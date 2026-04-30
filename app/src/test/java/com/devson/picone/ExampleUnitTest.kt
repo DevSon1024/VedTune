@@ -1,4 +1,4 @@
-package com.devson.default
+package com.devson.androidTemplate
 
 import org.junit.Test
 

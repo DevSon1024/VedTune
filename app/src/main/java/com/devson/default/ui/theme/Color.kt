@@ -1,4 +1,4 @@
-package com.devson.default.ui.theme
+package com.devson.androidTemplate.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

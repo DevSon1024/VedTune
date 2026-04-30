@@ -18,13 +18,13 @@ val splitApks = !project.hasProperty("noSplits") && !gradle.startParameter.taskN
 }
 
 android {
-    namespace = "com.devson.default"
+    namespace = "com.devson.androidTemplate"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.devson.default"
+        applicationId = "com.devson.androidTemplate"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
@@ -58,7 +58,7 @@ android {
             isDebuggable = true
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            resValue("string", "app_name", "default Beta")
+            resValue("string", "app_name", "androidTemplate Beta")
         }
 
         release {
@@ -68,7 +68,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            resValue("string", "app_name", "default")
+            resValue("string", "app_name", "androidTemplate")
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
