@@ -8,38 +8,55 @@ import android.provider.MediaStore
 import androidx.core.content.ContextCompat
 import com.devson.vedtune.data.local.dao.SongDao
 import com.devson.vedtune.data.local.entity.SongEntity
+import com.devson.vedtune.domain.model.FolderFilterMode
+import com.devson.vedtune.domain.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Synchronization engine that coordinates incremental syncing between Android MediaStore
- * and Room local cache. Optimized for large libraries (50,000+ songs).
+ * and the Room local cache. Optimized for large libraries (50,000+ songs).
+ *
+ * Folder filtering:
+ *   - NONE      → all audio files are included (default behaviour).
+ *   - WHITELIST → only songs whose folder path is in the whitelist are kept.
+ *                 An empty whitelist produces an empty library.
+ *   - BLACKLIST → songs whose folder path is in the blacklist are excluded.
+ *                 All other songs remain visible.
  */
 @Singleton
 class MediaSyncEngine @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val songDao: SongDao
+    private val songDao: SongDao,
+    private val settingsRepository: SettingsRepository
 ) {
 
     suspend fun performSync() = withContext(Dispatchers.IO) {
         if (!hasStoragePermission()) return@withContext
 
-        // 1. Fetch current songs in Room (ID and dateModified)
+        //  Read active folder filter settings 
+        val filterMode = settingsRepository.folderFilterMode.first()
+        val blacklist = settingsRepository.blacklistedFolders.first()
+        val whitelist = settingsRepository.whitelistedFolders.first()
+
+        //  1. Fetch current songs in Room (ID and dateModified) 
         val roomSongs = songDao.getSongIdAndModifiedMap()
         val roomSongsMap = roomSongs.associate { it.id to it.dateModified }
 
-        // 2. Fetch MediaStore songs (ID and dateModified)
-        val mediaStoreSongsMap = mutableMapOf<Long, Long>()
+        //  2. Fetch MediaStore songs (ID, dateModified, DATA path) 
+        //       We need DATA to apply the folder filter efficiently.
+        val mediaStoreSongsMap = mutableMapOf<Long, Long>()   // id → dateModified
+        val mediaStoreDataMap = mutableMapOf<Long, String>()  // id → file path
 
         val projection = arrayOf(
             MediaStore.Audio.Media._ID,
-            MediaStore.Audio.Media.DATE_MODIFIED
+            MediaStore.Audio.Media.DATE_MODIFIED,
+            MediaStore.Audio.Media.DATA
         )
-
-        // Query only music files
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
 
         context.contentResolver.query(
@@ -51,17 +68,48 @@ class MediaSyncEngine @Inject constructor(
         )?.use { cursor ->
             val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
             val dateModifiedCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED)
+            val dataCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idCol)
                 val dateModified = cursor.getLong(dateModifiedCol)
+                val filePath = cursor.getString(dataCol) ?: continue
                 mediaStoreSongsMap[id] = dateModified
+                mediaStoreDataMap[id] = filePath
             }
         }
 
-        // 3. Determine delta (inserts/updates and deletions)
-        val toDeleteIds = roomSongsMap.keys.filter { id -> !mediaStoreSongsMap.containsKey(id) }
-        val toFetchIds = mediaStoreSongsMap.filter { (id, dateModified) ->
+        //  3. Apply folder filter 
+        val filteredMediaStoreMap: Map<Long, Long> = when (filterMode) {
+            FolderFilterMode.NONE -> mediaStoreSongsMap
+
+            FolderFilterMode.WHITELIST -> {
+                if (whitelist.isEmpty()) {
+                    // Empty whitelist → show nothing
+                    emptyMap()
+                } else {
+                    mediaStoreSongsMap.filter { (id, _) ->
+                        val folder = mediaStoreDataMap[id]?.substringBeforeLast('/') ?: return@filter false
+                        whitelist.any { whitelisted -> folder == whitelisted || folder.startsWith("$whitelisted/") }
+                    }
+                }
+            }
+
+            FolderFilterMode.BLACKLIST -> {
+                if (blacklist.isEmpty()) {
+                    mediaStoreSongsMap
+                } else {
+                    mediaStoreSongsMap.filter { (id, _) ->
+                        val folder = mediaStoreDataMap[id]?.substringBeforeLast('/') ?: return@filter true
+                        blacklist.none { blacklisted -> folder == blacklisted || folder.startsWith("$blacklisted/") }
+                    }
+                }
+            }
+        }
+
+        //  4. Determine delta (inserts/updates and deletions) 
+        val toDeleteIds = roomSongsMap.keys.filter { id -> !filteredMediaStoreMap.containsKey(id) }
+        val toFetchIds = filteredMediaStoreMap.filter { (id, dateModified) ->
             val cachedModified = roomSongsMap[id]
             cachedModified == null || dateModified > cachedModified
         }.keys.toList()
@@ -70,7 +118,7 @@ class MediaSyncEngine @Inject constructor(
             return@withContext // Up to date!
         }
 
-        // 4. Fetch full metadata of new/modified IDs in chunks of 500 (avoiding SQLite parameter limits)
+        //  5. Fetch full metadata of new/modified IDs in chunks of 500 
         val toInsertEntities = mutableListOf<SongEntity>()
         if (toFetchIds.isNotEmpty()) {
             val chunkedIds = toFetchIds.chunked(500)
@@ -80,7 +128,7 @@ class MediaSyncEngine @Inject constructor(
             }
         }
 
-        // 5. Execute database sync in a single transaction
+        //  6. Execute database sync in a single transaction 
         songDao.syncMediaStore(toInsertEntities, toDeleteIds)
     }
 

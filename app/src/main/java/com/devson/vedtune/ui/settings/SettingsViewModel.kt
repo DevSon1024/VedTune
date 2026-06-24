@@ -2,7 +2,9 @@ package com.devson.vedtune.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.devson.vedtune.domain.model.FolderFilterMode
 import com.devson.vedtune.domain.repository.SettingsRepository
+import com.devson.vedtune.player.PlaybackConnection
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -10,13 +12,13 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-import com.devson.vedtune.player.PlaybackConnection
-
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val playbackConnection: PlaybackConnection
 ) : ViewModel() {
+
+    //  Existing settings 
 
     val showAlbumArt: StateFlow<Boolean> = settingsRepository.showAlbumArt
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
@@ -45,58 +47,53 @@ class SettingsViewModel @Inject constructor(
     val defaultStartScreen: StateFlow<String> = settingsRepository.defaultStartScreen
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "songs")
 
+    //  Folder filtering 
+
+    val folderFilterMode: StateFlow<FolderFilterMode> = settingsRepository.folderFilterMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FolderFilterMode.NONE)
+
+    val blacklistedFolders: StateFlow<Set<String>> = settingsRepository.blacklistedFolders
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    val whitelistedFolders: StateFlow<Set<String>> = settingsRepository.whitelistedFolders
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    //  Existing dispatchers 
+
     fun setShowAlbumArt(show: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.setShowAlbumArt(show)
-        }
+        viewModelScope.launch { settingsRepository.setShowAlbumArt(show) }
     }
 
     fun setShowRemainingTime(show: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.setShowRemainingTime(show)
-        }
+        viewModelScope.launch { settingsRepository.setShowRemainingTime(show) }
     }
 
     fun setShowMiniPlayerProgress(show: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.setShowMiniPlayerProgress(show)
-        }
+        viewModelScope.launch { settingsRepository.setShowMiniPlayerProgress(show) }
     }
 
     fun setAutoplayOnStartup(show: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.setAutoplayOnStartup(show)
-        }
+        viewModelScope.launch { settingsRepository.setAutoplayOnStartup(show) }
     }
 
     fun setThemeMode(mode: String) {
-        viewModelScope.launch {
-            settingsRepository.setThemeMode(mode)
-        }
+        viewModelScope.launch { settingsRepository.setThemeMode(mode) }
     }
 
     fun setDynamicColorsEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.setDynamicColorsEnabled(enabled)
-        }
+        viewModelScope.launch { settingsRepository.setDynamicColorsEnabled(enabled) }
     }
 
     fun setAutoSyncOnStartup(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.setAutoSyncOnStartup(enabled)
-        }
+        viewModelScope.launch { settingsRepository.setAutoSyncOnStartup(enabled) }
     }
 
     fun setAudioFadeInEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.setAudioFadeInEnabled(enabled)
-        }
+        viewModelScope.launch { settingsRepository.setAudioFadeInEnabled(enabled) }
     }
 
     fun setDefaultStartScreen(screen: String) {
-        viewModelScope.launch {
-            settingsRepository.setDefaultStartScreen(screen)
-        }
+        viewModelScope.launch { settingsRepository.setDefaultStartScreen(screen) }
     }
 
     fun clearPlaybackQueue() {
@@ -104,5 +101,47 @@ class SettingsViewModel @Inject constructor(
             settingsRepository.clearPlaybackQueue()
             playbackConnection.clearQueue()
         }
+    }
+
+    //  Folder filter dispatchers 
+
+    fun setFolderFilterMode(mode: FolderFilterMode) {
+        viewModelScope.launch { settingsRepository.setFolderFilterMode(mode) }
+    }
+
+    fun addToBlacklist(path: String) {
+        viewModelScope.launch {
+            val current = blacklistedFolders.value
+            settingsRepository.setBlacklistedFolders(current + path)
+        }
+    }
+
+    fun removeFromBlacklist(path: String) {
+        viewModelScope.launch {
+            val current = blacklistedFolders.value
+            settingsRepository.setBlacklistedFolders(current - path)
+        }
+    }
+
+    fun clearBlacklist() {
+        viewModelScope.launch { settingsRepository.setBlacklistedFolders(emptySet()) }
+    }
+
+    fun addToWhitelist(path: String) {
+        viewModelScope.launch {
+            val current = whitelistedFolders.value
+            settingsRepository.setWhitelistedFolders(current + path)
+        }
+    }
+
+    fun removeFromWhitelist(path: String) {
+        viewModelScope.launch {
+            val current = whitelistedFolders.value
+            settingsRepository.setWhitelistedFolders(current - path)
+        }
+    }
+
+    fun clearWhitelist() {
+        viewModelScope.launch { settingsRepository.setWhitelistedFolders(emptySet()) }
     }
 }

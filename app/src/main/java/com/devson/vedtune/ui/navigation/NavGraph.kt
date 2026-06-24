@@ -30,6 +30,7 @@ import com.devson.vedtune.ui.artists.ArtistDetailsScreen
 import com.devson.vedtune.ui.artists.ArtistDetailsViewModel
 import com.devson.vedtune.ui.settings.SettingsScreen
 import com.devson.vedtune.ui.settings.SettingsViewModel
+import com.devson.vedtune.ui.settings.FolderSettingsScreen
 import com.devson.vedtune.ui.playlists.PlaylistsScreen
 import com.devson.vedtune.ui.playlists.PlaylistsViewModel
 import com.devson.vedtune.ui.playlists.PlaylistDetailsScreen
@@ -41,6 +42,7 @@ sealed class Screen(val route: String) {
     data object Artists : Screen("artists")
     data object Playlists : Screen("playlists")
     data object Settings : Screen("settings")
+    data object FolderSettings : Screen("folder_settings")
     data object Player : Screen("player")
     data object AlbumDetails : Screen("album_details/{albumId}") {
         fun createRoute(albumId: Long) = "album_details/$albumId"
@@ -113,7 +115,33 @@ fun NavGraph(
             }
         ) {
             val viewModel: SettingsViewModel = hiltViewModel()
-            SettingsScreen(viewModel = viewModel)
+            SettingsScreen(
+                viewModel = viewModel,
+                onNavigateToFolderSettings = {
+                    navController.navigate(Screen.FolderSettings.route)
+                }
+            )
+        }
+        composable(
+            route = Screen.FolderSettings.route,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(350)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(350)
+                )
+            }
+        ) {
+            val viewModel: SettingsViewModel = hiltViewModel()
+            FolderSettingsScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
         composable(
             route = Screen.ArtistDetails.route,

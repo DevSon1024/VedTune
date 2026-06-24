@@ -1,5 +1,6 @@
 package com.devson.vedtune.domain.repository
 
+import com.devson.vedtune.domain.model.FolderFilterMode
 import kotlinx.coroutines.flow.Flow
 
 interface SettingsRepository {
@@ -12,7 +13,12 @@ interface SettingsRepository {
     val autoSyncOnStartup: Flow<Boolean>
     val audioFadeInEnabled: Flow<Boolean>
     val defaultStartScreen: Flow<String>
-    
+
+    // Folder filtering
+    val folderFilterMode: Flow<FolderFilterMode>
+    val blacklistedFolders: Flow<Set<String>>
+    val whitelistedFolders: Flow<Set<String>>
+
     suspend fun setShowAlbumArt(show: Boolean)
     suspend fun setShowRemainingTime(show: Boolean)
     suspend fun setShowMiniPlayerProgress(show: Boolean)
@@ -23,4 +29,9 @@ interface SettingsRepository {
     suspend fun setAudioFadeInEnabled(enabled: Boolean)
     suspend fun setDefaultStartScreen(screen: String)
     suspend fun clearPlaybackQueue()
+
+    // Folder filtering setters
+    suspend fun setFolderFilterMode(mode: FolderFilterMode)
+    suspend fun setBlacklistedFolders(folders: Set<String>)
+    suspend fun setWhitelistedFolders(folders: Set<String>)
 }
