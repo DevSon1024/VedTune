@@ -12,6 +12,10 @@ import com.devson.vedtune.data.local.entity.ArtistEntity
 import com.devson.vedtune.domain.repository.MediaRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import com.devson.vedtune.data.local.dao.PlaylistDao
+import com.devson.vedtune.data.local.entity.PlaylistEntity
+import com.devson.vedtune.data.local.entity.PlaylistSongCrossRef
+import com.devson.vedtune.domain.model.Playlist
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,6 +23,7 @@ import javax.inject.Singleton
 class MediaRepositoryImpl @Inject constructor(
     private val songDao: SongDao,
     private val queueDao: QueueDao,
+    private val playlistDao: PlaylistDao,
     private val syncEngine: MediaSyncEngine
 ) : MediaRepository {
 
@@ -100,5 +105,40 @@ class MediaRepositoryImpl @Inject constructor(
         return songDao.getSongsByArtist(artist).map { entities ->
             entities.map { it.toSong() }
         }
+    }
+
+    override fun getAllPlaylists(): Flow<List<Playlist>> {
+        return playlistDao.getAllPlaylistsWithCount().map { entities ->
+            entities.map { entity ->
+                Playlist(
+                    id = entity.id,
+                    name = entity.name,
+                    songCount = entity.songCount,
+                    createdAt = entity.createdAt
+                )
+            }
+        }
+    }
+
+    override fun getSongsByPlaylistId(playlistId: Long): Flow<List<Song>> {
+        return playlistDao.getPlaylistWithSongs(playlistId).map { relation ->
+            relation?.songs?.map { it.toSong() } ?: emptyList()
+        }
+    }
+
+    override suspend fun createPlaylist(name: String): Long {
+        return playlistDao.insertPlaylist(PlaylistEntity(name = name))
+    }
+
+    override suspend fun deletePlaylist(playlistId: Long) {
+        playlistDao.deletePlaylistById(playlistId)
+    }
+
+    override suspend fun addSongToPlaylist(playlistId: Long, songId: Long) {
+        playlistDao.insertPlaylistSong(PlaylistSongCrossRef(playlistId, songId))
+    }
+
+    override suspend fun removeSongFromPlaylist(playlistId: Long, songId: Long) {
+        playlistDao.deletePlaylistSong(playlistId, songId)
     }
 }

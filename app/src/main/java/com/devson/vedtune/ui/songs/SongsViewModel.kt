@@ -13,6 +13,10 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import com.devson.vedtune.domain.model.Playlist
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import com.devson.vedtune.domain.repository.SettingsRepository
 
 @HiltViewModel
@@ -21,6 +25,26 @@ class SongsViewModel @Inject constructor(
     private val playbackConnection: PlaybackConnection,
     private val settingsRepository: SettingsRepository
 ) : BaseViewModel<SongsUiState, SongsUiEvent>(SongsUiState(isLoading = true)) {
+
+    val playlists: StateFlow<List<Playlist>> = repository.getAllPlaylists()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun addSongToPlaylist(playlistId: Long, songId: Long) {
+        viewModelScope.launch {
+            repository.addSongToPlaylist(playlistId, songId)
+        }
+    }
+
+    fun createPlaylistAndAddSong(playlistName: String, songId: Long) {
+        viewModelScope.launch {
+            val playlistId = repository.createPlaylist(playlistName)
+            repository.addSongToPlaylist(playlistId, songId)
+        }
+    }
 
     private val _searchQuery = MutableStateFlow("")
     private val _sortBy = MutableStateFlow(SortBy.TITLE)

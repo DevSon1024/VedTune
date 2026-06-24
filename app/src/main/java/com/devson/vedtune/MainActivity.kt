@@ -33,6 +33,8 @@ import com.devson.vedtune.ui.components.MiniPlayer
 import com.devson.vedtune.ui.navigation.NavGraph
 import com.devson.vedtune.ui.navigation.Screen
 import com.devson.vedtune.ui.theme.vedtuneTheme
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -43,8 +45,27 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            android.Manifest.permission.READ_MEDIA_AUDIO
+        } else {
+            android.Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(this, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (hasPermission) {
+            lifecycleScope.launch {
+                val autoSync = viewModel.autoSyncOnStartup.value
+                if (autoSync) {
+                    viewModel.syncLibrary()
+                }
+            }
+        }
+
         setContent {
-            vedtuneTheme {
+            val themeMode by viewModel.themeMode.collectAsState()
+            val dynamicColorsEnabled by viewModel.dynamicColorsEnabled.collectAsState()
+
+            vedtuneTheme(themeMode = themeMode, dynamicColor = dynamicColorsEnabled) {
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route

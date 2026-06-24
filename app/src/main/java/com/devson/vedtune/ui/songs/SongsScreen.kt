@@ -67,6 +67,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.ui.components.SongArtwork
+import com.devson.vedtune.ui.components.AddToPlaylistDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,6 +77,8 @@ fun SongsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showSortMenu by remember { mutableStateOf(false) }
+    val playlists by viewModel.playlists.collectAsState()
+    var songForPlaylist by remember { mutableStateOf<Song?>(null) }
 
     val context = LocalContext.current
     val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -311,7 +314,8 @@ fun SongsScreen(
                             SongGridItem(
                                 song = song,
                                 onClick = { viewModel.playSong(song) },
-                                showArtwork = uiState.showArtwork
+                                showArtwork = uiState.showArtwork,
+                                onAddToPlaylistClick = { songForPlaylist = song }
                             )
                         }
                     }
@@ -326,7 +330,8 @@ fun SongsScreen(
                             SongListItem(
                                 song = song,
                                 onClick = { viewModel.playSong(song) },
-                                showArtwork = uiState.showArtwork
+                                showArtwork = uiState.showArtwork,
+                                onAddToPlaylistClick = { songForPlaylist = song }
                             )
                         }
                     }
@@ -334,13 +339,30 @@ fun SongsScreen(
             }
         }
     }
+
+    if (songForPlaylist != null) {
+        val targetSong = songForPlaylist!!
+        AddToPlaylistDialog(
+            playlists = playlists,
+            onDismiss = { songForPlaylist = null },
+            onPlaylistSelected = { playlistId ->
+                viewModel.addSongToPlaylist(playlistId, targetSong.id)
+                songForPlaylist = null
+            },
+            onCreateNewPlaylist = { playlistName ->
+                viewModel.createPlaylistAndAddSong(playlistName, targetSong.id)
+                songForPlaylist = null
+            }
+        )
+    }
 }
 
 @Composable
 fun SongListItem(
     song: Song,
     onClick: () -> Unit,
-    showArtwork: Boolean = true
+    showArtwork: Boolean = true,
+    onAddToPlaylistClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -386,6 +408,27 @@ fun SongListItem(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            var showMenu by remember { mutableStateOf(false) }
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Add to Playlist") },
+                        onClick = {
+                            onAddToPlaylistClick()
+                            showMenu = false
+                        }
+                    )
+                }
+            }
         }
     }
 }
@@ -394,7 +437,8 @@ fun SongListItem(
 fun SongGridItem(
     song: Song,
     onClick: () -> Unit,
-    showArtwork: Boolean = true
+    showArtwork: Boolean = true,
+    onAddToPlaylistClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -417,17 +461,43 @@ fun SongGridItem(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = song.title,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1
-            )
-            Text(
-                text = song.artist,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = song.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = song.artist,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+                var showMenu by remember { mutableStateOf(false) }
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Add to Playlist") },
+                            onClick = {
+                                onAddToPlaylistClick()
+                                showMenu = false
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
 }

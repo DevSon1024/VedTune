@@ -30,6 +30,15 @@ class SettingsViewModel @Inject constructor(
     val autoplayOnStartup: StateFlow<Boolean> = settingsRepository.autoplayOnStartup
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val themeMode: StateFlow<String> = settingsRepository.themeMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "SYSTEM")
+
+    val dynamicColorsEnabled: StateFlow<Boolean> = settingsRepository.dynamicColorsEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val autoSyncOnStartup: StateFlow<Boolean> = settingsRepository.autoSyncOnStartup
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     fun setShowAlbumArt(show: Boolean) {
         viewModelScope.launch {
             settingsRepository.setShowAlbumArt(show)
@@ -51,6 +60,24 @@ class SettingsViewModel @Inject constructor(
     fun setAutoplayOnStartup(show: Boolean) {
         viewModelScope.launch {
             settingsRepository.setAutoplayOnStartup(show)
+        }
+    }
+
+    fun setThemeMode(mode: String) {
+        viewModelScope.launch {
+            settingsRepository.setThemeMode(mode)
+        }
+    }
+
+    fun setDynamicColorsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setDynamicColorsEnabled(enabled)
+        }
+    }
+
+    fun setAutoSyncOnStartup(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setAutoSyncOnStartup(enabled)
         }
     }
 

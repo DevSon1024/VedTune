@@ -28,6 +28,10 @@ import com.devson.vedtune.ui.artists.ArtistDetailsScreen
 import com.devson.vedtune.ui.artists.ArtistDetailsViewModel
 import com.devson.vedtune.ui.settings.SettingsScreen
 import com.devson.vedtune.ui.settings.SettingsViewModel
+import com.devson.vedtune.ui.playlists.PlaylistsScreen
+import com.devson.vedtune.ui.playlists.PlaylistsViewModel
+import com.devson.vedtune.ui.playlists.PlaylistDetailsScreen
+import com.devson.vedtune.ui.playlists.PlaylistDetailsViewModel
 
 sealed class Screen(val route: String) {
     data object Songs : Screen("songs")
@@ -41,6 +45,9 @@ sealed class Screen(val route: String) {
     }
     data object ArtistDetails : Screen("artist_details/{artistName}") {
         fun createRoute(artistName: String) = "artist_details/$artistName"
+    }
+    data object PlaylistDetails : Screen("playlist_details/{playlistId}") {
+        fun createRoute(playlistId: Long) = "playlist_details/$playlistId"
     }
 }
 
@@ -77,7 +84,13 @@ fun NavGraph(
             )
         }
         composable(Screen.Playlists.route) {
-            PlaceholderScreen(title = "Playlists Screen")
+            val viewModel: PlaylistsViewModel = hiltViewModel()
+            PlaylistsScreen(
+                viewModel = viewModel,
+                onPlaylistClick = { playlistId ->
+                    navController.navigate(Screen.PlaylistDetails.createRoute(playlistId))
+                }
+            )
         }
         composable(Screen.Settings.route) {
             val viewModel: SettingsViewModel = hiltViewModel()
@@ -124,6 +137,18 @@ fun NavGraph(
         ) {
             val viewModel: AlbumDetailsViewModel = hiltViewModel()
             AlbumDetailsScreen(
+                viewModel = viewModel,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = Screen.PlaylistDetails.route,
+            arguments = listOf(
+                navArgument("playlistId") { type = NavType.LongType }
+            )
+        ) {
+            val viewModel: PlaylistDetailsViewModel = hiltViewModel()
+            PlaylistDetailsScreen(
                 viewModel = viewModel,
                 onBackClick = { navController.popBackStack() }
             )

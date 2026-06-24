@@ -2,6 +2,7 @@ package com.devson.vedtune.di
 
 import com.devson.vedtune.data.local.dao.SongDao
 import com.devson.vedtune.data.local.dao.QueueDao
+import com.devson.vedtune.data.local.dao.PlaylistDao
 import com.devson.vedtune.data.repository.MediaRepositoryImpl
 import com.devson.vedtune.data.sync.MediaSyncEngine
 import com.devson.vedtune.domain.repository.MediaRepository
@@ -54,9 +55,10 @@ object AppModule {
     fun provideMediaRepository(
         songDao: SongDao,
         queueDao: QueueDao,
+        playlistDao: PlaylistDao,
         syncEngine: MediaSyncEngine
     ): MediaRepository {
-        return MediaRepositoryImpl(songDao, queueDao, syncEngine)
+        return MediaRepositoryImpl(songDao, queueDao, playlistDao, syncEngine)
     }
 
     @Provides

@@ -13,8 +13,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,6 +43,9 @@ fun SettingsScreen(
     val showRemainingTime by viewModel.showRemainingTime.collectAsState()
     val showMiniPlayerProgress by viewModel.showMiniPlayerProgress.collectAsState()
     val autoplayOnStartup by viewModel.autoplayOnStartup.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsState()
+    val dynamicColorsEnabled by viewModel.dynamicColorsEnabled.collectAsState()
+    val autoSyncOnStartup by viewModel.autoSyncOnStartup.collectAsState()
 
     var queueClearedMessageVisible by remember { mutableStateOf(false) }
 
@@ -68,11 +73,23 @@ fun SettingsScreen(
             color = MaterialTheme.colorScheme.primary
         )
 
+        ThemeModeSelector(
+            currentMode = themeMode,
+            onModeSelected = { viewModel.setThemeMode(it) }
+        )
+
         SettingSwitchRow(
             title = "Show Album Artwork",
             description = "Display cover art inside player screens and lists.",
             checked = showAlbumArt,
             onCheckedChange = { viewModel.setShowAlbumArt(it) }
+        )
+
+        SettingSwitchRow(
+            title = "Dynamic Material You Colors",
+            description = "Enable dynamic theme colors matching device wallpaper (Android 12+).",
+            checked = dynamicColorsEnabled,
+            onCheckedChange = { viewModel.setDynamicColorsEnabled(it) }
         )
 
         SettingSwitchRow(
@@ -104,6 +121,13 @@ fun SettingsScreen(
             description = "Automatically resume music playback when the app is restarted.",
             checked = autoplayOnStartup,
             onCheckedChange = { viewModel.setAutoplayOnStartup(it) }
+        )
+
+        SettingSwitchRow(
+            title = "Auto-sync Library on Startup",
+            description = "Automatically scan and sync device audio files on app launch.",
+            checked = autoSyncOnStartup,
+            onCheckedChange = { viewModel.setAutoSyncOnStartup(it) }
         )
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -167,6 +191,46 @@ fun SettingsScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
+    }
+}
+
+@Composable
+fun ThemeModeSelector(
+    currentMode: String,
+    onModeSelected: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "Theme Mode",
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("SYSTEM" to "System", "LIGHT" to "Light", "DARK" to "Dark").forEach { (mode, label) ->
+                val isSelected = currentMode == mode
+                if (isSelected) {
+                    FilledTonalButton(
+                        onClick = { onModeSelected(mode) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(text = label)
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { onModeSelected(mode) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(text = label)
+                    }
+                }
+            }
+        }
     }
 }
 

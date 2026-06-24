@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.devson.vedtune.data.local.dao.QueueDao
 import com.devson.vedtune.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
@@ -22,6 +23,9 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_SHOW_REMAINING_TIME = booleanPreferencesKey("show_remaining_time")
         private val KEY_SHOW_MINIPLAYER_PROGRESS = booleanPreferencesKey("show_miniplayer_progress")
         private val KEY_AUTOPLAY_ON_STARTUP = booleanPreferencesKey("autoplay_on_startup")
+        private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
+        private val KEY_DYNAMIC_COLORS_ENABLED = booleanPreferencesKey("dynamic_colors_enabled")
+        private val KEY_AUTO_SYNC_ON_STARTUP = booleanPreferencesKey("auto_sync_on_startup")
     }
 
     override val showAlbumArt: Flow<Boolean> = dataStore.data.map { preferences ->
@@ -38,6 +42,18 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override val autoplayOnStartup: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[KEY_AUTOPLAY_ON_STARTUP] ?: false
+    }
+
+    override val themeMode: Flow<String> = dataStore.data.map { preferences ->
+        preferences[KEY_THEME_MODE] ?: "SYSTEM"
+    }
+
+    override val dynamicColorsEnabled: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[KEY_DYNAMIC_COLORS_ENABLED] ?: true
+    }
+
+    override val autoSyncOnStartup: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[KEY_AUTO_SYNC_ON_STARTUP] ?: true
     }
 
     override suspend fun setShowAlbumArt(show: Boolean) {
@@ -61,6 +77,24 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setAutoplayOnStartup(show: Boolean) {
         dataStore.edit { preferences ->
             preferences[KEY_AUTOPLAY_ON_STARTUP] = show
+        }
+    }
+
+    override suspend fun setThemeMode(mode: String) {
+        dataStore.edit { preferences ->
+            preferences[KEY_THEME_MODE] = mode
+        }
+    }
+
+    override suspend fun setDynamicColorsEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[KEY_DYNAMIC_COLORS_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setAutoSyncOnStartup(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[KEY_AUTO_SYNC_ON_STARTUP] = enabled
         }
     }
 

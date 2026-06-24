@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 import com.devson.vedtune.domain.repository.SettingsRepository
@@ -28,6 +29,15 @@ class MainViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     val showMiniPlayerProgress: StateFlow<Boolean> = settingsRepository.showMiniPlayerProgress
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val themeMode: StateFlow<String> = settingsRepository.themeMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "SYSTEM")
+
+    val dynamicColorsEnabled: StateFlow<Boolean> = settingsRepository.dynamicColorsEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val autoSyncOnStartup: StateFlow<Boolean> = settingsRepository.autoSyncOnStartup
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     val isPlaying: StateFlow<Boolean> = playbackConnection.isPlaying
@@ -58,5 +68,15 @@ class MainViewModel @Inject constructor(
 
     fun skipToNext() {
         playbackConnection.skipToNext()
+    }
+
+    fun syncLibrary() {
+        viewModelScope.launch {
+            try {
+                repository.synchronizeLibrary()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 }

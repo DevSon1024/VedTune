@@ -9,6 +9,7 @@ import androidx.room.Room
 import com.devson.vedtune.data.local.AppDatabase
 import com.devson.vedtune.data.local.dao.SongDao
 import com.devson.vedtune.data.local.dao.QueueDao
+import com.devson.vedtune.data.local.dao.PlaylistDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -44,6 +45,12 @@ object DatabaseModule {
     @Singleton
     fun provideQueueDao(database: AppDatabase): QueueDao {
         return database.queueDao()
+    }
+
+    @Provides
+    @Singleton
+    fun providePlaylistDao(database: AppDatabase): PlaylistDao {
+        return database.playlistDao()
     }
 
     @Provides
