@@ -2,11 +2,14 @@ package com.devson.vedtune.ui.songs
 
 import android.Manifest
 import android.content.ContentUris
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.IntentSenderRequest
 import androidx.core.content.ContextCompat
 import androidx.compose.material3.Button
 import androidx.compose.ui.text.style.TextAlign
@@ -30,14 +33,12 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,7 +49,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -60,8 +63,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -73,6 +79,8 @@ import com.devson.vedtune.ui.components.AddToPlaylistDialog
 @Composable
 fun SongsScreen(
     viewModel: SongsViewModel,
+    onNavigateToAlbum: (Long) -> Unit,
+    onNavigateToArtist: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -80,7 +88,38 @@ fun SongsScreen(
     val playlists by viewModel.playlists.collectAsState()
     var songForPlaylist by remember { mutableStateOf<Song?>(null) }
 
+    // Dialog and bottom sheet states
+    var selectedSongForOptions by remember { mutableStateOf<Song?>(null) }
+    var showInfoDialogSong by remember { mutableStateOf<Song?>(null) }
+    var showEditTagsDialogSong by remember { mutableStateOf<Song?>(null) }
+    var showPreviewDialogSong by remember { mutableStateOf<Song?>(null) }
+    var showDeleteConfirmDialogSong by remember { mutableStateOf<Song?>(null) }
+
     val context = LocalContext.current
+
+    val intentSenderLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            viewModel.onWritePermissionGranted(context)
+            viewModel.onDeletePermissionGranted()
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is SongsUiEvent.ShowError -> {
+                    android.widget.Toast.makeText(context, event.message, android.widget.Toast.LENGTH_LONG).show()
+                }
+                is SongsUiEvent.LaunchIntentSender -> {
+                    val request = IntentSenderRequest.Builder(event.intentSender).build()
+                    intentSenderLauncher.launch(request)
+                }
+            }
+        }
+    }
+
     val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_AUDIO
     } else {
@@ -315,7 +354,7 @@ fun SongsScreen(
                                 song = song,
                                 onClick = { viewModel.playSong(song) },
                                 showArtwork = uiState.showArtwork,
-                                onAddToPlaylistClick = { songForPlaylist = song }
+                                onOptionsClick = { selectedSongForOptions = song }
                             )
                         }
                     }
@@ -331,7 +370,7 @@ fun SongsScreen(
                                 song = song,
                                 onClick = { viewModel.playSong(song) },
                                 showArtwork = uiState.showArtwork,
-                                onAddToPlaylistClick = { songForPlaylist = song }
+                                onOptionsClick = { selectedSongForOptions = song }
                             )
                         }
                     }
@@ -355,6 +394,217 @@ fun SongsScreen(
             }
         )
     }
+
+    if (selectedSongForOptions != null) {
+        val song = selectedSongForOptions!!
+        ModalBottomSheet(
+            onDismissRequest = { selectedSongForOptions = null }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SongArtwork(
+                        albumId = song.albumId,
+                        lastModified = song.dateModified,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = song.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "${song.artist} • ${song.album}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                
+                HorizontalDivider()
+                
+                LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                    item {
+                        BottomSheetOption(
+                            icon = Icons.Default.Info,
+                            title = "Song Info",
+                            onClick = {
+                                selectedSongForOptions = null
+                                showInfoDialogSong = song
+                            }
+                        )
+                    }
+                    item {
+                        BottomSheetOption(
+                            icon = Icons.AutoMirrored.Filled.PlaylistAdd,
+                            title = "Add to Playlist",
+                            onClick = {
+                                selectedSongForOptions = null
+                                songForPlaylist = song
+                            }
+                        )
+                    }
+                    item {
+                        BottomSheetOption(
+                            icon = Icons.Default.PlayCircle,
+                            title = "Preview Song",
+                            onClick = {
+                                selectedSongForOptions = null
+                                showPreviewDialogSong = song
+                            }
+                        )
+                    }
+                    item {
+                        BottomSheetOption(
+                            icon = Icons.Default.Share,
+                            title = "Share",
+                            onClick = {
+                                selectedSongForOptions = null
+                                val songUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, song.id)
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "audio/*"
+                                    putExtra(Intent.EXTRA_STREAM, songUri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, "Share Song"))
+                            }
+                        )
+                    }
+                    item {
+                        BottomSheetOption(
+                            icon = Icons.Default.Edit,
+                            title = "Edit Tags",
+                            onClick = {
+                                selectedSongForOptions = null
+                                showEditTagsDialogSong = song
+                            }
+                        )
+                    }
+                    item {
+                        BottomSheetOption(
+                            icon = Icons.Default.DeleteForever,
+                            title = "Delete Permanently",
+                            tint = MaterialTheme.colorScheme.error,
+                            onClick = {
+                                selectedSongForOptions = null
+                                showDeleteConfirmDialogSong = song
+                            }
+                        )
+                    }
+                    item {
+                        BottomSheetOption(
+                            icon = Icons.Default.Album,
+                            title = "Go to Album",
+                            onClick = {
+                                selectedSongForOptions = null
+                                onNavigateToAlbum(song.albumId)
+                            }
+                        )
+                    }
+                    item {
+                        BottomSheetOption(
+                            icon = Icons.Default.Person,
+                            title = "Go to Artist",
+                            onClick = {
+                                selectedSongForOptions = null
+                                onNavigateToArtist(song.artist)
+                            }
+                        )
+                    }
+                    item {
+                        BottomSheetOption(
+                            icon = Icons.Default.Shuffle,
+                            title = "Shuffle",
+                            onClick = {
+                                selectedSongForOptions = null
+                                viewModel.playShuffle(song)
+                            }
+                        )
+                    }
+                    item {
+                        BottomSheetOption(
+                            icon = Icons.Default.QueuePlayNext,
+                            title = "Play Next",
+                            onClick = {
+                                selectedSongForOptions = null
+                                viewModel.playNext(song)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showInfoDialogSong != null) {
+        val song = showInfoDialogSong!!
+        SongInfoDialog(
+            song = song,
+            onEditTagsClick = { showEditTagsDialogSong = song },
+            onDismiss = { showInfoDialogSong = null }
+        )
+    }
+
+    if (showEditTagsDialogSong != null) {
+        val song = showEditTagsDialogSong!!
+        EditTagsDialog(
+            song = song,
+            onSave = { title, artist, album, track, year, artworkUri ->
+                viewModel.updateSongTags(context, song, title, artist, album, track, year, artworkUri)
+            },
+            onDismiss = { showEditTagsDialogSong = null }
+        )
+    }
+
+    if (showPreviewDialogSong != null) {
+        val song = showPreviewDialogSong!!
+        SongPreviewDialog(
+            song = song,
+            onDismiss = { showPreviewDialogSong = null }
+        )
+    }
+
+    if (showDeleteConfirmDialogSong != null) {
+        val song = showDeleteConfirmDialogSong!!
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialogSong = null },
+            title = { Text("Delete Permanently") },
+            text = { Text("Are you sure you want to permanently delete \"${song.title}\" from your device? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteSongPermanently(context, song)
+                        showDeleteConfirmDialogSong = null
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showDeleteConfirmDialogSong = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -362,7 +612,7 @@ fun SongListItem(
     song: Song,
     onClick: () -> Unit,
     showArtwork: Boolean = true,
-    onAddToPlaylistClick: () -> Unit
+    onOptionsClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -378,6 +628,7 @@ fun SongListItem(
         ) {
             SongArtwork(
                 albumId = song.albumId,
+                lastModified = song.dateModified,
                 modifier = Modifier
                     .size(56.dp)
                     .clip(MaterialTheme.shapes.small)
@@ -411,23 +662,8 @@ fun SongListItem(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            var showMenu by remember { mutableStateOf(false) }
-            Box {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
-                }
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Add to Playlist") },
-                        onClick = {
-                            onAddToPlaylistClick()
-                            showMenu = false
-                        }
-                    )
-                }
+            IconButton(onClick = onOptionsClick) {
+                Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
             }
         }
     }
@@ -438,7 +674,7 @@ fun SongGridItem(
     song: Song,
     onClick: () -> Unit,
     showArtwork: Boolean = true,
-    onAddToPlaylistClick: () -> Unit
+    onOptionsClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -451,6 +687,7 @@ fun SongGridItem(
         ) {
             SongArtwork(
                 albumId = song.albumId,
+                lastModified = song.dateModified,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
@@ -479,23 +716,438 @@ fun SongGridItem(
                         maxLines = 1
                     )
                 }
-                var showMenu by remember { mutableStateOf(false) }
-                Box {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
+                IconButton(onClick = onOptionsClick) {
+                    Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BottomSheetOption(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    tint: Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = title,
+            tint = tint,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            color = tint
+        )
+    }
+}
+
+@Composable
+fun SongInfoDialog(
+    song: Song,
+    onEditTagsClick: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    var metadata by remember { mutableStateOf<AudioMetadata?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    
+    val uri = remember(song.id) {
+        ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, song.id)
+    }
+
+    androidx.compose.runtime.LaunchedEffect(song.id) {
+        metadata = MediaInfoHelper.getAudioMetadata(context, uri)
+        isLoading = false
+    }
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = MaterialTheme.shapes.extraLarge,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = "Song Info",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                if (isLoading) {
+                    Box(modifier = Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
                     }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
+                } else {
+                    metadata?.let { meta ->
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            InfoRow(label = "Title", value = song.title)
+                            InfoRow(label = "Artist", value = song.artist)
+                            InfoRow(label = "Album", value = song.album)
+                            InfoRow(label = "Format", value = meta.format)
+                            InfoRow(label = "Codec", value = meta.codec)
+                            InfoRow(label = "Duration", value = meta.duration.ifBlank { formatDuration(song.duration) })
+                            InfoRow(label = "Bit Rate", value = meta.bitRate)
+                            InfoRow(label = "Sampling Rate", value = meta.samplingRate)
+                            InfoRow(label = "Channels", value = meta.channels)
+                            InfoRow(label = "File Size", value = meta.fileSize)
+                            InfoRow(label = "Location", value = meta.location)
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    androidx.compose.material3.TextButton(onClick = onDismiss) {
+                        Text("Close")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(onClick = {
+                        onEditTagsClick()
+                        onDismiss()
+                    }) {
+                        Text("Edit Tags")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value.ifBlank { "Unknown" },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1f).padding(start = 16.dp)
+        )
+    }
+}
+
+@Composable
+fun EditTagsDialog(
+    song: Song,
+    onSave: (title: String, artist: String, album: String, track: Int, year: Int, artworkUri: Uri?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var title by remember { mutableStateOf(song.title) }
+    var artist by remember { mutableStateOf(song.artist) }
+    var album by remember { mutableStateOf(song.album) }
+    var track by remember { mutableStateOf(song.track.toString()) }
+    var year by remember { mutableStateOf(song.year.toString()) }
+    var selectedArtworkUri by remember { mutableStateOf<Uri?>(null) }
+
+    val artworkLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            selectedArtworkUri = uri
+        }
+    }
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = MaterialTheme.shapes.extraLarge,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Edit Tags",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable { artworkLauncher.launch("image/*") },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (selectedArtworkUri != null) {
+                        AsyncImage(
+                            model = selectedArtworkUri,
+                            contentDescription = "Selected Art",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        SongArtwork(
+                            albumId = song.albumId,
+                            lastModified = song.dateModified,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.4f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Art",
+                                tint = Color.White
+                            )
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Title") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = artist,
+                    onValueChange = { artist = it },
+                    label = { Text("Artist") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = album,
+                    onValueChange = { album = it },
+                    label = { Text("Album") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = track,
+                    onValueChange = { track = it },
+                    label = { Text("Track Number") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = year,
+                    onValueChange = { year = it },
+                    label = { Text("Year") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    androidx.compose.material3.TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            onSave(
+                                title,
+                                artist,
+                                album,
+                                track.toIntOrNull() ?: 0,
+                                year.toIntOrNull() ?: 0,
+                                selectedArtworkUri
+                            )
+                            onDismiss()
+                        }
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("Add to Playlist") },
-                            onClick = {
-                                onAddToPlaylistClick()
-                                showMenu = false
-                            }
+                        Text("Save")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SongPreviewDialog(
+    song: Song,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val uri = remember(song.id) {
+        ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, song.id)
+    }
+    
+    val mediaPlayer = remember {
+        android.media.MediaPlayer().apply {
+            setDataSource(context, uri)
+            prepare()
+        }
+    }
+    
+    var isPlaying by remember { mutableStateOf(false) }
+    var currentPosition by remember { mutableStateOf(0f) }
+    val duration = remember { mediaPlayer.duration.toFloat() }
+    
+    androidx.compose.runtime.LaunchedEffect(isPlaying) {
+        if (isPlaying) {
+            mediaPlayer.start()
+            while (isPlaying && mediaPlayer.isPlaying) {
+                currentPosition = mediaPlayer.currentPosition.toFloat()
+                kotlinx.coroutines.delay(200)
+            }
+        } else {
+            if (mediaPlayer.isPlaying) {
+                mediaPlayer.pause()
+            }
+        }
+    }
+    
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            mediaPlayer.stop()
+            mediaPlayer.release()
+        }
+    }
+    
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = MaterialTheme.shapes.extraLarge,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Preview Audio",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                SongArtwork(
+                    albumId = song.albumId,
+                    lastModified = song.dateModified,
+                    modifier = Modifier
+                        .size(140.dp)
+                        .clip(MaterialTheme.shapes.large)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = song.artist,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    textAlign = TextAlign.Center
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Slider(
+                    value = currentPosition,
+                    onValueChange = {
+                        currentPosition = it
+                        mediaPlayer.seekTo(it.toInt())
+                    },
+                    valueRange = 0f..duration,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = formatDuration(currentPosition.toLong()),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = formatDuration(duration.toLong()),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { isPlaying = !isPlaying },
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(MaterialTheme.colorScheme.primary, CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(32.dp)
                         )
                     }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                androidx.compose.material3.TextButton(onClick = onDismiss) {
+                    Text("Close")
                 }
             }
         }
@@ -508,3 +1160,4 @@ private fun formatDuration(durationMs: Long): String {
     val seconds = totalSeconds % 60
     return String.format("%d:%02d", minutes, seconds)
 }
+

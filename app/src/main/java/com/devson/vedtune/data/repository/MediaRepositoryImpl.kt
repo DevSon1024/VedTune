@@ -141,4 +141,8 @@ class MediaRepositoryImpl @Inject constructor(
     override suspend fun removeSongFromPlaylist(playlistId: Long, songId: Long) {
         playlistDao.deletePlaylistSong(playlistId, songId)
     }
+
+    override suspend fun deleteSong(songId: Long) {
+        songDao.deleteSongs(listOf(songId))
+    }
 }

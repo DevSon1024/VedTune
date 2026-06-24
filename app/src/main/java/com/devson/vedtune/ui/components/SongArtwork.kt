@@ -23,18 +23,28 @@ import coil.request.ImageRequest
 fun SongArtwork(
     albumId: Long,
     modifier: Modifier = Modifier,
-    showArtwork: Boolean = true
+    showArtwork: Boolean = true,
+    lastModified: Long = 0L
 ) {
     val context = LocalContext.current
-    val artworkUri = remember(albumId) {
-        ContentUris.withAppendedId(
-            Uri.parse("content://media/external/audio/albumart"),
-            albumId
-        )
-    }
-    var isError by remember { mutableStateOf(false) }
+    var artworkData by remember(albumId, lastModified) { mutableStateOf<Any?>(null) }
+    var isError by remember(albumId, lastModified) { mutableStateOf(false) }
 
-    if (!showArtwork || isError) {
+    androidx.compose.runtime.LaunchedEffect(albumId, lastModified) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val customFile = java.io.File(context.filesDir, "custom_artwork/$albumId.jpg")
+            if (customFile.exists()) {
+                artworkData = customFile
+            } else {
+                artworkData = ContentUris.withAppendedId(
+                    Uri.parse("content://media/external/audio/albumart"),
+                    albumId
+                )
+            }
+        }
+    }
+
+    if (!showArtwork || isError || artworkData == null) {
         Box(
             modifier = modifier,
             contentAlignment = Alignment.Center
@@ -48,7 +58,8 @@ fun SongArtwork(
     } else {
         AsyncImage(
             model = ImageRequest.Builder(context)
-                .data(artworkUri)
+                .data(artworkData)
+                .memoryCacheKey("artwork_${albumId}_${lastModified}")
                 .crossfade(true)
                 .build(),
             contentDescription = "Album Artwork",

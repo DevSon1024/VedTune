@@ -26,4 +26,5 @@ data class SongsUiState(
 
 sealed interface SongsUiEvent : UiEvent {
     data class ShowError(val message: String) : SongsUiEvent
+    data class LaunchIntentSender(val intentSender: android.content.IntentSender) : SongsUiEvent
 }

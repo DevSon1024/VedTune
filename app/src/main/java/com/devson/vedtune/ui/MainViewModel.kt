@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import com.devson.vedtune.domain.repository.SettingsRepository
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -24,6 +26,28 @@ class MainViewModel @Inject constructor(
     private val playbackConnection: PlaybackConnection,
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
+
+    init {
+        viewModelScope.launch {
+            var isFirst = true
+            combine(
+                settingsRepository.folderFilterMode,
+                settingsRepository.blacklistedFolders,
+                settingsRepository.whitelistedFolders
+            ) { mode, black, white ->
+                Triple(mode, black, white)
+            }.collect {
+                if (isFirst) {
+                    isFirst = false
+                    if (settingsRepository.autoSyncOnStartup.first()) {
+                        syncLibrary()
+                    }
+                } else {
+                    syncLibrary()
+                }
+            }
+        }
+    }
 
     val showAlbumArt: StateFlow<Boolean> = settingsRepository.showAlbumArt
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)

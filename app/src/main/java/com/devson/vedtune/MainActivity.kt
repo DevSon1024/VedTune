@@ -52,14 +52,7 @@ class MainActivity : ComponentActivity() {
             android.Manifest.permission.READ_EXTERNAL_STORAGE
         }
         val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(this, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        if (hasPermission) {
-            lifecycleScope.launch {
-                val autoSync = viewModel.autoSyncOnStartup.value
-                if (autoSync) {
-                    viewModel.syncLibrary()
-                }
-            }
-        }
+        // The startup sync is now handled automatically by MainViewModel settings observer.
 
         setContent {
             val themeMode by viewModel.themeMode.collectAsState()
@@ -142,6 +135,46 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    private var mediaStoreObserver: android.database.ContentObserver? = null
+
+    override fun onResume() {
+        super.onResume()
+        registerObserverIfPermissionGranted()
+    }
+
+    private fun registerObserverIfPermissionGranted() {
+        if (mediaStoreObserver != null) return // Already registered
+
+        val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            android.Manifest.permission.READ_MEDIA_AUDIO
+        } else {
+            android.Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(this, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (hasPermission) {
+            val observer = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
+                override fun onChange(selfChange: Boolean) {
+                    super.onChange(selfChange)
+                    viewModel.syncLibrary()
+                }
+            }
+            contentResolver.registerContentObserver(
+                android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                true,
+                observer
+            )
+            mediaStoreObserver = observer
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mediaStoreObserver?.let {
+            contentResolver.unregisterContentObserver(it)
+            mediaStoreObserver = null
         }
     }
 }

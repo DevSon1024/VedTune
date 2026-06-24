@@ -284,6 +284,96 @@ class PlaybackConnection @Inject constructor(
         }
     }
 
+    fun playNext(song: Song) {
+        mediaController?.let { controller ->
+            val currentItemIndex = if (controller.mediaItemCount > 0) controller.currentMediaItemIndex else -1
+            val mediaItem = MediaItem.Builder()
+                .setMediaId(song.id.toString())
+                .setUri(ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, song.id))
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(song.title)
+                        .setArtist(song.artist)
+                        .setAlbumTitle(song.album)
+                        .setArtworkUri(Uri.parse("content://media/external/audio/albumart/${song.albumId}"))
+                        .build()
+                )
+                .build()
+            if (currentItemIndex != -1) {
+                var existingIndex = -1
+                for (i in 0 until controller.mediaItemCount) {
+                    if (controller.getMediaItemAt(i).mediaId == song.id.toString()) {
+                        existingIndex = i
+                        break
+                    }
+                }
+                if (existingIndex != -1) {
+                    controller.removeMediaItem(existingIndex)
+                }
+                val insertIndex = if (existingIndex != -1 && existingIndex <= currentItemIndex) {
+                    currentItemIndex
+                } else {
+                    currentItemIndex + 1
+                }
+                controller.addMediaItem(insertIndex, mediaItem)
+            } else {
+                controller.addMediaItem(mediaItem)
+                controller.prepare()
+                playWithFadeIn(controller)
+            }
+            scope.launch {
+                val currentQueue = repository.getQueue().toMutableList()
+                val indexInQueue = currentQueue.indexOfFirst { it.id == song.id }
+                if (indexInQueue != -1) {
+                    currentQueue.removeAt(indexInQueue)
+                }
+                val insertIndex = if (currentItemIndex != -1) {
+                    val index = currentQueue.indexOfFirst { it.id == currentSongId.value }
+                    if (index != -1) index + 1 else 0
+                } else {
+                    0
+                }
+                currentQueue.add(insertIndex.coerceIn(0, currentQueue.size), song)
+                repository.saveQueue(currentQueue)
+            }
+        }
+    }
+
+    fun playShuffle(song: Song, playlist: List<Song>) {
+        mediaController?.let { controller ->
+            val remaining = playlist.filter { it.id != song.id }.shuffled()
+            val fullList = listOf(song) + remaining
+            
+            val mediaItems = fullList.map { s ->
+                MediaItem.Builder()
+                    .setMediaId(s.id.toString())
+                    .setUri(ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, s.id))
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(s.title)
+                            .setArtist(s.artist)
+                            .setAlbumTitle(s.album)
+                            .setArtworkUri(Uri.parse("content://media/external/audio/albumart/${s.albumId}"))
+                            .build()
+                    )
+                    .build()
+            }
+            controller.setMediaItems(mediaItems)
+            controller.seekTo(0, 0L)
+            controller.prepare()
+            playWithFadeIn(controller)
+            
+            scope.launch {
+                repository.saveQueue(fullList)
+                dataStore.edit { preferences ->
+                    preferences[KEY_CURRENT_SON_ID] = song.id
+                    preferences[KEY_PLAYBACK_POSITION] = 0L
+                }
+            }
+        }
+    }
+
+
     fun clearQueue() {
         mediaController?.let { controller ->
             controller.stop()

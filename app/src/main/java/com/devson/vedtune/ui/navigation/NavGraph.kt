@@ -70,7 +70,15 @@ fun NavGraph(
     ) {
         composable(Screen.Songs.route) {
             val viewModel: SongsViewModel = hiltViewModel()
-            SongsScreen(viewModel = viewModel)
+            SongsScreen(
+                viewModel = viewModel,
+                onNavigateToAlbum = { albumId ->
+                    navController.navigate(Screen.AlbumDetails.createRoute(albumId))
+                },
+                onNavigateToArtist = { artistName ->
+                    navController.navigate(Screen.ArtistDetails.createRoute(artistName))
+                }
+            )
         }
         composable(Screen.Albums.route) {
             val viewModel: AlbumsViewModel = hiltViewModel()

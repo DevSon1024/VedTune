@@ -35,13 +35,17 @@ class MediaSyncEngine @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) {
 
+    private val syncMutex = kotlinx.coroutines.sync.Mutex()
+
     suspend fun performSync() = withContext(Dispatchers.IO) {
         if (!hasStoragePermission()) return@withContext
+        if (!syncMutex.tryLock()) return@withContext // Skip concurrent sync runs
 
-        //  Read active folder filter settings 
-        val filterMode = settingsRepository.folderFilterMode.first()
-        val blacklist = settingsRepository.blacklistedFolders.first()
-        val whitelist = settingsRepository.whitelistedFolders.first()
+        try {
+            //  Read active folder filter settings 
+            val filterMode = settingsRepository.folderFilterMode.first()
+            val blacklist = settingsRepository.blacklistedFolders.first()
+            val whitelist = settingsRepository.whitelistedFolders.first()
 
         //  1. Fetch current songs in Room (ID and dateModified) 
         val roomSongs = songDao.getSongIdAndModifiedMap()
@@ -130,6 +134,9 @@ class MediaSyncEngine @Inject constructor(
 
         //  6. Execute database sync in a single transaction 
         songDao.syncMediaStore(toInsertEntities, toDeleteIds)
+        } finally {
+            syncMutex.unlock()
+        }
     }
 
     private fun fetchFullMetadataForIds(ids: List<Long>): List<SongEntity> {
