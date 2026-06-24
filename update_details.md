@@ -18,3 +18,10 @@ Date: 2026-06-24 16:09:00 UTC
 - **Type:** Feature
 - **Solution:** Developed SongsUiState and SongsViewModel using reactive combined flows on Dispatchers.Default. Created SongsScreen Composable displaying song listings in list and grid views with Coil cover loader, sorting dropdown, and search text-fields. Wired into NavGraph using hiltViewModel. Cleaned up List icon deprecation warning to achieve 100% warning-free build.
 ---
+
+Date: 2026-06-24 16:12:00 UTC
+
+- **Issue:** Songs not displaying on initial launch due to missing runtime permission request.
+- **Type:** Bug
+- **Solution:** Added runtime storage permission check (READ_MEDIA_AUDIO / READ_EXTERNAL_STORAGE) and request launcher in SongsScreen empty state. When permission is granted, it automatically triggers library synchronization.
+---
