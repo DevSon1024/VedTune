@@ -26,6 +26,9 @@ interface SongDao {
     @Query("SELECT id, dateModified FROM songs")
     suspend fun getSongIdAndModifiedMap(): List<SongIdAndModified>
 
+    @Query("SELECT * FROM songs WHERE id IN (:ids)")
+    suspend fun getSongsByIds(ids: List<Long>): List<SongEntity>
+
     @Query("UPDATE songs SET isFavorite = :isFavorite WHERE id = :id")
     suspend fun updateFavoriteStatus(id: Long, isFavorite: Boolean)
 

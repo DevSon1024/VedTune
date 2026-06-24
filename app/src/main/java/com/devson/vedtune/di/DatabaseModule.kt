@@ -8,6 +8,7 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import com.devson.vedtune.data.local.AppDatabase
 import com.devson.vedtune.data.local.dao.SongDao
+import com.devson.vedtune.data.local.dao.QueueDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -28,13 +29,21 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "vedtune_database"
-        ).build()
+        )
+        .fallbackToDestructiveMigration()
+        .build()
     }
 
     @Provides
     @Singleton
     fun provideSongDao(database: AppDatabase): SongDao {
         return database.songDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideQueueDao(database: AppDatabase): QueueDao {
+        return database.queueDao()
     }
 
     @Provides

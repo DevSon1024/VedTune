@@ -1,6 +1,8 @@
 package com.devson.vedtune.data.repository
 
 import com.devson.vedtune.data.local.dao.SongDao
+import com.devson.vedtune.data.local.dao.QueueDao
+import com.devson.vedtune.data.local.entity.QueueItemEntity
 import com.devson.vedtune.data.mapper.toSong
 import com.devson.vedtune.data.sync.MediaSyncEngine
 import com.devson.vedtune.domain.model.Song
@@ -13,6 +15,7 @@ import javax.inject.Singleton
 @Singleton
 class MediaRepositoryImpl @Inject constructor(
     private val songDao: SongDao,
+    private val queueDao: QueueDao,
     private val syncEngine: MediaSyncEngine
 ) : MediaRepository {
 
@@ -36,5 +39,26 @@ class MediaRepositoryImpl @Inject constructor(
 
     override suspend fun synchronizeLibrary() {
         syncEngine.performSync()
+    }
+
+    override suspend fun getQueue(): List<Song> {
+        val queueItems = queueDao.getQueueItems()
+        if (queueItems.isEmpty()) return emptyList()
+        val songIds = queueItems.map { it.songId }
+        val songEntities = songDao.getSongsByIds(songIds)
+        val songsMap = songEntities.associateBy { it.id }
+        return queueItems.mapNotNull { item ->
+            songsMap[item.songId]?.toSong()
+        }
+    }
+
+    override suspend fun saveQueue(songs: List<Song>) {
+        val entities = songs.mapIndexed { index, song ->
+            QueueItemEntity(
+                songId = song.id,
+                orderIndex = index
+            )
+        }
+        queueDao.updateQueue(entities)
     }
 }

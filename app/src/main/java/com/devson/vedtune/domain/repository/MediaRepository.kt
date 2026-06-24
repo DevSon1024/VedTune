@@ -9,4 +9,6 @@ interface MediaRepository {
     suspend fun updateFavoriteStatus(id: Long, isFavorite: Boolean)
     suspend fun incrementPlayCount(id: Long)
     suspend fun synchronizeLibrary()
+    suspend fun getQueue(): List<Song>
+    suspend fun saveQueue(songs: List<Song>)
 }

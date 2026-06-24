@@ -1,6 +1,7 @@
 package com.devson.vedtune.di
 
 import com.devson.vedtune.data.local.dao.SongDao
+import com.devson.vedtune.data.local.dao.QueueDao
 import com.devson.vedtune.data.repository.MediaRepositoryImpl
 import com.devson.vedtune.data.sync.MediaSyncEngine
 import com.devson.vedtune.domain.repository.MediaRepository
@@ -48,8 +49,9 @@ object AppModule {
     @Singleton
     fun provideMediaRepository(
         songDao: SongDao,
+        queueDao: QueueDao,
         syncEngine: MediaSyncEngine
     ): MediaRepository {
-        return MediaRepositoryImpl(songDao, syncEngine)
+        return MediaRepositoryImpl(songDao, queueDao, syncEngine)
     }
 }
