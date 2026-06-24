@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.devson.vedtune.domain.model.Song
+import com.devson.vedtune.ui.components.SongArtwork
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -416,45 +417,6 @@ fun SongGridItem(
                 maxLines = 1
             )
         }
-    }
-}
-
-@Composable
-fun SongArtwork(
-    albumId: Long,
-    modifier: Modifier = Modifier
-) {
-    val context = LocalContext.current
-    val artworkUri = remember(albumId) {
-        ContentUris.withAppendedId(
-            Uri.parse("content://media/external/audio/albumart"),
-            albumId
-        )
-    }
-    var isError by remember { mutableStateOf(false) }
-
-    if (isError) {
-        Box(
-            modifier = modifier,
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = "Music Placeholder",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    } else {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(artworkUri)
-                .crossfade(true)
-                .build(),
-            contentDescription = "Album Artwork",
-            contentScale = ContentScale.Crop,
-            onError = { isError = true },
-            modifier = modifier
-        )
     }
 }
 

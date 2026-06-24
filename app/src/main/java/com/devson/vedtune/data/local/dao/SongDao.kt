@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.devson.vedtune.data.local.entity.SongEntity
+import com.devson.vedtune.data.local.entity.AlbumEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -34,6 +35,12 @@ interface SongDao {
 
     @Query("UPDATE songs SET playCount = playCount + 1, lastPlayed = :timestamp WHERE id = :id")
     suspend fun incrementPlayCount(id: Long, timestamp: Long)
+
+    @Query("SELECT albumId, album, artist, COUNT(*) as songCount FROM songs GROUP BY albumId ORDER BY album ASC")
+    fun getAllAlbums(): Flow<List<AlbumEntity>>
+
+    @Query("SELECT * FROM songs WHERE albumId = :albumId ORDER BY track ASC, title ASC")
+    fun getSongsByAlbumId(albumId: Long): Flow<List<SongEntity>>
 
     @Transaction
     suspend fun syncMediaStore(

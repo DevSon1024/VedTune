@@ -37,7 +37,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.devson.vedtune.domain.model.Song
-import com.devson.vedtune.ui.songs.SongArtwork
+import com.devson.vedtune.ui.components.SongArtwork
 
 @Composable
 fun MiniPlayer(
