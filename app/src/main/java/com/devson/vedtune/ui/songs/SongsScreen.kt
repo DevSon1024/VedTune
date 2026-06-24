@@ -307,7 +307,7 @@ fun SongsScreen(
                         contentPadding = PaddingValues(bottom = 16.dp)
                     ) {
                         items(uiState.songs, key = { it.id }) { song ->
-                            SongGridItem(song = song, onClick = { /* TODO: Playback implementation in Phase 4 */ })
+                            SongGridItem(song = song, onClick = { viewModel.playSong(song) })
                         }
                     }
                 }
@@ -318,7 +318,7 @@ fun SongsScreen(
                         contentPadding = PaddingValues(bottom = 16.dp)
                     ) {
                         items(uiState.songs, key = { it.id }) { song ->
-                            SongListItem(song = song, onClick = { /* TODO: Playback implementation in Phase 4 */ })
+                            SongListItem(song = song, onClick = { viewModel.playSong(song) })
                         }
                     }
                 }

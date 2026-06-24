@@ -2,7 +2,9 @@ package com.devson.vedtune.ui.songs
 
 import androidx.lifecycle.viewModelScope
 import com.devson.vedtune.core.BaseViewModel
+import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.domain.repository.MediaRepository
+import com.devson.vedtune.player.PlaybackConnection
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,7 +15,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SongsViewModel @Inject constructor(
-    private val repository: MediaRepository
+    private val repository: MediaRepository,
+    private val playbackConnection: PlaybackConnection
 ) : BaseViewModel<SongsUiState, SongsUiEvent>(SongsUiState(isLoading = true)) {
 
     private val _searchQuery = MutableStateFlow("")
@@ -74,6 +77,10 @@ class SongsViewModel @Inject constructor(
     fun toggleLayoutView() {
         val newGridView = !currentState.isGridView
         updateState { it.copy(isGridView = newGridView) }
+    }
+
+    fun playSong(song: Song) {
+        playbackConnection.playSong(song, currentState.songs)
     }
 
     fun refresh() {

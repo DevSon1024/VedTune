@@ -25,3 +25,10 @@ Date: 2026-06-24 16:12:00 UTC
 - **Type:** Bug
 - **Solution:** Added runtime storage permission check (READ_MEDIA_AUDIO / READ_EXTERNAL_STORAGE) and request launcher in SongsScreen empty state. When permission is granted, it automatically triggers library synchronization.
 ---
+
+Date: 2026-06-24 16:16:00 UTC
+
+- **Issue:** Background media playback, notification controls, and service boundary management.
+- **Type:** Feature
+- **Solution:** Configured foreground service declarations and permissions in AndroidManifest.xml. Added PlayerModule Hilt bindings for AudioAttributes and ExoPlayer. Implemented MusicService (extending MediaSessionService) and PlaybackConnection (bridging MediaController asynchronously using buildAsync). Bound click listeners on SongsScreen to trigger VM and connection-level queue playback.
+---
