@@ -10,7 +10,9 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import android.net.Uri
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
@@ -71,6 +73,7 @@ class PlaybackConnection @Inject constructor(
         private val KEY_REPEAT_MODE = intPreferencesKey("repeat_mode")
         private val KEY_SHUFFLE_MODE = booleanPreferencesKey("shuffle_mode")
         private val KEY_AUTOPLAY_ON_STARTUP = booleanPreferencesKey("autoplay_on_startup")
+        private val KEY_AUDIO_FADE_IN_ENABLED = booleanPreferencesKey("audio_fade_in_enabled")
     }
 
     init {
@@ -203,6 +206,14 @@ class PlaybackConnection @Inject constructor(
                                     MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                                     s.id
                                 ))
+                                .setMediaMetadata(
+                                    MediaMetadata.Builder()
+                                        .setTitle(s.title)
+                                        .setArtist(s.artist)
+                                        .setAlbumTitle(s.album)
+                                        .setArtworkUri(Uri.parse("content://media/external/audio/albumart/${s.albumId}"))
+                                        .build()
+                                )
                                 .build()
                         }
                         controller.setMediaItems(mediaItems)
@@ -223,7 +234,7 @@ class PlaybackConnection @Inject constructor(
                         
                         val autoplay = preferences[KEY_AUTOPLAY_ON_STARTUP] ?: false
                         if (autoplay) {
-                            controller.play()
+                            playWithFadeIn(controller)
                         }
                         
                         updateState()
@@ -245,6 +256,14 @@ class PlaybackConnection @Inject constructor(
                         MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                         s.id
                     ))
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(s.title)
+                            .setArtist(s.artist)
+                            .setAlbumTitle(s.album)
+                            .setArtworkUri(Uri.parse("content://media/external/audio/albumart/${s.albumId}"))
+                            .build()
+                    )
                     .build()
             }
             controller.setMediaItems(mediaItems)
@@ -253,7 +272,7 @@ class PlaybackConnection @Inject constructor(
                 controller.seekTo(index, 0L)
             }
             controller.prepare()
-            controller.play()
+            playWithFadeIn(controller)
 
             scope.launch {
                 repository.saveQueue(playlist)
@@ -282,8 +301,31 @@ class PlaybackConnection @Inject constructor(
         }
     }
 
+    private fun playWithFadeIn(controller: MediaController) {
+        scope.launch {
+            val preferences = dataStore.data.first()
+            val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
+            if (fadeIn) {
+                controller.volume = 0f
+                controller.play()
+                var vol = 0f
+                while (vol < 1.0f && controller.isPlaying) {
+                    delay(40)
+                    vol += 0.1f
+                    controller.volume = vol.coerceAtMost(1f)
+                }
+                if (controller.isPlaying) {
+                    controller.volume = 1f
+                }
+            } else {
+                controller.volume = 1f
+                controller.play()
+            }
+        }
+    }
+
     fun play() {
-        mediaController?.play()
+        mediaController?.let { playWithFadeIn(it) }
     }
 
     fun pause() {

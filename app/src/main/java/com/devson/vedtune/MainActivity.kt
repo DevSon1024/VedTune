@@ -64,6 +64,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by viewModel.themeMode.collectAsState()
             val dynamicColorsEnabled by viewModel.dynamicColorsEnabled.collectAsState()
+            val defaultStartScreen by viewModel.defaultStartScreen.collectAsState()
 
             vedtuneTheme(themeMode = themeMode, dynamicColor = dynamicColorsEnabled) {
                 val navController = rememberNavController()
@@ -136,6 +137,7 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     NavGraph(
                         navController = navController,
+                        startDestination = defaultStartScreen,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }

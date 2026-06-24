@@ -52,6 +52,7 @@ fun SongArtwork(
                 .crossfade(true)
                 .build(),
             contentDescription = "Album Artwork",
+            modifier = modifier,
             contentScale = ContentScale.Crop,
             onError = { isError = true },
             onSuccess = { isError = false }

@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import android.content.Intent
+import android.media.audiofx.AudioEffect
+import android.widget.Toast
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedButton
@@ -22,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,7 +50,10 @@ fun SettingsScreen(
     val themeMode by viewModel.themeMode.collectAsState()
     val dynamicColorsEnabled by viewModel.dynamicColorsEnabled.collectAsState()
     val autoSyncOnStartup by viewModel.autoSyncOnStartup.collectAsState()
+    val audioFadeInEnabled by viewModel.audioFadeInEnabled.collectAsState()
+    val defaultStartScreen by viewModel.defaultStartScreen.collectAsState()
 
+    val context = LocalContext.current
     var queueClearedMessageVisible by remember { mutableStateOf(false) }
 
     Column(
@@ -129,6 +136,50 @@ fun SettingsScreen(
             checked = autoSyncOnStartup,
             onCheckedChange = { viewModel.setAutoSyncOnStartup(it) }
         )
+
+        SettingSwitchRow(
+            title = "Audio Fade-in on Play/Resume",
+            description = "Gradually fade in sound when starting or resuming playback.",
+            checked = audioFadeInEnabled,
+            onCheckedChange = { viewModel.setAudioFadeInEnabled(it) }
+        )
+
+        DefaultStartScreenSelector(
+            currentScreen = defaultStartScreen,
+            onScreenSelected = { viewModel.setDefaultStartScreen(it) }
+        )
+
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "System Equalizer",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Launch the system audio equalizer control panel to adjust sound settings.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            OutlinedButton(
+                onClick = {
+                    try {
+                        val intent = Intent(AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL).apply {
+                            putExtra(AudioEffect.EXTRA_PACKAGE_NAME, context.packageName)
+                            putExtra(AudioEffect.EXTRA_CONTENT_TYPE, AudioEffect.CONTENT_TYPE_MUSIC)
+                        }
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "System Equalizer not supported on this device.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            ) {
+                Text(text = "Open Equalizer")
+            }
+        }
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
@@ -266,5 +317,45 @@ fun SettingSwitchRow(
             checked = checked,
             onCheckedChange = onCheckedChange
         )
+    }
+}
+
+@Composable
+fun DefaultStartScreenSelector(
+    currentScreen: String,
+    onScreenSelected: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "Default Start Screen",
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("songs" to "Songs", "albums" to "Albums", "artists" to "Artists", "playlists" to "Playlists").forEach { (screen, label) ->
+                val isSelected = currentScreen == screen
+                if (isSelected) {
+                    FilledTonalButton(
+                        onClick = { onScreenSelected(screen) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(text = label, maxLines = 1, style = MaterialTheme.typography.bodySmall)
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { onScreenSelected(screen) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(text = label, maxLines = 1, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
     }
 }

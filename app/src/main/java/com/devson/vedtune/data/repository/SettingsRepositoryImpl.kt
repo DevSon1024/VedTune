@@ -26,6 +26,8 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         private val KEY_DYNAMIC_COLORS_ENABLED = booleanPreferencesKey("dynamic_colors_enabled")
         private val KEY_AUTO_SYNC_ON_STARTUP = booleanPreferencesKey("auto_sync_on_startup")
+        private val KEY_AUDIO_FADE_IN_ENABLED = booleanPreferencesKey("audio_fade_in_enabled")
+        private val KEY_DEFAULT_START_SCREEN = stringPreferencesKey("default_start_screen")
     }
 
     override val showAlbumArt: Flow<Boolean> = dataStore.data.map { preferences ->
@@ -54,6 +56,14 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override val autoSyncOnStartup: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[KEY_AUTO_SYNC_ON_STARTUP] ?: true
+    }
+
+    override val audioFadeInEnabled: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
+    }
+
+    override val defaultStartScreen: Flow<String> = dataStore.data.map { preferences ->
+        preferences[KEY_DEFAULT_START_SCREEN] ?: "songs"
     }
 
     override suspend fun setShowAlbumArt(show: Boolean) {
@@ -95,6 +105,18 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setAutoSyncOnStartup(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[KEY_AUTO_SYNC_ON_STARTUP] = enabled
+        }
+    }
+
+    override suspend fun setAudioFadeInEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[KEY_AUDIO_FADE_IN_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setDefaultStartScreen(screen: String) {
+        dataStore.edit { preferences ->
+            preferences[KEY_DEFAULT_START_SCREEN] = screen
         }
     }
 

@@ -40,6 +40,9 @@ class MainViewModel @Inject constructor(
     val autoSyncOnStartup: StateFlow<Boolean> = settingsRepository.autoSyncOnStartup
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    val defaultStartScreen: StateFlow<String> = settingsRepository.defaultStartScreen
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "songs")
+
     val isPlaying: StateFlow<Boolean> = playbackConnection.isPlaying
 
     val currentSong: StateFlow<Song?> = playbackConnection.currentSongId

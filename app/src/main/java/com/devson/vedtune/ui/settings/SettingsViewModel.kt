@@ -39,6 +39,12 @@ class SettingsViewModel @Inject constructor(
     val autoSyncOnStartup: StateFlow<Boolean> = settingsRepository.autoSyncOnStartup
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    val audioFadeInEnabled: StateFlow<Boolean> = settingsRepository.audioFadeInEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val defaultStartScreen: StateFlow<String> = settingsRepository.defaultStartScreen
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "songs")
+
     fun setShowAlbumArt(show: Boolean) {
         viewModelScope.launch {
             settingsRepository.setShowAlbumArt(show)
@@ -78,6 +84,18 @@ class SettingsViewModel @Inject constructor(
     fun setAutoSyncOnStartup(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setAutoSyncOnStartup(enabled)
+        }
+    }
+
+    fun setAudioFadeInEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setAudioFadeInEnabled(enabled)
+        }
+    }
+
+    fun setDefaultStartScreen(screen: String) {
+        viewModelScope.launch {
+            settingsRepository.setDefaultStartScreen(screen)
         }
     }
 

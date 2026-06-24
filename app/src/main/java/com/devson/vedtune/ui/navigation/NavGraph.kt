@@ -2,6 +2,8 @@ package com.devson.vedtune.ui.navigation
 
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
@@ -54,12 +56,15 @@ sealed class Screen(val route: String) {
 @Composable
 fun NavGraph(
     navController: NavHostController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    startDestination: String = Screen.Songs.route
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Songs.route,
-        modifier = modifier
+        startDestination = startDestination,
+        modifier = modifier,
+        enterTransition = { fadeIn(animationSpec = tween(300)) },
+        exitTransition = { fadeOut(animationSpec = tween(300)) }
     ) {
         composable(Screen.Songs.route) {
             val viewModel: SongsViewModel = hiltViewModel()
@@ -92,7 +97,21 @@ fun NavGraph(
                 }
             )
         }
-        composable(Screen.Settings.route) {
+        composable(
+            route = Screen.Settings.route,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(350)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(350)
+                )
+            }
+        ) {
             val viewModel: SettingsViewModel = hiltViewModel()
             SettingsScreen(viewModel = viewModel)
         }
@@ -100,7 +119,19 @@ fun NavGraph(
             route = Screen.ArtistDetails.route,
             arguments = listOf(
                 navArgument("artistName") { type = NavType.StringType }
-            )
+            ),
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(350)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(350)
+                )
+            }
         ) {
             val viewModel: ArtistDetailsViewModel = hiltViewModel()
             ArtistDetailsScreen(
@@ -133,7 +164,19 @@ fun NavGraph(
             route = Screen.AlbumDetails.route,
             arguments = listOf(
                 navArgument("albumId") { type = NavType.LongType }
-            )
+            ),
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(350)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(350)
+                )
+            }
         ) {
             val viewModel: AlbumDetailsViewModel = hiltViewModel()
             AlbumDetailsScreen(
@@ -145,7 +188,19 @@ fun NavGraph(
             route = Screen.PlaylistDetails.route,
             arguments = listOf(
                 navArgument("playlistId") { type = NavType.LongType }
-            )
+            ),
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(350)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(350)
+                )
+            }
         ) {
             val viewModel: PlaylistDetailsViewModel = hiltViewModel()
             PlaylistDetailsScreen(

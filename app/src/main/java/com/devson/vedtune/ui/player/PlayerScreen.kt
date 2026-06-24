@@ -40,6 +40,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,10 +72,24 @@ fun PlayerScreen(
 
     var showSleepTimerDialog by remember { mutableStateOf(false) }
 
+    val artworkScale by animateFloatAsState(
+        targetValue = if (isPlaying) 1.0f else 0.88f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "ArtworkScale"
+    )
+
+    val gradientColors = listOf(
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+        MaterialTheme.colorScheme.background
+    )
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(Brush.verticalGradient(gradientColors))
             .statusBarsPadding()
     ) {
         if (song == null) {
@@ -145,6 +164,7 @@ fun PlayerScreen(
                     modifier = Modifier
                         .fillMaxWidth(0.85f)
                         .aspectRatio(1f)
+                        .scale(artworkScale)
                         .clip(MaterialTheme.shapes.extraLarge)
                 ) {
                     SongArtwork(
