@@ -1,5 +1,9 @@
 package com.devson.vedtune.di
 
+import com.devson.vedtune.data.local.dao.SongDao
+import com.devson.vedtune.data.repository.MediaRepositoryImpl
+import com.devson.vedtune.data.sync.MediaSyncEngine
+import com.devson.vedtune.domain.repository.MediaRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -39,4 +43,13 @@ object AppModule {
     @Singleton
     @MainDispatcher
     fun provideMainDispatcher(): CoroutineDispatcher = Dispatchers.Main
+
+    @Provides
+    @Singleton
+    fun provideMediaRepository(
+        songDao: SongDao,
+        syncEngine: MediaSyncEngine
+    ): MediaRepository {
+        return MediaRepositoryImpl(songDao, syncEngine)
+    }
 }
