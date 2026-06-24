@@ -6,9 +6,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.devson.vedtune.ui.songs.SongsScreen
+import com.devson.vedtune.ui.songs.SongsViewModel
 
 sealed class Screen(val route: String) {
     data object Songs : Screen("songs")
@@ -29,7 +32,8 @@ fun NavGraph(
         modifier = modifier
     ) {
         composable(Screen.Songs.route) {
-            PlaceholderScreen(title = "Songs Screen")
+            val viewModel: SongsViewModel = hiltViewModel()
+            SongsScreen(viewModel = viewModel)
         }
         composable(Screen.Albums.route) {
             PlaceholderScreen(title = "Albums Screen")
