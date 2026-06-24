@@ -47,7 +47,9 @@ fun MiniPlayer(
     onPlayPauseClick: () -> Unit,
     onSkipNextClick: () -> Unit,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showArtwork: Boolean = true,
+    showProgress: Boolean = true
 ) {
     AnimatedVisibility(
         visible = song != null,
@@ -67,15 +69,17 @@ fun MiniPlayer(
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     // Thin progress line at the very top of the card
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(2.dp)
-                            .align(Alignment.TopCenter),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                    )
+                    if (showProgress) {
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(2.dp)
+                                .align(Alignment.TopCenter),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        )
+                    }
 
                     Row(
                         modifier = Modifier
@@ -87,7 +91,8 @@ fun MiniPlayer(
                             albumId = song.albumId,
                             modifier = Modifier
                                 .size(40.dp)
-                                .clip(MaterialTheme.shapes.small)
+                                .clip(MaterialTheme.shapes.small),
+                            showArtwork = showArtwork
                         )
 
                         Spacer(modifier = Modifier.width(12.dp))

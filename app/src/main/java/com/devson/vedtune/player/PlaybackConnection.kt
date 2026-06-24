@@ -70,6 +70,7 @@ class PlaybackConnection @Inject constructor(
         private val KEY_PLAYBACK_POSITION = longPreferencesKey("playback_position")
         private val KEY_REPEAT_MODE = intPreferencesKey("repeat_mode")
         private val KEY_SHUFFLE_MODE = booleanPreferencesKey("shuffle_mode")
+        private val KEY_AUTOPLAY_ON_STARTUP = booleanPreferencesKey("autoplay_on_startup")
     }
 
     init {
@@ -219,6 +220,12 @@ class PlaybackConnection @Inject constructor(
                         
                         _repeatMode.value = savedRepeatMode
                         _shuffleModeEnabled.value = savedShuffleMode
+                        
+                        val autoplay = preferences[KEY_AUTOPLAY_ON_STARTUP] ?: false
+                        if (autoplay) {
+                            controller.play()
+                        }
+                        
                         updateState()
                     }
                 } else {
@@ -254,6 +261,23 @@ class PlaybackConnection @Inject constructor(
                     preferences[KEY_CURRENT_SON_ID] = song.id
                     preferences[KEY_PLAYBACK_POSITION] = 0L
                 }
+            }
+        }
+    }
+
+    fun clearQueue() {
+        mediaController?.let { controller ->
+            controller.stop()
+            controller.clearMediaItems()
+        }
+        _currentSongId.value = null
+        _playbackPosition.value = 0L
+        _playbackDuration.value = 0L
+        scope.launch {
+            repository.saveQueue(emptyList())
+            dataStore.edit { preferences ->
+                preferences.remove(KEY_CURRENT_SON_ID)
+                preferences[KEY_PLAYBACK_POSITION] = 0L
             }
         }
     }

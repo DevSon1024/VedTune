@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import com.devson.vedtune.data.local.entity.SongEntity
 import com.devson.vedtune.data.local.entity.AlbumEntity
+import com.devson.vedtune.data.local.entity.ArtistEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -41,6 +42,12 @@ interface SongDao {
 
     @Query("SELECT * FROM songs WHERE albumId = :albumId ORDER BY track ASC, title ASC")
     fun getSongsByAlbumId(albumId: Long): Flow<List<SongEntity>>
+
+    @Query("SELECT artist, COUNT(*) as songCount, COUNT(DISTINCT albumId) as albumCount FROM songs GROUP BY artist ORDER BY artist ASC")
+    fun getAllArtists(): Flow<List<ArtistEntity>>
+
+    @Query("SELECT * FROM songs WHERE artist = :artist ORDER BY album ASC, title ASC")
+    fun getSongsByArtist(artist: String): Flow<List<SongEntity>>
 
     @Transaction
     suspend fun syncMediaStore(

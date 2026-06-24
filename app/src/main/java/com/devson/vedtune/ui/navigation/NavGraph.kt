@@ -22,6 +22,12 @@ import com.devson.vedtune.ui.albums.AlbumsScreen
 import com.devson.vedtune.ui.albums.AlbumsViewModel
 import com.devson.vedtune.ui.albums.AlbumDetailsScreen
 import com.devson.vedtune.ui.albums.AlbumDetailsViewModel
+import com.devson.vedtune.ui.artists.ArtistsScreen
+import com.devson.vedtune.ui.artists.ArtistsViewModel
+import com.devson.vedtune.ui.artists.ArtistDetailsScreen
+import com.devson.vedtune.ui.artists.ArtistDetailsViewModel
+import com.devson.vedtune.ui.settings.SettingsScreen
+import com.devson.vedtune.ui.settings.SettingsViewModel
 
 sealed class Screen(val route: String) {
     data object Songs : Screen("songs")
@@ -32,6 +38,9 @@ sealed class Screen(val route: String) {
     data object Player : Screen("player")
     data object AlbumDetails : Screen("album_details/{albumId}") {
         fun createRoute(albumId: Long) = "album_details/$albumId"
+    }
+    data object ArtistDetails : Screen("artist_details/{artistName}") {
+        fun createRoute(artistName: String) = "artist_details/$artistName"
     }
 }
 
@@ -59,13 +68,32 @@ fun NavGraph(
             )
         }
         composable(Screen.Artists.route) {
-            PlaceholderScreen(title = "Artists Screen")
+            val viewModel: ArtistsViewModel = hiltViewModel()
+            ArtistsScreen(
+                viewModel = viewModel,
+                onArtistClick = { artistName ->
+                    navController.navigate(Screen.ArtistDetails.createRoute(artistName))
+                }
+            )
         }
         composable(Screen.Playlists.route) {
             PlaceholderScreen(title = "Playlists Screen")
         }
         composable(Screen.Settings.route) {
-            PlaceholderScreen(title = "Settings Screen")
+            val viewModel: SettingsViewModel = hiltViewModel()
+            SettingsScreen(viewModel = viewModel)
+        }
+        composable(
+            route = Screen.ArtistDetails.route,
+            arguments = listOf(
+                navArgument("artistName") { type = NavType.StringType }
+            )
+        ) {
+            val viewModel: ArtistDetailsViewModel = hiltViewModel()
+            ArtistDetailsScreen(
+                viewModel = viewModel,
+                onBackClick = { navController.popBackStack() }
+            )
         }
         composable(
             route = Screen.Player.route,

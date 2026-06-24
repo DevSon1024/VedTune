@@ -53,6 +53,8 @@ class MainActivity : ComponentActivity() {
                 val isPlaying by viewModel.isPlaying.collectAsState()
                 val position by viewModel.playbackPosition.collectAsState()
                 val duration by viewModel.playbackDuration.collectAsState()
+                val showAlbumArt by viewModel.showAlbumArt.collectAsState()
+                val showMiniPlayerProgress by viewModel.showMiniPlayerProgress.collectAsState()
 
                 val progress = remember(position, duration) {
                     if (duration > 0) position.toFloat() / duration.toFloat() else 0f
@@ -75,7 +77,9 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onClick = {
                                         navController.navigate(Screen.Player.route)
-                                    }
+                                    },
+                                    showArtwork = showAlbumArt,
+                                    showProgress = showMiniPlayerProgress
                                 )
 
                                 val items = listOf(

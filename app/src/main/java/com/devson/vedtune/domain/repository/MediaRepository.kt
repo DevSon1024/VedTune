@@ -2,6 +2,7 @@ package com.devson.vedtune.domain.repository
 
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.domain.model.Album
+import com.devson.vedtune.domain.model.Artist
 import kotlinx.coroutines.flow.Flow
 
 interface MediaRepository {
@@ -14,4 +15,6 @@ interface MediaRepository {
     suspend fun saveQueue(songs: List<Song>)
     fun getAllAlbums(): Flow<List<Album>>
     fun getSongsByAlbumId(albumId: Long): Flow<List<Song>>
+    fun getAllArtists(): Flow<List<Artist>>
+    fun getSongsByArtist(artist: String): Flow<List<Song>>
 }

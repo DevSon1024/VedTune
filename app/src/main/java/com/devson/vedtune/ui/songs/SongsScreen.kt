@@ -308,7 +308,11 @@ fun SongsScreen(
                         contentPadding = PaddingValues(bottom = 16.dp)
                     ) {
                         items(uiState.songs, key = { it.id }) { song ->
-                            SongGridItem(song = song, onClick = { viewModel.playSong(song) })
+                            SongGridItem(
+                                song = song,
+                                onClick = { viewModel.playSong(song) },
+                                showArtwork = uiState.showArtwork
+                            )
                         }
                     }
                 }
@@ -319,7 +323,11 @@ fun SongsScreen(
                         contentPadding = PaddingValues(bottom = 16.dp)
                     ) {
                         items(uiState.songs, key = { it.id }) { song ->
-                            SongListItem(song = song, onClick = { viewModel.playSong(song) })
+                            SongListItem(
+                                song = song,
+                                onClick = { viewModel.playSong(song) },
+                                showArtwork = uiState.showArtwork
+                            )
                         }
                     }
                 }
@@ -331,7 +339,8 @@ fun SongsScreen(
 @Composable
 fun SongListItem(
     song: Song,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    showArtwork: Boolean = true
 ) {
     Card(
         modifier = Modifier
@@ -350,7 +359,8 @@ fun SongListItem(
                 modifier = Modifier
                     .size(56.dp)
                     .clip(MaterialTheme.shapes.small)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                showArtwork = showArtwork
             )
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -383,7 +393,8 @@ fun SongListItem(
 @Composable
 fun SongGridItem(
     song: Song,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    showArtwork: Boolean = true
 ) {
     Card(
         modifier = Modifier
@@ -400,7 +411,8 @@ fun SongGridItem(
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .clip(MaterialTheme.shapes.medium)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                showArtwork = showArtwork
             )
 
             Spacer(modifier = Modifier.height(8.dp))

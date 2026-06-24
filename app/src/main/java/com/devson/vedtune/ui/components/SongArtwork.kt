@@ -22,7 +22,8 @@ import coil.request.ImageRequest
 @Composable
 fun SongArtwork(
     albumId: Long,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showArtwork: Boolean = true
 ) {
     val context = LocalContext.current
     val artworkUri = remember(albumId) {
@@ -33,7 +34,7 @@ fun SongArtwork(
     }
     var isError by remember { mutableStateOf(false) }
 
-    if (isError) {
+    if (!showArtwork || isError) {
         Box(
             modifier = modifier,
             contentAlignment = Alignment.Center

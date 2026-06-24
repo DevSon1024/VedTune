@@ -1,8 +1,8 @@
-package com.devson.vedtune.ui.albums
+package com.devson.vedtune.ui.artists
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.devson.vedtune.domain.model.Album
+import com.devson.vedtune.domain.model.Artist
 import com.devson.vedtune.domain.repository.MediaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,30 +12,23 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
-import com.devson.vedtune.domain.repository.SettingsRepository
-
 @HiltViewModel
-class AlbumsViewModel @Inject constructor(
-    private val repository: MediaRepository,
-    private val settingsRepository: SettingsRepository
+class ArtistsViewModel @Inject constructor(
+    private val repository: MediaRepository
 ) : ViewModel() {
-
-    val showAlbumArt: StateFlow<Boolean> = settingsRepository.showAlbumArt
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
-    val albums: StateFlow<List<Album>> = combine(
-        repository.getAllAlbums(),
+    val artists: StateFlow<List<Artist>> = combine(
+        repository.getAllArtists(),
         _searchQuery
-    ) { albums, query ->
+    ) { artists, query ->
         if (query.isBlank()) {
-            albums
+            artists
         } else {
-            albums.filter {
-                it.title.contains(query, ignoreCase = true) ||
-                it.artist.contains(query, ignoreCase = true)
+            artists.filter {
+                it.name.contains(query, ignoreCase = true)
             }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

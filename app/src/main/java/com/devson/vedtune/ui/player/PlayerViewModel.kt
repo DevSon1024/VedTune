@@ -15,12 +15,21 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import com.devson.vedtune.domain.repository.SettingsRepository
+
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     private val repository: MediaRepository,
-    private val playbackConnection: PlaybackConnection
+    private val playbackConnection: PlaybackConnection,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
+
+    val showAlbumArt: StateFlow<Boolean> = settingsRepository.showAlbumArt
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val showRemainingTime: StateFlow<Boolean> = settingsRepository.showRemainingTime
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val isPlaying: StateFlow<Boolean> = playbackConnection.isPlaying
 

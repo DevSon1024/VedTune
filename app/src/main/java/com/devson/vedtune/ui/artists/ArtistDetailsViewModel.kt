@@ -1,9 +1,9 @@
-package com.devson.vedtune.ui.albums
+package com.devson.vedtune.ui.artists
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.devson.vedtune.domain.model.Album
+import com.devson.vedtune.domain.model.Artist
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.domain.repository.MediaRepository
 import com.devson.vedtune.player.PlaybackConnection
@@ -13,11 +13,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
-
 import com.devson.vedtune.domain.repository.SettingsRepository
 
 @HiltViewModel
-class AlbumDetailsViewModel @Inject constructor(
+class ArtistDetailsViewModel @Inject constructor(
     private val repository: MediaRepository,
     private val playbackConnection: PlaybackConnection,
     private val settingsRepository: SettingsRepository,
@@ -27,19 +26,18 @@ class AlbumDetailsViewModel @Inject constructor(
     val showAlbumArt: StateFlow<Boolean> = settingsRepository.showAlbumArt
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
-    val albumId: Long = checkNotNull(savedStateHandle["albumId"])
+    val artistName: String = checkNotNull(savedStateHandle["artistName"])
 
-    val songs: StateFlow<List<Song>> = repository.getSongsByAlbumId(albumId)
+    val songs: StateFlow<List<Song>> = repository.getSongsByArtist(artistName)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val albumDetails: StateFlow<Album?> = songs.map { songList ->
+    val artistDetails: StateFlow<Artist?> = songs.map { songList ->
         if (songList.isNotEmpty()) {
-            val firstSong = songList.first()
-            Album(
-                id = albumId,
-                title = firstSong.album,
-                artist = firstSong.artist,
-                songCount = songList.size
+            val distinctAlbumsCount = songList.map { it.albumId }.distinct().size
+            Artist(
+                name = artistName,
+                songCount = songList.size,
+                albumCount = distinctAlbumsCount
             )
         } else {
             null
@@ -50,14 +48,14 @@ class AlbumDetailsViewModel @Inject constructor(
         playbackConnection.playSong(song, songs.value)
     }
 
-    fun playAlbum() {
+    fun playArtist() {
         val songList = songs.value
         if (songList.isNotEmpty()) {
             playbackConnection.playSong(songList.first(), songList)
         }
     }
 
-    fun shuffleAlbum() {
+    fun shuffleArtist() {
         val songList = songs.value
         if (songList.isNotEmpty()) {
             val shuffled = songList.shuffled()

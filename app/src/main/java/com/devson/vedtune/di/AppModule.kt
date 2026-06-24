@@ -5,6 +5,10 @@ import com.devson.vedtune.data.local.dao.QueueDao
 import com.devson.vedtune.data.repository.MediaRepositoryImpl
 import com.devson.vedtune.data.sync.MediaSyncEngine
 import com.devson.vedtune.domain.repository.MediaRepository
+import com.devson.vedtune.domain.repository.SettingsRepository
+import com.devson.vedtune.data.repository.SettingsRepositoryImpl
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -53,5 +57,14 @@ object AppModule {
         syncEngine: MediaSyncEngine
     ): MediaRepository {
         return MediaRepositoryImpl(songDao, queueDao, syncEngine)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSettingsRepository(
+        dataStore: DataStore<Preferences>,
+        queueDao: QueueDao
+    ): SettingsRepository {
+        return SettingsRepositoryImpl(dataStore, queueDao)
     }
 }

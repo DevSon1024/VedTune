@@ -20,7 +20,8 @@ data class SongsUiState(
     val isGridView: Boolean = false,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val showArtwork: Boolean = true
 ) : UiState
 
 sealed interface SongsUiEvent : UiEvent {

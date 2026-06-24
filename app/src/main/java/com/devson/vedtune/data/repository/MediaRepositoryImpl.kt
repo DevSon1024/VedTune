@@ -7,6 +7,8 @@ import com.devson.vedtune.data.mapper.toSong
 import com.devson.vedtune.data.sync.MediaSyncEngine
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.domain.model.Album
+import com.devson.vedtune.domain.model.Artist
+import com.devson.vedtune.data.local.entity.ArtistEntity
 import com.devson.vedtune.domain.repository.MediaRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -78,6 +80,24 @@ class MediaRepositoryImpl @Inject constructor(
 
     override fun getSongsByAlbumId(albumId: Long): Flow<List<Song>> {
         return songDao.getSongsByAlbumId(albumId).map { entities ->
+            entities.map { it.toSong() }
+        }
+    }
+
+    override fun getAllArtists(): Flow<List<Artist>> {
+        return songDao.getAllArtists().map { entities ->
+            entities.map { entity ->
+                Artist(
+                    name = entity.artist,
+                    songCount = entity.songCount,
+                    albumCount = entity.albumCount
+                )
+            }
+        }
+    }
+
+    override fun getSongsByArtist(artist: String): Flow<List<Song>> {
+        return songDao.getSongsByArtist(artist).map { entities ->
             entities.map { it.toSong() }
         }
     }

@@ -38,6 +38,7 @@ fun AlbumsScreen(
 ) {
     val albums by viewModel.albums.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val showArtwork by viewModel.showAlbumArt.collectAsState()
 
     Column(
         modifier = modifier
@@ -80,7 +81,8 @@ fun AlbumsScreen(
                 ) { album ->
                     AlbumGridItem(
                         album = album,
-                        onClick = { onAlbumClick(album.id) }
+                        onClick = { onAlbumClick(album.id) },
+                        showArtwork = showArtwork
                     )
                 }
             }
@@ -92,7 +94,8 @@ fun AlbumsScreen(
 fun AlbumGridItem(
     album: Album,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showArtwork: Boolean = true
 ) {
     Card(
         modifier = modifier
@@ -107,7 +110,8 @@ fun AlbumGridItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .clip(MaterialTheme.shapes.medium)
+                    .clip(MaterialTheme.shapes.medium),
+                showArtwork = showArtwork
             )
             
             Spacer(modifier = Modifier.height(8.dp))

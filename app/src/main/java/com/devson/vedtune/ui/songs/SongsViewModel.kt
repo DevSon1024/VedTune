@@ -13,10 +13,13 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import com.devson.vedtune.domain.repository.SettingsRepository
+
 @HiltViewModel
 class SongsViewModel @Inject constructor(
     private val repository: MediaRepository,
-    private val playbackConnection: PlaybackConnection
+    private val playbackConnection: PlaybackConnection,
+    private val settingsRepository: SettingsRepository
 ) : BaseViewModel<SongsUiState, SongsUiEvent>(SongsUiState(isLoading = true)) {
 
     private val _searchQuery = MutableStateFlow("")
@@ -54,6 +57,13 @@ class SongsViewModel @Inject constructor(
                         songs = filteredSongs,
                         isLoading = false
                     )
+                }
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.showAlbumArt.collect { show ->
+                updateState {
+                    it.copy(showArtwork = show)
                 }
             }
         }

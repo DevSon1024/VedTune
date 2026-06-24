@@ -53,7 +53,9 @@ import java.util.Locale
 fun PlayerScreen(
     viewModel: PlayerViewModel,
     onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showArtwork: Boolean = true,
+    showRemainingTime: Boolean = false
 ) {
     val song by viewModel.currentSong.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()
@@ -147,7 +149,8 @@ fun PlayerScreen(
                 ) {
                     SongArtwork(
                         albumId = activeSong.albumId,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        showArtwork = showArtwork
                     )
                 }
 
@@ -215,8 +218,14 @@ fun PlayerScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
+                    val remainingOrDurationMs = if (showRemainingTime) {
+                        val currentPos = if (isDragging) sliderValue.toLong() else position
+                        (duration - currentPos).coerceAtLeast(0L)
+                    } else {
+                        duration
+                    }
                     Text(
-                        text = formatTime(duration),
+                        text = if (showRemainingTime) "-${formatTime(remainingOrDurationMs)}" else formatTime(duration),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
