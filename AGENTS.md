@@ -4,9 +4,7 @@
 
 Project: VedTune
 
-Package:
-
-com.devson.vedtune
+Package: com.devson.vedtune
 
 Purpose:
 
@@ -422,3 +420,19 @@ When forced to choose between:
 Always choose:
 
 Better architecture.
+
+## Documentation & Update Tracking
+
+You must actively maintain the project's changelog. After every completed task, error resolution, or feature addition, you must append an entry to the `update_details.md` file.
+
+**Format and Rules for `update_details.md`:**
+
+- Do NOT read or rewrite the whole file every time. Simply append the new data at the very end of the document.
+- Include a Date and Time stamp for the update.
+  Whenever a fix, optimization, or feature is completed, you MUST document it using the following format:
+
+- **Issue:** (Briefly describe the exact issue or bottleneck that was just solved)
+- **Type:** (Specify the category: e.g., Error, Bug, UI, Performance, Architecture, Feature)
+- **Solution:** (Explain how the issue was solved. Maximum 10 lines.)
+- After the details of the latest update, you must append exactly `---` on a new line to close out that specific session.
+- Do not include any conversational filler in the file.
