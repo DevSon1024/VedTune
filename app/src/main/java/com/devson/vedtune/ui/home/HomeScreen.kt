@@ -77,6 +77,7 @@ fun HomeScreen(
     val duration by mainViewModel.playbackDuration.collectAsState()
     val showAlbumArt by mainViewModel.showAlbumArt.collectAsState()
     val showMiniPlayerProgress by mainViewModel.showMiniPlayerProgress.collectAsState()
+    val isGestureMiniPlayerEnabled by mainViewModel.isGestureMiniPlayerEnabled.collectAsState()
 
     val progress = remember(position, duration) {
         if (duration > 0) position.toFloat() / duration.toFloat() else 0f
@@ -103,7 +104,8 @@ fun HomeScreen(
                         navController.navigate(Screen.Player.route)
                     },
                     showArtwork = showAlbumArt,
-                    showProgress = showMiniPlayerProgress
+                    showProgress = showMiniPlayerProgress,
+                    isGestureEnabled = isGestureMiniPlayerEnabled
                 )
 
                 val items = listOf(

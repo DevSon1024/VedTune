@@ -13,6 +13,7 @@ interface SettingsRepository {
     val autoSyncOnStartup: Flow<Boolean>
     val audioFadeInEnabled: Flow<Boolean>
     val defaultStartScreen: Flow<String>
+    val isGestureMiniPlayerEnabled: Flow<Boolean>
 
     // Folder filtering
     val folderFilterMode: Flow<FolderFilterMode>
@@ -28,6 +29,7 @@ interface SettingsRepository {
     suspend fun setAutoSyncOnStartup(enabled: Boolean)
     suspend fun setAudioFadeInEnabled(enabled: Boolean)
     suspend fun setDefaultStartScreen(screen: String)
+    suspend fun setGestureMiniPlayerEnabled(enabled: Boolean)
     suspend fun clearPlaybackQueue()
 
     // Folder filtering setters

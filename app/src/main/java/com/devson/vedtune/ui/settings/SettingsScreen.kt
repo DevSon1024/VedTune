@@ -73,6 +73,7 @@ fun SettingsScreen(
     val autoSyncOnStartup by viewModel.autoSyncOnStartup.collectAsState()
     val audioFadeInEnabled by viewModel.audioFadeInEnabled.collectAsState()
     val defaultStartScreen by viewModel.defaultStartScreen.collectAsState()
+    val isGestureMiniPlayerEnabled by viewModel.isGestureMiniPlayerEnabled.collectAsState()
 
     val context = LocalContext.current
     var queueClearedMessageVisible by remember { mutableStateOf(false) }
@@ -179,6 +180,19 @@ fun SettingsScreen(
                 description = "Display the thin progress line along the top of the mini player card.",
                 checked = showMiniPlayerProgress,
                 onCheckedChange = { viewModel.setShowMiniPlayerProgress(it) },
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            )
+
+            SettingSwitchRow(
+                title = "Gesture-Based Mini Player",
+                description = "Control playback using gestures (swipe left/right to next/previous, double-tap to play/pause).",
+                checked = isGestureMiniPlayerEnabled,
+                onCheckedChange = { viewModel.setGestureMiniPlayerEnabled(it) },
                 modifier = Modifier.padding(vertical = 4.dp)
             )
 

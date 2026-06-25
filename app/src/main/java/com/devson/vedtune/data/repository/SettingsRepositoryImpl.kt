@@ -29,6 +29,7 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_AUTO_SYNC_ON_STARTUP = booleanPreferencesKey("auto_sync_on_startup")
         private val KEY_AUDIO_FADE_IN_ENABLED = booleanPreferencesKey("audio_fade_in_enabled")
         private val KEY_DEFAULT_START_SCREEN = stringPreferencesKey("default_start_screen")
+        private val KEY_IS_GESTURE_MINIPLAYER_ENABLED = booleanPreferencesKey("is_gesture_miniplayer_enabled")
 
         // Folder filter
         private val KEY_FOLDER_FILTER_MODE = stringPreferencesKey("folder_filter_mode")
@@ -75,6 +76,10 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override val defaultStartScreen: Flow<String> = dataStore.data.map { preferences ->
         preferences[KEY_DEFAULT_START_SCREEN] ?: "songs"
+    }
+
+    override val isGestureMiniPlayerEnabled: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[KEY_IS_GESTURE_MINIPLAYER_ENABLED] ?: false
     }
 
     //  Folder filtering flows 
@@ -131,6 +136,10 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setDefaultStartScreen(screen: String) {
         dataStore.edit { it[KEY_DEFAULT_START_SCREEN] = screen }
+    }
+
+    override suspend fun setGestureMiniPlayerEnabled(enabled: Boolean) {
+        dataStore.edit { it[KEY_IS_GESTURE_MINIPLAYER_ENABLED] = enabled }
     }
 
     override suspend fun clearPlaybackQueue() {

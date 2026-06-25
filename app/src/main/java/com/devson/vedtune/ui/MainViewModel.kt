@@ -67,6 +67,9 @@ class MainViewModel @Inject constructor(
     val defaultStartScreen: StateFlow<String> = settingsRepository.defaultStartScreen
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "songs")
 
+    val isGestureMiniPlayerEnabled: StateFlow<Boolean> = settingsRepository.isGestureMiniPlayerEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     val isPlaying: StateFlow<Boolean> = playbackConnection.isPlaying
 
     val currentSong: StateFlow<Song?> = playbackConnection.currentSongId

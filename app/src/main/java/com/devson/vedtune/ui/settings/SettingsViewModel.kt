@@ -47,6 +47,9 @@ class SettingsViewModel @Inject constructor(
     val defaultStartScreen: StateFlow<String> = settingsRepository.defaultStartScreen
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "songs")
 
+    val isGestureMiniPlayerEnabled: StateFlow<Boolean> = settingsRepository.isGestureMiniPlayerEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     //  Folder filtering 
 
     val folderFilterMode: StateFlow<FolderFilterMode> = settingsRepository.folderFilterMode
@@ -94,6 +97,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setDefaultStartScreen(screen: String) {
         viewModelScope.launch { settingsRepository.setDefaultStartScreen(screen) }
+    }
+
+    fun setGestureMiniPlayerEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setGestureMiniPlayerEnabled(enabled) }
     }
 
     fun clearPlaybackQueue() {
