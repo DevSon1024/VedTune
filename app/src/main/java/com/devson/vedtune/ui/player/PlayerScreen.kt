@@ -82,7 +82,8 @@ fun PlayerScreen(
     )
 
     val gradientColors = listOf(
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
         MaterialTheme.colorScheme.background
     )
 
@@ -90,7 +91,6 @@ fun PlayerScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Brush.verticalGradient(gradientColors))
-            .statusBarsPadding()
     ) {
         if (song == null) {
             Box(
@@ -108,6 +108,7 @@ fun PlayerScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .statusBarsPadding()
                     .padding(horizontal = 24.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -162,7 +163,7 @@ fun PlayerScreen(
                 // Artwork Cover Card
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(0.85f)
+                        .fillMaxWidth(0.92f)
                         .aspectRatio(1f)
                         .scale(artworkScale)
                         .clip(MaterialTheme.shapes.extraLarge)

@@ -11,13 +11,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -29,11 +29,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.devson.vedtune.domain.model.Album
 import com.devson.vedtune.ui.components.SongArtwork
+import com.devson.vedtune.ui.components.SearchBar
 
 @Composable
 fun AlbumsScreen(
     viewModel: AlbumsViewModel,
     onAlbumClick: (Long) -> Unit,
+    contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
     val albums by viewModel.albums.collectAsState()
@@ -41,21 +43,14 @@ fun AlbumsScreen(
     val showArtwork by viewModel.showAlbumArt.collectAsState()
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(top = 16.dp)
+        modifier = modifier.fillMaxSize()
     ) {
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { viewModel.setSearchQuery(it) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            placeholder = { Text(text = "Search albums...") },
-            singleLine = true
+        SearchBar(
+            query = searchQuery,
+            onQueryChange = { viewModel.setSearchQuery(it) },
+            placeholder = "Search albums...",
+            modifier = Modifier.statusBarsPadding()
         )
-
-        Spacer(modifier = Modifier.height(16.dp))
 
         if (albums.isEmpty()) {
             Box(
@@ -71,7 +66,12 @@ fun AlbumsScreen(
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 8.dp,
+                    bottom = contentPadding.calculateBottomPadding() + 16.dp
+                ),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {

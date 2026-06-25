@@ -2,6 +2,7 @@ package com.devson.vedtune.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import android.content.Intent
@@ -50,6 +52,7 @@ import com.devson.vedtune.domain.model.FolderFilterMode
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
+    contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     onNavigateToFolderSettings: () -> Unit = {}
 ) {
@@ -69,7 +72,13 @@ fun SettingsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .statusBarsPadding()
+            .padding(
+                start = 16.dp,
+                end = 16.dp,
+                top = 16.dp,
+                bottom = contentPadding.calculateBottomPadding() + 16.dp
+            )
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {

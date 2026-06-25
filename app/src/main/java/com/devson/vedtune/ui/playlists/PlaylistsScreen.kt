@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,7 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
+import com.devson.vedtune.ui.components.SearchBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -51,38 +53,25 @@ import com.devson.vedtune.domain.model.Playlist
 fun PlaylistsScreen(
     viewModel: PlaylistsViewModel,
     onPlaylistClick: (Long) -> Unit,
+    contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
     val playlists by viewModel.playlists.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showCreateDialog = true },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Create Playlist")
-            }
-        }
-    ) { innerPadding ->
+    Box(
+        modifier = modifier.fillMaxSize()
+    ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(top = 16.dp)
+            modifier = Modifier.fillMaxSize()
         ) {
-            Text(
-                text = "Playlists",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(horizontal = 24.dp)
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { viewModel.setSearchQuery(it) },
+                placeholder = "Search playlists...",
+                modifier = Modifier.statusBarsPadding()
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             if (playlists.isEmpty()) {
                 Box(
@@ -90,12 +79,18 @@ fun PlaylistsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No playlists. Tap + to create one.",
+                        text = if (searchQuery.isBlank()) "No playlists. Tap + to create one." else "No matching playlists",
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        top = 8.dp,
+                        bottom = contentPadding.calculateBottomPadding() + 88.dp // Space for FAB + bottom player/navbar
+                    )
+                ) {
                     items(
                         items = playlists,
                         key = { it.id }
@@ -108,6 +103,17 @@ fun PlaylistsScreen(
                     }
                 }
             }
+        }
+
+        FloatingActionButton(
+            onClick = { showCreateDialog = true },
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = contentPadding.calculateBottomPadding() + 16.dp)
+        ) {
+            Icon(imageVector = Icons.Default.Add, contentDescription = "Create Playlist")
         }
     }
 

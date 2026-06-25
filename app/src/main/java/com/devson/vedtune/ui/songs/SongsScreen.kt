@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -74,6 +75,7 @@ import coil.request.ImageRequest
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.ui.components.SongArtwork
 import com.devson.vedtune.ui.components.AddToPlaylistDialog
+import com.devson.vedtune.ui.components.SearchBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,6 +83,7 @@ fun SongsScreen(
     viewModel: SongsViewModel,
     onNavigateToAlbum: (Long) -> Unit,
     onNavigateToArtist: (String) -> Unit,
+    contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -142,35 +145,21 @@ fun SongsScreen(
     }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
+        modifier = modifier.fillMaxSize()
     ) {
         // 1. Search Bar
-        OutlinedTextField(
-            value = uiState.searchQuery,
-            onValueChange = { viewModel.setSearchQuery(it) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            placeholder = { Text("Search songs, artists, albums...") },
-            leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = "Search") },
-            trailingIcon = {
-                if (uiState.searchQuery.isNotEmpty()) {
-                    IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Clear")
-                    }
-                }
-            },
-            singleLine = true,
-            shape = MaterialTheme.shapes.medium
+        SearchBar(
+            query = uiState.searchQuery,
+            onQueryChange = { viewModel.setSearchQuery(it) },
+            placeholder = "Search songs, artists, albums...",
+            modifier = Modifier.statusBarsPadding()
         )
 
         // 2. Sorting and View Toggle Options
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp),
+                .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -347,7 +336,12 @@ fun SongsScreen(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(bottom = 16.dp)
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 8.dp,
+                            bottom = contentPadding.calculateBottomPadding() + 16.dp
+                        )
                     ) {
                         items(uiState.songs, key = { it.id }) { song ->
                             SongGridItem(
@@ -363,7 +357,12 @@ fun SongsScreen(
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
-                        contentPadding = PaddingValues(bottom = 16.dp)
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 8.dp,
+                            bottom = contentPadding.calculateBottomPadding() + 16.dp
+                        )
                     ) {
                         items(uiState.songs, key = { it.id }) { song ->
                             SongListItem(

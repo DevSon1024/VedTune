@@ -57,81 +57,17 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by viewModel.themeMode.collectAsState()
             val dynamicColorsEnabled by viewModel.dynamicColorsEnabled.collectAsState()
-            val defaultStartScreen by viewModel.defaultStartScreen.collectAsState()
 
             vedtuneTheme(themeMode = themeMode, dynamicColor = dynamicColorsEnabled) {
                 val navController = rememberNavController()
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = navBackStackEntry?.destination?.route
-
-                val currentSong by viewModel.currentSong.collectAsState()
-                val isPlaying by viewModel.isPlaying.collectAsState()
-                val position by viewModel.playbackPosition.collectAsState()
-                val duration by viewModel.playbackDuration.collectAsState()
-                val showAlbumArt by viewModel.showAlbumArt.collectAsState()
-                val showMiniPlayerProgress by viewModel.showMiniPlayerProgress.collectAsState()
-
-                val progress = remember(position, duration) {
-                    if (duration > 0) position.toFloat() / duration.toFloat() else 0f
-                }
 
                 Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    bottomBar = {
-                        if (currentRoute != Screen.Player.route) {
-                            Column {
-                                MiniPlayer(
-                                    song = currentSong,
-                                    isPlaying = isPlaying,
-                                    progress = progress,
-                                    onPlayPauseClick = {
-                                        if (isPlaying) viewModel.pause() else viewModel.play()
-                                    },
-                                    onSkipNextClick = {
-                                        viewModel.skipToNext()
-                                    },
-                                    onClick = {
-                                        navController.navigate(Screen.Player.route)
-                                    },
-                                    showArtwork = showAlbumArt,
-                                    showProgress = showMiniPlayerProgress
-                                )
-
-                                val items = listOf(
-                                    NavigationItem("Songs", Screen.Songs.route, Icons.AutoMirrored.Filled.List),
-                                    NavigationItem("Albums", Screen.Albums.route, Icons.Default.PlayArrow),
-                                    NavigationItem("Artists", Screen.Artists.route, Icons.Default.Person),
-                                    NavigationItem("Playlists", Screen.Playlists.route, Icons.Default.Favorite),
-                                    NavigationItem("Settings", Screen.Settings.route, Icons.Default.Settings)
-                                )
-                                NavigationBar {
-                                    items.forEach { item ->
-                                        NavigationBarItem(
-                                            selected = currentRoute == item.route,
-                                            onClick = {
-                                                if (currentRoute != item.route) {
-                                                    navController.navigate(item.route) {
-                                                        popUpTo(navController.graph.findStartDestination().id) {
-                                                            saveState = true
-                                                        }
-                                                        launchSingleTop = true
-                                                        restoreState = true
-                                                    }
-                                                }
-                                            },
-                                            icon = { Icon(imageVector = item.icon, contentDescription = item.label) },
-                                            label = { Text(text = item.label) }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    modifier = Modifier.fillMaxSize()
                 ) { innerPadding ->
                     NavGraph(
                         navController = navController,
-                        startDestination = defaultStartScreen,
-                        modifier = Modifier.padding(innerPadding)
+                        mainViewModel = viewModel,
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
             }
@@ -179,8 +115,4 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private data class NavigationItem(
-    val label: String,
-    val route: String,
-    val icon: ImageVector
-)
+// NavigationItem class removed as tabs are now handled inside HomeScreen
