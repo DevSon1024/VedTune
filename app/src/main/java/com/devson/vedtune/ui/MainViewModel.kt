@@ -97,6 +97,10 @@ class MainViewModel @Inject constructor(
         playbackConnection.skipToNext()
     }
 
+    fun skipToPrevious() {
+        playbackConnection.skipToPrevious()
+    }
+
     fun syncLibrary() {
         viewModelScope.launch {
             try {

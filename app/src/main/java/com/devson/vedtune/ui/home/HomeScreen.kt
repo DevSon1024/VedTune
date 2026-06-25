@@ -95,6 +95,9 @@ fun HomeScreen(
                     onSkipNextClick = {
                         mainViewModel.skipToNext()
                     },
+                    onSkipPreviousClick = {
+                        mainViewModel.skipToPrevious()
+                    },
                     onClick = {
                         navController.navigate(Screen.Player.route)
                     },
