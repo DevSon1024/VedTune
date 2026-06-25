@@ -16,9 +16,11 @@ datastore = "1.1.1"
 media3 = "1.4.1"
 coil = "2.7.0"
 mediainfo = "v1.0.0-fix"
+jaudiotagger = "2.3.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+jaudiotagger = { group = "com.github.Adonai", name = "jaudiotagger", version.ref = "jaudiotagger" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

@@ -25,4 +25,5 @@ interface MediaRepository {
     suspend fun addSongToPlaylist(playlistId: Long, songId: Long)
     suspend fun removeSongFromPlaylist(playlistId: Long, songId: Long)
     suspend fun deleteSong(songId: Long)
+    suspend fun updateSong(song: Song)
 }

@@ -47,6 +47,7 @@ fun HomeScreen(
     onNavigateToArtist: (String) -> Unit,
     onNavigateToPlaylist: (Long) -> Unit,
     onNavigateToFolderSettings: () -> Unit,
+    onNavigateToEditTags: (Long) -> Unit,
     defaultStartScreen: String,
     mainViewModel: MainViewModel,
     modifier: Modifier = Modifier
@@ -140,6 +141,7 @@ fun HomeScreen(
                         viewModel = viewModel,
                         onNavigateToAlbum = onNavigateToAlbum,
                         onNavigateToArtist = onNavigateToArtist,
+                        onNavigateToEditTags = onNavigateToEditTags,
                         contentPadding = innerPadding,
                         modifier = Modifier.fillMaxSize()
                     )

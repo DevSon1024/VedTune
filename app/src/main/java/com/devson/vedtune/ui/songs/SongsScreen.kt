@@ -1,6 +1,10 @@
 package com.devson.vedtune.ui.songs
 
 import android.Manifest
+import androidx.compose.runtime.DisposableEffect
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
 import android.content.ContentUris
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -61,6 +65,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -83,6 +88,7 @@ fun SongsScreen(
     viewModel: SongsViewModel,
     onNavigateToAlbum: (Long) -> Unit,
     onNavigateToArtist: (String) -> Unit,
+    onNavigateToEditTags: (Long) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
@@ -94,7 +100,6 @@ fun SongsScreen(
     // Dialog and bottom sheet states
     var selectedSongForOptions by remember { mutableStateOf<Song?>(null) }
     var showInfoDialogSong by remember { mutableStateOf<Song?>(null) }
-    var showEditTagsDialogSong by remember { mutableStateOf<Song?>(null) }
     var showPreviewDialogSong by remember { mutableStateOf<Song?>(null) }
     var showDeleteConfirmDialogSong by remember { mutableStateOf<Song?>(null) }
 
@@ -492,7 +497,7 @@ fun SongsScreen(
                             title = "Edit Tags",
                             onClick = {
                                 selectedSongForOptions = null
-                                showEditTagsDialogSong = song
+                                onNavigateToEditTags(song.id)
                             }
                         )
                     }
@@ -556,19 +561,11 @@ fun SongsScreen(
         val song = showInfoDialogSong!!
         SongInfoDialog(
             song = song,
-            onEditTagsClick = { showEditTagsDialogSong = song },
-            onDismiss = { showInfoDialogSong = null }
-        )
-    }
-
-    if (showEditTagsDialogSong != null) {
-        val song = showEditTagsDialogSong!!
-        EditTagsDialog(
-            song = song,
-            onSave = { title, artist, album, track, year, artworkUri ->
-                viewModel.updateSongTags(context, song, title, artist, album, track, year, artworkUri)
+            onEditTagsClick = { 
+                showInfoDialogSong = null
+                onNavigateToEditTags(song.id) 
             },
-            onDismiss = { showEditTagsDialogSong = null }
+            onDismiss = { showInfoDialogSong = null }
         )
     }
 
@@ -616,7 +613,9 @@ fun SongListItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
             .clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
@@ -678,7 +677,9 @@ fun SongGridItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
             .clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
@@ -864,145 +865,6 @@ fun InfoRow(label: String, value: String) {
 }
 
 @Composable
-fun EditTagsDialog(
-    song: Song,
-    onSave: (title: String, artist: String, album: String, track: Int, year: Int, artworkUri: Uri?) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var title by remember { mutableStateOf(song.title) }
-    var artist by remember { mutableStateOf(song.artist) }
-    var album by remember { mutableStateOf(song.album) }
-    var track by remember { mutableStateOf(song.track.toString()) }
-    var year by remember { mutableStateOf(song.year.toString()) }
-    var selectedArtworkUri by remember { mutableStateOf<Uri?>(null) }
-
-    val artworkLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        if (uri != null) {
-            selectedArtworkUri = uri
-        }
-    }
-
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            shape = MaterialTheme.shapes.extraLarge,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "Edit Tags",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                Box(
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(MaterialTheme.shapes.medium)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable { artworkLauncher.launch("image/*") },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (selectedArtworkUri != null) {
-                        AsyncImage(
-                            model = selectedArtworkUri,
-                            contentDescription = "Selected Art",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        SongArtwork(
-                            albumId = song.albumId,
-                            lastModified = song.dateModified,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.4f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit Art",
-                                tint = Color.White
-                            )
-                        }
-                    }
-                }
-
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Title") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = artist,
-                    onValueChange = { artist = it },
-                    label = { Text("Artist") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = album,
-                    onValueChange = { album = it },
-                    label = { Text("Album") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = track,
-                    onValueChange = { track = it },
-                    label = { Text("Track Number") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = year,
-                    onValueChange = { year = it },
-                    label = { Text("Year") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    androidx.compose.material3.TextButton(onClick = onDismiss) {
-                        Text("Cancel")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            onSave(
-                                title,
-                                artist,
-                                album,
-                                track.toIntOrNull() ?: 0,
-                                year.toIntOrNull() ?: 0,
-                                selectedArtworkUri
-                            )
-                            onDismiss()
-                        }
-                    ) {
-                        Text("Save")
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun SongPreviewDialog(
     song: Song,
     onDismiss: () -> Unit
@@ -1011,39 +873,46 @@ fun SongPreviewDialog(
     val uri = remember(song.id) {
         ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, song.id)
     }
-    
-    val mediaPlayer = remember {
-        android.media.MediaPlayer().apply {
-            setDataSource(context, uri)
+
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(uri))
             prepare()
+            playWhenReady = true
         }
     }
-    
-    var isPlaying by remember { mutableStateOf(false) }
+
+    var isPlaying by remember { mutableStateOf(true) }
     var currentPosition by remember { mutableStateOf(0f) }
-    val duration = remember { mediaPlayer.duration.toFloat() }
-    
-    androidx.compose.runtime.LaunchedEffect(isPlaying) {
-        if (isPlaying) {
-            mediaPlayer.start()
-            while (isPlaying && mediaPlayer.isPlaying) {
-                currentPosition = mediaPlayer.currentPosition.toFloat()
-                kotlinx.coroutines.delay(200)
+    var duration by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(exoPlayer) {
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(playing: Boolean) {
+                isPlaying = playing
             }
-        } else {
-            if (mediaPlayer.isPlaying) {
-                mediaPlayer.pause()
+            override fun onPlaybackStateChanged(state: Int) {
+                if (state == Player.STATE_READY) {
+                    duration = exoPlayer.duration.toFloat()
+                }
             }
         }
+        exoPlayer.addListener(listener)
+
+        while (true) {
+            if (exoPlayer.isPlaying) {
+                currentPosition = exoPlayer.currentPosition.toFloat()
+            }
+            kotlinx.coroutines.delay(200)
+        }
     }
-    
-    androidx.compose.runtime.DisposableEffect(Unit) {
+
+    DisposableEffect(Unit) {
         onDispose {
-            mediaPlayer.stop()
-            mediaPlayer.release()
+            exoPlayer.release()
         }
     }
-    
+
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
@@ -1064,9 +933,9 @@ fun SongPreviewDialog(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 SongArtwork(
                     albumId = song.albumId,
                     lastModified = song.dateModified,
@@ -1075,9 +944,9 @@ fun SongPreviewDialog(
                         .clip(MaterialTheme.shapes.large)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Text(
                     text = song.title,
                     style = MaterialTheme.typography.bodyLarge,
@@ -1092,19 +961,19 @@ fun SongPreviewDialog(
                     maxLines = 1,
                     textAlign = TextAlign.Center
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Slider(
                     value = currentPosition,
                     onValueChange = {
                         currentPosition = it
-                        mediaPlayer.seekTo(it.toInt())
+                        exoPlayer.seekTo(it.toLong())
                     },
-                    valueRange = 0f..duration,
+                    valueRange = 0f..duration.coerceAtLeast(1f),
                     modifier = Modifier.fillMaxWidth()
                 )
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -1120,16 +989,22 @@ fun SongPreviewDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
-                        onClick = { isPlaying = !isPlaying },
+                        onClick = {
+                            if (isPlaying) {
+                                exoPlayer.pause()
+                            } else {
+                                exoPlayer.play()
+                            }
+                        },
                         modifier = Modifier
                             .size(56.dp)
                             .background(MaterialTheme.colorScheme.primary, CircleShape)
@@ -1142,9 +1017,9 @@ fun SongPreviewDialog(
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 androidx.compose.material3.TextButton(onClick = onDismiss) {
                     Text("Close")
                 }
@@ -1159,4 +1034,3 @@ private fun formatDuration(durationMs: Long): String {
     val seconds = totalSeconds % 60
     return String.format("%d:%02d", minutes, seconds)
 }
-

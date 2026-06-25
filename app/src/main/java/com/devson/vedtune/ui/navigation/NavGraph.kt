@@ -27,6 +27,8 @@ import com.devson.vedtune.ui.settings.SettingsViewModel
 import com.devson.vedtune.ui.settings.FolderSettingsScreen
 import com.devson.vedtune.ui.playlists.PlaylistDetailsScreen
 import com.devson.vedtune.ui.playlists.PlaylistDetailsViewModel
+import com.devson.vedtune.ui.songs.EditTagsScreen
+import com.devson.vedtune.ui.songs.EditTagsViewModel
 
 sealed class Screen(val route: String) {
     data object Home : Screen("home")
@@ -45,6 +47,9 @@ sealed class Screen(val route: String) {
     }
     data object PlaylistDetails : Screen("playlist_details/{playlistId}") {
         fun createRoute(playlistId: Long) = "playlist_details/$playlistId"
+    }
+    data object EditTags : Screen("edit_tags/{songId}") {
+        fun createRoute(songId: Long) = "edit_tags/$songId"
     }
 }
 
@@ -76,6 +81,9 @@ fun NavGraph(
                 },
                 onNavigateToFolderSettings = {
                     navController.navigate(Screen.FolderSettings.route)
+                },
+                onNavigateToEditTags = { songId ->
+                    navController.navigate(Screen.EditTags.createRoute(songId))
                 },
                 defaultStartScreen = defaultStartScreen,
                 mainViewModel = mainViewModel,
@@ -192,6 +200,30 @@ fun NavGraph(
         ) {
             val viewModel: PlaylistDetailsViewModel = hiltViewModel()
             PlaylistDetailsScreen(
+                viewModel = viewModel,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = Screen.EditTags.route,
+            arguments = listOf(
+                navArgument("songId") { type = NavType.LongType }
+            ),
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(350)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(350)
+                )
+            }
+        ) {
+            val viewModel: EditTagsViewModel = hiltViewModel()
+            EditTagsScreen(
                 viewModel = viewModel,
                 onBackClick = { navController.popBackStack() }
             )

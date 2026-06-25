@@ -4,6 +4,7 @@ import com.devson.vedtune.data.local.dao.SongDao
 import com.devson.vedtune.data.local.dao.QueueDao
 import com.devson.vedtune.data.local.entity.QueueItemEntity
 import com.devson.vedtune.data.mapper.toSong
+import com.devson.vedtune.data.mapper.toEntity
 import com.devson.vedtune.data.sync.MediaSyncEngine
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.domain.model.Album
@@ -144,5 +145,9 @@ class MediaRepositoryImpl @Inject constructor(
 
     override suspend fun deleteSong(songId: Long) {
         songDao.deleteSongs(listOf(songId))
+    }
+
+    override suspend fun updateSong(song: Song) {
+        songDao.insertSongs(listOf(song.toEntity()))
     }
 }

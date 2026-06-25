@@ -153,6 +153,9 @@ dependencies {
     // MediaInfo Android
     implementation(libs.mediainfo.android)
 
+    // jaudiotagger for ID3 tag editing
+    implementation(libs.jaudiotagger)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -24,16 +24,17 @@ fun SongArtwork(
     albumId: Long,
     modifier: Modifier = Modifier,
     showArtwork: Boolean = true,
-    lastModified: Long = 0L
+    lastModified: Long = 0L,
+    ignoreCustomArtwork: Boolean = false
 ) {
     val context = LocalContext.current
-    var artworkData by remember(albumId, lastModified) { mutableStateOf<Any?>(null) }
-    var isError by remember(albumId, lastModified) { mutableStateOf(false) }
+    var artworkData by remember(albumId, lastModified, ignoreCustomArtwork) { mutableStateOf<Any?>(null) }
+    var isError by remember(albumId, lastModified, ignoreCustomArtwork) { mutableStateOf(false) }
 
-    androidx.compose.runtime.LaunchedEffect(albumId, lastModified) {
+    androidx.compose.runtime.LaunchedEffect(albumId, lastModified, ignoreCustomArtwork) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val customFile = java.io.File(context.filesDir, "custom_artwork/$albumId.jpg")
-            if (customFile.exists()) {
+            if (customFile.exists() && !ignoreCustomArtwork) {
                 artworkData = customFile
             } else {
                 artworkData = ContentUris.withAppendedId(
