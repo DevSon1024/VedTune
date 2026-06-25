@@ -45,132 +45,187 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.ui.components.SongArtwork
+import com.devson.vedtune.ui.components.PlayingIndicator
+import com.devson.vedtune.ui.components.MiniPlayer
+import com.devson.vedtune.ui.MainViewModel
+import androidx.compose.foundation.layout.PaddingValues
 import java.util.Locale
 
 @Composable
 fun PlaylistDetailsScreen(
     viewModel: PlaylistDetailsViewModel,
+    mainViewModel: MainViewModel,
     onBackClick: () -> Unit,
+    onNavigateToPlayer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val songs by viewModel.songs.collectAsState()
     val playlistDetails by viewModel.playlistDetails.collectAsState()
     val showArtwork by viewModel.showAlbumArt.collectAsState()
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-    ) {
-        Row(
+    val currentSongId by viewModel.currentSongId.collectAsState()
+    val isPlaying by viewModel.isPlaying.collectAsState()
+
+    val currentSong by mainViewModel.currentSong.collectAsState()
+    val mainIsPlaying by mainViewModel.isPlaying.collectAsState()
+    val position by mainViewModel.playbackPosition.collectAsState()
+    val duration by mainViewModel.playbackDuration.collectAsState()
+    val showArtworkFlow by mainViewModel.showAlbumArt.collectAsState()
+    val showMiniPlayerProgress by mainViewModel.showMiniPlayerProgress.collectAsState()
+    val isGestureMiniPlayerEnabled by mainViewModel.isGestureMiniPlayerEnabled.collectAsState()
+
+    val progress = remember(position, duration) {
+        if (duration > 0) position.toFloat() / duration.toFloat() else 0f
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxSize()
+                .statusBarsPadding()
         ) {
-            IconButton(onClick = onBackClick) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Go Back"
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Go Back"
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = playlistDetails?.name ?: "Playlist",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = playlistDetails?.name ?: "Playlist",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
 
-        if (songs.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "No songs in this playlist")
-            }
-        } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Card(
-                            modifier = Modifier.size(160.dp),
-                            shape = MaterialTheme.shapes.extraLarge,
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            if (songs.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "No songs in this playlist")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        bottom = if (currentSong != null) 96.dp else 16.dp
+                    )
+                ) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
+                            Card(
+                                modifier = Modifier.size(160.dp),
+                                shape = MaterialTheme.shapes.extraLarge,
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = "Playlist cover",
-                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    modifier = Modifier.size(64.dp)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text(
-                            text = playlistDetails?.name ?: "Playlist",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        Text(
-                            text = if (songs.size == 1) "1 Song" else "${songs.size} Songs",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Button(
-                                onClick = { viewModel.playPlaylist() },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(text = "Play")
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PlayArrow,
+                                        contentDescription = "Playlist cover",
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.size(64.dp)
+                                    )
+                                }
                             }
 
-                            FilledTonalButton(
-                                onClick = { viewModel.shufflePlaylist() },
-                                modifier = Modifier.weight(1f)
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = playlistDetails?.name ?: "Playlist",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            Text(
+                                text = if (songs.size == 1) "1 Song" else "${songs.size} Songs",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(text = "Shuffle")
+                                Button(
+                                    onClick = { viewModel.playPlaylist() },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(text = "Play")
+                                }
+
+                                FilledTonalButton(
+                                    onClick = { viewModel.shufflePlaylist() },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(text = "Shuffle")
+                                }
                             }
                         }
                     }
-                }
 
-                itemsIndexed(
-                    items = songs,
-                    key = { _, song -> song.id }
-                ) { index, song ->
-                    PlaylistTrackItem(
-                        index = index + 1,
-                        song = song,
-                        showArtwork = showArtwork,
-                        onClick = { viewModel.playSong(song) },
-                        onRemoveClick = { viewModel.removeSongFromPlaylist(song.id) }
-                    )
+                    itemsIndexed(
+                        items = songs,
+                        key = { _, song -> song.id }
+                    ) { index, song ->
+                        val isCurrentSong = song.id == currentSongId
+                        PlaylistTrackItem(
+                            index = index + 1,
+                            song = song,
+                            showArtwork = showArtwork,
+                            isCurrentSong = isCurrentSong,
+                            isPlaying = isPlaying,
+                            onClick = { viewModel.playSong(song) },
+                            onRemoveClick = { viewModel.removeSongFromPlaylist(song.id) }
+                        )
+                    }
                 }
+            }
+        }
+
+        if (currentSong != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            ) {
+                MiniPlayer(
+                    song = currentSong,
+                    isPlaying = mainIsPlaying,
+                    progress = progress,
+                    onPlayPauseClick = {
+                        if (mainIsPlaying) mainViewModel.pause() else mainViewModel.play()
+                    },
+                    onSkipNextClick = { mainViewModel.skipToNext() },
+                    onSkipPreviousClick = { mainViewModel.skipToPrevious() },
+                    onClick = onNavigateToPlayer,
+                    showArtwork = showArtworkFlow,
+                    showProgress = showMiniPlayerProgress,
+                    isGestureEnabled = isGestureMiniPlayerEnabled
+                )
             }
         }
     }
@@ -183,6 +238,8 @@ fun PlaylistTrackItem(
     showArtwork: Boolean,
     onClick: () -> Unit,
     onRemoveClick: () -> Unit,
+    isCurrentSong: Boolean = false,
+    isPlaying: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -194,13 +251,25 @@ fun PlaylistTrackItem(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = String.format(Locale.getDefault(), "%02d", index),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-            modifier = Modifier.width(32.dp)
-        )
+        if (isCurrentSong) {
+            Box(
+                modifier = Modifier.width(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                PlayingIndicator(
+                    isPlaying = isPlaying,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        } else {
+            Text(
+                text = String.format(Locale.getDefault(), "%02d", index),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.width(32.dp)
+            )
+        }
 
         SongArtwork(
             albumId = song.albumId,

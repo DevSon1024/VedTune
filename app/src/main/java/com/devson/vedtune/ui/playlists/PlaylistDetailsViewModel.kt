@@ -24,6 +24,9 @@ class PlaylistDetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
+    val currentSongId: StateFlow<Long?> = playbackConnection.currentSongId
+    val isPlaying: StateFlow<Boolean> = playbackConnection.isPlaying
+
     val playlistId: Long = checkNotNull(savedStateHandle["playlistId"])
 
     val showAlbumArt: StateFlow<Boolean> = settingsRepository.showAlbumArt

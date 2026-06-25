@@ -132,7 +132,9 @@ fun NavGraph(
             val viewModel: ArtistDetailsViewModel = hiltViewModel()
             ArtistDetailsScreen(
                 viewModel = viewModel,
-                onBackClick = { navController.popBackStack() }
+                mainViewModel = mainViewModel,
+                onBackClick = { navController.popBackStack() },
+                onNavigateToPlayer = { navController.navigate(Screen.Player.route) }
             )
         }
         composable(
@@ -177,7 +179,9 @@ fun NavGraph(
             val viewModel: AlbumDetailsViewModel = hiltViewModel()
             AlbumDetailsScreen(
                 viewModel = viewModel,
-                onBackClick = { navController.popBackStack() }
+                mainViewModel = mainViewModel,
+                onBackClick = { navController.popBackStack() },
+                onNavigateToPlayer = { navController.navigate(Screen.Player.route) }
             )
         }
         composable(
@@ -201,7 +205,9 @@ fun NavGraph(
             val viewModel: PlaylistDetailsViewModel = hiltViewModel()
             PlaylistDetailsScreen(
                 viewModel = viewModel,
-                onBackClick = { navController.popBackStack() }
+                mainViewModel = mainViewModel,
+                onBackClick = { navController.popBackStack() },
+                onNavigateToPlayer = { navController.navigate(Screen.Player.route) }
             )
         }
         composable(

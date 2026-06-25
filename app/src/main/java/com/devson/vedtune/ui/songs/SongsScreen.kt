@@ -82,6 +82,7 @@ import com.devson.vedtune.ui.components.SongArtwork
 import com.devson.vedtune.ui.components.AddToPlaylistDialog
 import com.devson.vedtune.ui.components.SearchBar
 import com.devson.vedtune.ui.components.VedTuneTopAppBar
+import com.devson.vedtune.ui.components.PlayingIndicator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,6 +95,8 @@ fun SongsScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val currentSongId by viewModel.currentSongId.collectAsState()
+    val isPlaying by viewModel.isPlaying.collectAsState()
     var showSortMenu by remember { mutableStateOf(false) }
     val playlists by viewModel.playlists.collectAsState()
     var songForPlaylist by remember { mutableStateOf<Song?>(null) }
@@ -328,10 +331,13 @@ fun SongsScreen(
                         )
                     ) {
                         items(uiState.songs, key = { it.id }) { song ->
+                            val isCurrentSong = song.id == currentSongId
                             SongGridItem(
                                 song = song,
                                 onClick = { viewModel.playSong(song) },
                                 showArtwork = uiState.showArtwork,
+                                isCurrentSong = isCurrentSong,
+                                isPlaying = isPlaying,
                                 onOptionsClick = { selectedSongForOptions = song }
                             )
                         }
@@ -349,10 +355,13 @@ fun SongsScreen(
                         )
                     ) {
                         items(uiState.songs, key = { it.id }) { song ->
+                            val isCurrentSong = song.id == currentSongId
                             SongListItem(
                                 song = song,
                                 onClick = { viewModel.playSong(song) },
                                 showArtwork = uiState.showArtwork,
+                                isCurrentSong = isCurrentSong,
+                                isPlaying = isPlaying,
                                 onOptionsClick = { selectedSongForOptions = song }
                             )
                         }
@@ -587,6 +596,8 @@ fun SongListItem(
     song: Song,
     onClick: () -> Unit,
     showArtwork: Boolean = true,
+    isCurrentSong: Boolean = false,
+    isPlaying: Boolean = false,
     onOptionsClick: () -> Unit
 ) {
     Card(
@@ -603,15 +614,33 @@ fun SongListItem(
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SongArtwork(
-                albumId = song.albumId,
-                lastModified = song.dateModified,
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                showArtwork = showArtwork
-            )
+            Box(
+                modifier = Modifier.size(56.dp)
+            ) {
+                SongArtwork(
+                    albumId = song.albumId,
+                    lastModified = song.dateModified,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    showArtwork = showArtwork
+                )
+                if (isCurrentSong) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(MaterialTheme.shapes.small)
+                            .background(Color.Black.copy(alpha = 0.4f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        PlayingIndicator(
+                            isPlaying = isPlaying,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.width(16.dp))
 
@@ -651,6 +680,8 @@ fun SongGridItem(
     song: Song,
     onClick: () -> Unit,
     showArtwork: Boolean = true,
+    isCurrentSong: Boolean = false,
+    isPlaying: Boolean = false,
     onOptionsClick: () -> Unit
 ) {
     Card(
@@ -664,16 +695,35 @@ fun SongGridItem(
         Column(
             modifier = Modifier.padding(8.dp)
         ) {
-            SongArtwork(
-                albumId = song.albumId,
-                lastModified = song.dateModified,
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .clip(MaterialTheme.shapes.medium)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                showArtwork = showArtwork
-            )
+            ) {
+                SongArtwork(
+                    albumId = song.albumId,
+                    lastModified = song.dateModified,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    showArtwork = showArtwork
+                )
+                if (isCurrentSong) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(Color.Black.copy(alpha = 0.4f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        PlayingIndicator(
+                            isPlaying = isPlaying,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 

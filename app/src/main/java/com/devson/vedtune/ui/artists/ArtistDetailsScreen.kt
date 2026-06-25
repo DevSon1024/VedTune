@@ -35,185 +35,240 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.ui.components.SongArtwork
+import com.devson.vedtune.ui.components.PlayingIndicator
+import com.devson.vedtune.ui.components.MiniPlayer
+import com.devson.vedtune.ui.MainViewModel
+import androidx.compose.foundation.layout.PaddingValues
 import java.util.Locale
 
 @Composable
 fun ArtistDetailsScreen(
     viewModel: ArtistDetailsViewModel,
+    mainViewModel: MainViewModel,
     onBackClick: () -> Unit,
+    onNavigateToPlayer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val songs by viewModel.songs.collectAsState()
     val artistDetails by viewModel.artistDetails.collectAsState()
     val showArtwork by viewModel.showAlbumArt.collectAsState()
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-    ) {
-        Row(
+    val currentSongId by viewModel.currentSongId.collectAsState()
+    val isPlaying by viewModel.isPlaying.collectAsState()
+
+    val currentSong by mainViewModel.currentSong.collectAsState()
+    val mainIsPlaying by mainViewModel.isPlaying.collectAsState()
+    val position by mainViewModel.playbackPosition.collectAsState()
+    val duration by mainViewModel.playbackDuration.collectAsState()
+    val showArtworkFlow by mainViewModel.showAlbumArt.collectAsState()
+    val showMiniPlayerProgress by mainViewModel.showMiniPlayerProgress.collectAsState()
+    val isGestureMiniPlayerEnabled by mainViewModel.isGestureMiniPlayerEnabled.collectAsState()
+
+    val progress = remember(position, duration) {
+        if (duration > 0) position.toFloat() / duration.toFloat() else 0f
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxSize()
+                .statusBarsPadding()
         ) {
-            IconButton(onClick = onBackClick) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Go Back"
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Go Back"
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = artistDetails?.name ?: "Artist Details",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = artistDetails?.name ?: "Artist Details",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
 
-        if (songs.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "No songs by this artist")
-            }
-        } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        val distinctAlbums = remember(songs) {
-                            songs.map { it.albumId }.distinct().take(4)
-                        }
-
-                        ElevatedCard(
-                            modifier = Modifier.size(200.dp),
-                            shape = MaterialTheme.shapes.extraLarge
+            if (songs.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "No songs by this artist")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        bottom = if (currentSong != null) 96.dp else 16.dp
+                    )
+                ) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            if (distinctAlbums.isEmpty()) {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
+                            val distinctAlbums = remember(songs) {
+                                songs.map { it.albumId }.distinct().take(4)
+                            }
+
+                            ElevatedCard(
+                                modifier = Modifier.size(200.dp),
+                                shape = MaterialTheme.shapes.extraLarge
+                            ) {
+                                if (distinctAlbums.isEmpty()) {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(text = "?")
+                                    }
+                                } else if (distinctAlbums.size == 1) {
+                                    SongArtwork(
+                                        albumId = distinctAlbums[0],
+                                        modifier = Modifier.fillMaxSize(),
+                                        showArtwork = showArtwork
+                                    )
+                                } else {
+                                    Column(modifier = Modifier.fillMaxSize()) {
+                                        Row(modifier = Modifier.weight(1f)) {
+                                            Box(modifier = Modifier.weight(1f)) {
+                                                SongArtwork(
+                                                    albumId = distinctAlbums[0],
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    showArtwork = showArtwork
+                                                )
+                                            }
+                                            Box(modifier = Modifier.weight(1f)) {
+                                                if (distinctAlbums.size > 1) {
+                                                    SongArtwork(
+                                                        albumId = distinctAlbums[1],
+                                                        modifier = Modifier.fillMaxSize(),
+                                                        showArtwork = showArtwork
+                                                    )
+                                                } else {
+                                                    Spacer(modifier = Modifier.fillMaxSize())
+                                                }
+                                            }
+                                        }
+                                        Row(modifier = Modifier.weight(1f)) {
+                                            Box(modifier = Modifier.weight(1f)) {
+                                                if (distinctAlbums.size > 2) {
+                                                    SongArtwork(
+                                                        albumId = distinctAlbums[2],
+                                                        modifier = Modifier.fillMaxSize(),
+                                                        showArtwork = showArtwork
+                                                    )
+                                                } else {
+                                                    Spacer(modifier = Modifier.fillMaxSize())
+                                                }
+                                            }
+                                            Box(modifier = Modifier.weight(1f)) {
+                                                if (distinctAlbums.size > 3) {
+                                                    SongArtwork(
+                                                        albumId = distinctAlbums[3],
+                                                        modifier = Modifier.fillMaxSize(),
+                                                        showArtwork = showArtwork
+                                                    )
+                                                } else {
+                                                    Spacer(modifier = Modifier.fillMaxSize())
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = artistDetails?.name ?: "Unknown Artist",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            val songsText = if (artistDetails?.songCount == 1) "1 Song" else "${artistDetails?.songCount ?: 0} Songs"
+                            val albumsText = if (artistDetails?.albumCount == 1) "1 Album" else "${artistDetails?.albumCount ?: 0} Albums"
+                            Text(
+                                text = "$songsText • $albumsText",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Button(
+                                    onClick = { viewModel.playArtist() },
+                                    modifier = Modifier.weight(1f)
                                 ) {
-                                    Text(text = "?")
+                                    Text(text = "Play")
                                 }
-                            } else if (distinctAlbums.size == 1) {
-                                SongArtwork(
-                                    albumId = distinctAlbums[0],
-                                    modifier = Modifier.fillMaxSize(),
-                                    showArtwork = showArtwork
-                                )
-                            } else {
-                                Column(modifier = Modifier.fillMaxSize()) {
-                                    Row(modifier = Modifier.weight(1f)) {
-                                        Box(modifier = Modifier.weight(1f)) {
-                                            SongArtwork(
-                                                albumId = distinctAlbums[0],
-                                                modifier = Modifier.fillMaxSize(),
-                                                showArtwork = showArtwork
-                                            )
-                                        }
-                                        Box(modifier = Modifier.weight(1f)) {
-                                            if (distinctAlbums.size > 1) {
-                                                SongArtwork(
-                                                    albumId = distinctAlbums[1],
-                                                    modifier = Modifier.fillMaxSize(),
-                                                    showArtwork = showArtwork
-                                                )
-                                            } else {
-                                                Spacer(modifier = Modifier.fillMaxSize())
-                                            }
-                                        }
-                                    }
-                                    Row(modifier = Modifier.weight(1f)) {
-                                        Box(modifier = Modifier.weight(1f)) {
-                                            if (distinctAlbums.size > 2) {
-                                                SongArtwork(
-                                                    albumId = distinctAlbums[2],
-                                                    modifier = Modifier.fillMaxSize(),
-                                                    showArtwork = showArtwork
-                                                )
-                                            } else {
-                                                Spacer(modifier = Modifier.fillMaxSize())
-                                            }
-                                        }
-                                        Box(modifier = Modifier.weight(1f)) {
-                                            if (distinctAlbums.size > 3) {
-                                                SongArtwork(
-                                                    albumId = distinctAlbums[3],
-                                                    modifier = Modifier.fillMaxSize(),
-                                                    showArtwork = showArtwork
-                                                )
-                                            } else {
-                                                Spacer(modifier = Modifier.fillMaxSize())
-                                            }
-                                        }
-                                    }
+
+                                FilledTonalButton(
+                                    onClick = { viewModel.shuffleArtist() },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(text = "Shuffle")
                                 }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text(
-                            text = artistDetails?.name ?: "Unknown Artist",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        val songsText = if (artistDetails?.songCount == 1) "1 Song" else "${artistDetails?.songCount ?: 0} Songs"
-                        val albumsText = if (artistDetails?.albumCount == 1) "1 Album" else "${artistDetails?.albumCount ?: 0} Albums"
-                        Text(
-                            text = "$songsText • $albumsText",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Button(
-                                onClick = { viewModel.playArtist() },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(text = "Play")
-                            }
-
-                            FilledTonalButton(
-                                onClick = { viewModel.shuffleArtist() },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(text = "Shuffle")
                             }
                         }
                     }
-                }
 
-                itemsIndexed(
-                    items = songs,
-                    key = { _, song -> song.id }
-                ) { index, song ->
-                    ArtistTrackItem(
-                        index = index + 1,
-                        song = song,
-                        onClick = { viewModel.playSong(song) }
-                    )
+                    itemsIndexed(
+                        items = songs,
+                        key = { _, song -> song.id }
+                    ) { index, song ->
+                        val isCurrentSong = song.id == currentSongId
+                        ArtistTrackItem(
+                            index = index + 1,
+                            song = song,
+                            isCurrentSong = isCurrentSong,
+                            isPlaying = isPlaying,
+                            onClick = { viewModel.playSong(song) }
+                        )
+                    }
                 }
+            }
+        }
+
+        if (currentSong != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            ) {
+                MiniPlayer(
+                    song = currentSong,
+                    isPlaying = mainIsPlaying,
+                    progress = progress,
+                    onPlayPauseClick = {
+                        if (mainIsPlaying) mainViewModel.pause() else mainViewModel.play()
+                    },
+                    onSkipNextClick = { mainViewModel.skipToNext() },
+                    onSkipPreviousClick = { mainViewModel.skipToPrevious() },
+                    onClick = onNavigateToPlayer,
+                    showArtwork = showArtworkFlow,
+                    showProgress = showMiniPlayerProgress,
+                    isGestureEnabled = isGestureMiniPlayerEnabled
+                )
             }
         }
     }
@@ -224,6 +279,8 @@ fun ArtistTrackItem(
     index: Int,
     song: Song,
     onClick: () -> Unit,
+    isCurrentSong: Boolean = false,
+    isPlaying: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -233,13 +290,25 @@ fun ArtistTrackItem(
             .padding(horizontal = 24.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = String.format(Locale.getDefault(), "%02d", index),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-            modifier = Modifier.width(36.dp)
-        )
+        if (isCurrentSong) {
+            Box(
+                modifier = Modifier.width(36.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                PlayingIndicator(
+                    isPlaying = isPlaying,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        } else {
+            Text(
+                text = String.format(Locale.getDefault(), "%02d", index),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.width(36.dp)
+            )
+        }
 
         Column(modifier = Modifier.weight(1f)) {
             Text(

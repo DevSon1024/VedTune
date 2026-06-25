@@ -35,132 +35,188 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.ui.components.SongArtwork
+import com.devson.vedtune.ui.components.PlayingIndicator
+import com.devson.vedtune.ui.components.MiniPlayer
+import com.devson.vedtune.ui.MainViewModel
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.runtime.remember
 import java.util.Locale
 
 @Composable
 fun AlbumDetailsScreen(
     viewModel: AlbumDetailsViewModel,
+    mainViewModel: MainViewModel,
     onBackClick: () -> Unit,
+    onNavigateToPlayer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val songs by viewModel.songs.collectAsState()
     val albumDetails by viewModel.albumDetails.collectAsState()
     val showArtwork by viewModel.showAlbumArt.collectAsState()
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-    ) {
-        Row(
+    val currentSongId by viewModel.currentSongId.collectAsState()
+    val isPlaying by viewModel.isPlaying.collectAsState()
+
+    val currentSong by mainViewModel.currentSong.collectAsState()
+    val mainIsPlaying by mainViewModel.isPlaying.collectAsState()
+    val position by mainViewModel.playbackPosition.collectAsState()
+    val duration by mainViewModel.playbackDuration.collectAsState()
+    val showArtworkFlow by mainViewModel.showAlbumArt.collectAsState()
+    val showMiniPlayerProgress by mainViewModel.showMiniPlayerProgress.collectAsState()
+    val isGestureMiniPlayerEnabled by mainViewModel.isGestureMiniPlayerEnabled.collectAsState()
+
+    val progress = remember(position, duration) {
+        if (duration > 0) position.toFloat() / duration.toFloat() else 0f
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxSize()
+                .statusBarsPadding()
         ) {
-            IconButton(onClick = onBackClick) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Go Back"
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Go Back"
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = albumDetails?.title ?: "Album Details",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = albumDetails?.title ?: "Album Details",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
 
-        if (songs.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "No songs in this album")
-            }
-        } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        ElevatedCard(
+            if (songs.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "No songs in this album")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        bottom = if (currentSong != null) 96.dp else 16.dp
+                    )
+                ) {
+                    item {
+                        Column(
                             modifier = Modifier
-                                .size(200.dp),
-                            shape = MaterialTheme.shapes.extraLarge
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            SongArtwork(
-                                albumId = viewModel.albumId,
-                                modifier = Modifier.fillMaxSize(),
-                                showArtwork = showArtwork
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text(
-                            text = albumDetails?.title ?: "Unknown Album",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        Text(
-                            text = albumDetails?.artist ?: "Unknown Artist",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        Text(
-                            text = "${songs.size} ${if (songs.size == 1) "Song" else "Songs"}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Button(
-                                onClick = { viewModel.playAlbum() },
-                                modifier = Modifier.weight(1f)
+                            ElevatedCard(
+                                modifier = Modifier
+                                    .size(200.dp),
+                                shape = MaterialTheme.shapes.extraLarge
                             ) {
-                                Text(text = "Play")
+                                SongArtwork(
+                                    albumId = viewModel.albumId,
+                                    modifier = Modifier.fillMaxSize(),
+                                    showArtwork = showArtwork
+                                )
                             }
 
-                            FilledTonalButton(
-                                onClick = { viewModel.shuffleAlbum() },
-                                modifier = Modifier.weight(1f)
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = albumDetails?.title ?: "Unknown Album",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            Text(
+                                text = albumDetails?.artist ?: "Unknown Artist",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            Text(
+                                text = "${songs.size} ${if (songs.size == 1) "Song" else "Songs"}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(text = "Shuffle")
+                                Button(
+                                    onClick = { viewModel.playAlbum() },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(text = "Play")
+                                }
+
+                                FilledTonalButton(
+                                    onClick = { viewModel.shuffleAlbum() },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(text = "Shuffle")
+                                }
                             }
                         }
                     }
-                }
 
-                itemsIndexed(
-                    items = songs,
-                    key = { _, song -> song.id }
-                ) { index, song ->
-                    AlbumTrackItem(
-                        trackNumber = index + 1,
-                        song = song,
-                        onClick = { viewModel.playSong(song) }
-                    )
+                    itemsIndexed(
+                        items = songs,
+                        key = { _, song -> song.id }
+                    ) { index, song ->
+                        val isCurrentSong = song.id == currentSongId
+                        AlbumTrackItem(
+                            trackNumber = index + 1,
+                            song = song,
+                            isCurrentSong = isCurrentSong,
+                            isPlaying = isPlaying,
+                            onClick = { viewModel.playSong(song) }
+                        )
+                    }
                 }
+            }
+        }
+
+        if (currentSong != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            ) {
+                MiniPlayer(
+                    song = currentSong,
+                    isPlaying = mainIsPlaying,
+                    progress = progress,
+                    onPlayPauseClick = {
+                        if (mainIsPlaying) mainViewModel.pause() else mainViewModel.play()
+                    },
+                    onSkipNextClick = { mainViewModel.skipToNext() },
+                    onSkipPreviousClick = { mainViewModel.skipToPrevious() },
+                    onClick = onNavigateToPlayer,
+                    showArtwork = showArtworkFlow,
+                    showProgress = showMiniPlayerProgress,
+                    isGestureEnabled = isGestureMiniPlayerEnabled
+                )
             }
         }
     }
@@ -171,6 +227,8 @@ fun AlbumTrackItem(
     trackNumber: Int,
     song: Song,
     onClick: () -> Unit,
+    isCurrentSong: Boolean = false,
+    isPlaying: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -180,13 +238,25 @@ fun AlbumTrackItem(
             .padding(horizontal = 24.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = String.format(Locale.getDefault(), "%02d", trackNumber),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-            modifier = Modifier.width(36.dp)
-        )
+        if (isCurrentSong) {
+            Box(
+                modifier = Modifier.width(36.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                PlayingIndicator(
+                    isPlaying = isPlaying,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        } else {
+            Text(
+                text = String.format(Locale.getDefault(), "%02d", trackNumber),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.width(36.dp)
+            )
+        }
 
         Column(modifier = Modifier.weight(1f)) {
             Text(

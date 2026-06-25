@@ -24,6 +24,9 @@ class AlbumDetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
+    val currentSongId: StateFlow<Long?> = playbackConnection.currentSongId
+    val isPlaying: StateFlow<Boolean> = playbackConnection.isPlaying
+
     val showAlbumArt: StateFlow<Boolean> = settingsRepository.showAlbumArt
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 

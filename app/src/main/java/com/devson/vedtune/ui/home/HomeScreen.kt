@@ -87,26 +87,28 @@ fun HomeScreen(
         modifier = modifier.fillMaxSize(),
         bottomBar = {
             Column {
-                MiniPlayer(
-                    song = currentSong,
-                    isPlaying = isPlaying,
-                    progress = progress,
-                    onPlayPauseClick = {
-                        if (isPlaying) mainViewModel.pause() else mainViewModel.play()
-                    },
-                    onSkipNextClick = {
-                        mainViewModel.skipToNext()
-                    },
-                    onSkipPreviousClick = {
-                        mainViewModel.skipToPrevious()
-                    },
-                    onClick = {
-                        navController.navigate(Screen.Player.route)
-                    },
-                    showArtwork = showAlbumArt,
-                    showProgress = showMiniPlayerProgress,
-                    isGestureEnabled = isGestureMiniPlayerEnabled
-                )
+                if (tabRoutes.getOrNull(selectedIndex) != Screen.Settings.route) {
+                    MiniPlayer(
+                        song = currentSong,
+                        isPlaying = isPlaying,
+                        progress = progress,
+                        onPlayPauseClick = {
+                            if (isPlaying) mainViewModel.pause() else mainViewModel.play()
+                        },
+                        onSkipNextClick = {
+                            mainViewModel.skipToNext()
+                        },
+                        onSkipPreviousClick = {
+                            mainViewModel.skipToPrevious()
+                        },
+                        onClick = {
+                            navController.navigate(Screen.Player.route)
+                        },
+                        showArtwork = showAlbumArt,
+                        showProgress = showMiniPlayerProgress,
+                        isGestureEnabled = isGestureMiniPlayerEnabled
+                    )
+                }
 
                 val items = listOf(
                     HomeNavigationItem("Songs", Screen.Songs.route, Icons.AutoMirrored.Filled.List),

@@ -36,6 +36,9 @@ class SongsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) : BaseViewModel<SongsUiState, SongsUiEvent>(SongsUiState(isLoading = true)) {
 
+    val currentSongId: StateFlow<Long?> = playbackConnection.currentSongId
+    val isPlaying: StateFlow<Boolean> = playbackConnection.isPlaying
+
     val playlists: StateFlow<List<Playlist>> = repository.getAllPlaylists()
         .stateIn(
             scope = viewModelScope,
