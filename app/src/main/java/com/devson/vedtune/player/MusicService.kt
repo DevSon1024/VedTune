@@ -1,21 +1,22 @@
 package com.devson.vedtune.player
 
 import android.app.PendingIntent
+import android.app.Service
 import android.content.Intent
 import android.os.Bundle
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
-import com.devson.vedtune.R
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
-private const val CUSTOM_COMMAND_CLOSE = "action_close"
+private const val ACTION_CLOSE = "com.devson.vedtune.ACTION_CLOSE"
 
 @AndroidEntryPoint
 class MusicService : MediaSessionService() {
@@ -24,6 +25,7 @@ class MusicService : MediaSessionService() {
     lateinit var exoPlayer: ExoPlayer
 
     private var mediaSession: MediaSession? = null
+    private var isPlayerReleased = false
 
     override fun onCreate() {
         super.onCreate()
@@ -46,12 +48,12 @@ class MusicService : MediaSessionService() {
             ): MediaSession.ConnectionResult {
                 val connectionResult = super.onConnect(session, controller)
                 val sessionCommands = connectionResult.availableSessionCommands.buildUpon()
-                    .add(SessionCommand(CUSTOM_COMMAND_CLOSE, Bundle.EMPTY))
+                    .add(SessionCommand(ACTION_CLOSE, Bundle.EMPTY))
                     .build()
-                return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
-                    .setAvailableSessionCommands(sessionCommands)
-                    .setAvailablePlayerCommands(connectionResult.availablePlayerCommands)
-                    .build()
+                return MediaSession.ConnectionResult.accept(
+                    sessionCommands,
+                    connectionResult.availablePlayerCommands
+                )
             }
 
             override fun onCustomCommand(
@@ -60,9 +62,8 @@ class MusicService : MediaSessionService() {
                 customCommand: SessionCommand,
                 args: Bundle
             ): ListenableFuture<SessionResult> {
-                if (customCommand.customAction == CUSTOM_COMMAND_CLOSE) {
-                    session.player.pause()
-                    stopSelf()
+                if (customCommand.customAction == ACTION_CLOSE) {
+                    performCleanup(killProcess = true)
                     return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                 }
                 return super.onCustomCommand(session, controller, customCommand, args)
@@ -76,8 +77,8 @@ class MusicService : MediaSessionService() {
 
         val closeButton = CommandButton.Builder()
             .setDisplayName("Close")
-            .setSessionCommand(SessionCommand(CUSTOM_COMMAND_CLOSE, Bundle.EMPTY))
-            .setIconResId(R.drawable.ic_close)
+            .setSessionCommand(SessionCommand(ACTION_CLOSE, Bundle.EMPTY))
+            .setIconResId(android.R.drawable.ic_menu_close_clear_cancel)
             .build()
 
         mediaSession?.setCustomLayout(listOf(closeButton))
@@ -89,17 +90,63 @@ class MusicService : MediaSessionService() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        if (!exoPlayer.isPlaying) {
-            stopSelf()
-        }
+        performCleanup(killProcess = false)
     }
 
     override fun onDestroy() {
-        mediaSession?.run {
-            player.release()
-            release()
+        performCleanup(killProcess = false)
+        super.onDestroy()
+    }
+
+    private fun performCleanup(killProcess: Boolean) {
+        // Stop playback and clear media items
+        try {
+            if (!isPlayerReleased) {
+                if (exoPlayer.playbackState != Player.STATE_IDLE) {
+                    exoPlayer.stop()
+                    exoPlayer.clearMediaItems()
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // Explicitly release MediaSession and set to null to notify the OS to remove controls
+        mediaSession?.let { session ->
+            try {
+                session.release()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
             mediaSession = null
         }
-        super.onDestroy()
+
+        // Remove foreground notification forcefully
+        try {
+            stopForeground(Service.STOP_FOREGROUND_REMOVE)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // Release player resource safely
+        releasePlayerSafely()
+
+        // Terminate the service
+        stopSelf()
+
+        if (killProcess) {
+            android.os.Process.killProcess(android.os.Process.myPid())
+        }
+    }
+
+    private fun releasePlayerSafely() {
+        if (!isPlayerReleased) {
+            try {
+                exoPlayer.release()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            isPlayerReleased = true
+        }
     }
 }
