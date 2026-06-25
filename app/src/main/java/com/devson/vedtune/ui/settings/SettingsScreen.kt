@@ -52,6 +52,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.devson.vedtune.domain.model.FolderFilterMode
+import com.devson.vedtune.ui.components.VedTuneTopAppBar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -79,20 +80,25 @@ fun SettingsScreen(
     var queueClearedMessageVisible by remember { mutableStateOf(false) }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        modifier = modifier.fillMaxSize()
     ) {
-        Text(
-            text = "Settings",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 4.dp)
+        VedTuneTopAppBar(
+            title = "Settings",
+            searchQuery = "",
+            onQueryChange = {},
+            showSearchAction = false,
+            showSortAction = false,
+            showLayoutToggleAction = false,
+            modifier = Modifier.statusBarsPadding()
         )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
 
         // CARD 1: Appearance & Theme
         SettingsCard(
@@ -350,6 +356,7 @@ fun SettingsScreen(
 
         // Bottom spacer to offset the mini-player and navigation bar padding cleanly
         Spacer(modifier = Modifier.height(contentPadding.calculateBottomPadding()))
+    }
     }
 }
 

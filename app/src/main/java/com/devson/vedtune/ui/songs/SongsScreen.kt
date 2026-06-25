@@ -81,6 +81,7 @@ import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.ui.components.SongArtwork
 import com.devson.vedtune.ui.components.AddToPlaylistDialog
 import com.devson.vedtune.ui.components.SearchBar
+import com.devson.vedtune.ui.components.VedTuneTopAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -152,124 +153,102 @@ fun SongsScreen(
     Column(
         modifier = modifier.fillMaxSize()
     ) {
-        // 1. Search Bar
-        SearchBar(
-            query = uiState.searchQuery,
-            onQueryChange = { viewModel.setSearchQuery(it) },
-            placeholder = "Search songs, artists, albums...",
-            modifier = Modifier.statusBarsPadding()
-        )
-
-        // 2. Sorting and View Toggle Options
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "${uiState.songs.size} songs",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+        Box {
+            VedTuneTopAppBar(
+                title = "Songs",
+                searchQuery = uiState.searchQuery,
+                onQueryChange = { viewModel.setSearchQuery(it) },
+                searchPlaceholder = "Search songs, artists, albums...",
+                showSortAction = true,
+                onSortClick = { showSortMenu = true },
+                showLayoutToggleAction = true,
+                isGridView = uiState.isGridView,
+                onLayoutToggleClick = { viewModel.toggleLayoutView() },
+                totalItemCount = uiState.totalItemCount,
+                totalDurationMs = uiState.totalDurationMs,
+                modifier = Modifier.statusBarsPadding()
             )
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Layout view toggle (List <-> Grid)
-                IconButton(onClick = { viewModel.toggleLayoutView() }) {
-                    Icon(
-                        imageVector = if (uiState.isGridView) Icons.AutoMirrored.Filled.List else Icons.Default.Menu,
-                        contentDescription = "Toggle Layout"
-                    )
-                }
-
-                // Sort option button
-                Box {
-                    IconButton(onClick = { showSortMenu = true }) {
-                        Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Sort Options")
+            DropdownMenu(
+                expanded = showSortMenu,
+                onDismissRequest = { showSortMenu = false },
+                modifier = Modifier.align(Alignment.TopEnd)
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Sort by Title") },
+                    onClick = {
+                        viewModel.setSortBy(SortBy.TITLE)
+                        showSortMenu = false
+                    },
+                    leadingIcon = {
+                        if (uiState.sortBy == SortBy.TITLE) {
+                            Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                        }
                     }
-
-                    DropdownMenu(
-                        expanded = showSortMenu,
-                        onDismissRequest = { showSortMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Sort by Title") },
-                            onClick = {
-                                viewModel.setSortBy(SortBy.TITLE)
-                                showSortMenu = false
-                            },
-                            leadingIcon = {
-                                if (uiState.sortBy == SortBy.TITLE) {
-                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
-                                }
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Sort by Artist") },
-                            onClick = {
-                                viewModel.setSortBy(SortBy.ARTIST)
-                                showSortMenu = false
-                            },
-                            leadingIcon = {
-                                if (uiState.sortBy == SortBy.ARTIST) {
-                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
-                                }
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Sort by Album") },
-                            onClick = {
-                                viewModel.setSortBy(SortBy.ALBUM)
-                                showSortMenu = false
-                            },
-                            leadingIcon = {
-                                if (uiState.sortBy == SortBy.ALBUM) {
-                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
-                                }
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Sort by Date Added") },
-                            onClick = {
-                                viewModel.setSortBy(SortBy.DATE_ADDED)
-                                showSortMenu = false
-                            },
-                            leadingIcon = {
-                                if (uiState.sortBy == SortBy.DATE_ADDED) {
-                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
-                                }
-                            }
-                        )
-
-                        HorizontalDivider()
-
-                        DropdownMenuItem(
-                            text = { Text("Ascending") },
-                            onClick = {
-                                viewModel.setSortOrder(SortOrder.ASCENDING)
-                                showSortMenu = false
-                            },
-                            leadingIcon = {
-                                if (uiState.sortOrder == SortOrder.ASCENDING) {
-                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
-                                }
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Descending") },
-                            onClick = {
-                                viewModel.setSortOrder(SortOrder.DESCENDING)
-                                showSortMenu = false
-                            },
-                            leadingIcon = {
-                                if (uiState.sortOrder == SortOrder.DESCENDING) {
-                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
-                                }
-                            }
-                        )
+                )
+                DropdownMenuItem(
+                    text = { Text("Sort by Artist") },
+                    onClick = {
+                        viewModel.setSortBy(SortBy.ARTIST)
+                        showSortMenu = false
+                    },
+                    leadingIcon = {
+                        if (uiState.sortBy == SortBy.ARTIST) {
+                            Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                        }
                     }
-                }
+                )
+                DropdownMenuItem(
+                    text = { Text("Sort by Album") },
+                    onClick = {
+                        viewModel.setSortBy(SortBy.ALBUM)
+                        showSortMenu = false
+                    },
+                    leadingIcon = {
+                        if (uiState.sortBy == SortBy.ALBUM) {
+                            Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                        }
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Sort by Date Added") },
+                    onClick = {
+                        viewModel.setSortBy(SortBy.DATE_ADDED)
+                        showSortMenu = false
+                    },
+                    leadingIcon = {
+                        if (uiState.sortBy == SortBy.DATE_ADDED) {
+                            Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                        }
+                    }
+                )
+
+                HorizontalDivider()
+
+                DropdownMenuItem(
+                    text = { Text("Ascending") },
+                    onClick = {
+                        viewModel.setSortOrder(SortOrder.ASCENDING)
+                        showSortMenu = false
+                    },
+                    leadingIcon = {
+                        if (uiState.sortOrder == SortOrder.ASCENDING) {
+                            Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                        }
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Descending") },
+                    onClick = {
+                        viewModel.setSortOrder(SortOrder.DESCENDING)
+                        showSortMenu = false
+                    },
+                    leadingIcon = {
+                        if (uiState.sortOrder == SortOrder.DESCENDING) {
+                            Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                        }
+                    }
+                )
             }
         }
 

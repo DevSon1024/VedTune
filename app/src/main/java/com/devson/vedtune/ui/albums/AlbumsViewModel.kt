@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
@@ -39,6 +40,18 @@ class AlbumsViewModel @Inject constructor(
             }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val totalItemCount: StateFlow<Int> = albums
+        .map { it.size }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val totalDurationMs: StateFlow<Long> = combine(
+        albums,
+        repository.getAllSongs()
+    ) { filteredAlbums, allSongs ->
+        val filteredAlbumIds = filteredAlbums.map { it.id }.toSet()
+        allSongs.filter { it.albumId in filteredAlbumIds }.sumOf { it.duration }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query

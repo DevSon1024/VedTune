@@ -33,6 +33,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import com.devson.vedtune.ui.components.SearchBar
+import com.devson.vedtune.ui.components.VedTuneTopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -58,6 +59,7 @@ fun PlaylistsScreen(
 ) {
     val playlists by viewModel.playlists.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val totalItemCount by viewModel.totalItemCount.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
 
     Box(
@@ -66,10 +68,13 @@ fun PlaylistsScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            SearchBar(
-                query = searchQuery,
+            VedTuneTopAppBar(
+                title = "Playlists",
+                searchQuery = searchQuery,
                 onQueryChange = { viewModel.setSearchQuery(it) },
-                placeholder = "Search playlists...",
+                searchPlaceholder = "Search playlists...",
+                totalItemCount = totalItemCount,
+                itemTypeLabel = "playlists",
                 modifier = Modifier.statusBarsPadding()
             )
 

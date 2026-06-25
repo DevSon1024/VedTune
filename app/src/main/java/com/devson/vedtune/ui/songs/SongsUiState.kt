@@ -21,7 +21,9 @@ data class SongsUiState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val errorMessage: String? = null,
-    val showArtwork: Boolean = true
+    val showArtwork: Boolean = true,
+    val totalItemCount: Int = 0,
+    val totalDurationMs: Long = 0L
 ) : UiState
 
 sealed interface SongsUiEvent : UiEvent {

@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.devson.vedtune.domain.model.Album
 import com.devson.vedtune.ui.components.SongArtwork
 import com.devson.vedtune.ui.components.SearchBar
+import com.devson.vedtune.ui.components.VedTuneTopAppBar
 
 @Composable
 fun AlbumsScreen(
@@ -41,14 +42,20 @@ fun AlbumsScreen(
     val albums by viewModel.albums.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val showArtwork by viewModel.showAlbumArt.collectAsState()
+    val totalItemCount by viewModel.totalItemCount.collectAsState()
+    val totalDurationMs by viewModel.totalDurationMs.collectAsState()
 
     Column(
         modifier = modifier.fillMaxSize()
     ) {
-        SearchBar(
-            query = searchQuery,
+        VedTuneTopAppBar(
+            title = "Albums",
+            searchQuery = searchQuery,
             onQueryChange = { viewModel.setSearchQuery(it) },
-            placeholder = "Search albums...",
+            searchPlaceholder = "Search albums...",
+            totalItemCount = totalItemCount,
+            itemTypeLabel = "albums",
+            totalDurationMs = totalDurationMs,
             modifier = Modifier.statusBarsPadding()
         )
 

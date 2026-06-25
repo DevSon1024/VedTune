@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.devson.vedtune.domain.model.Artist
 import com.devson.vedtune.ui.components.SearchBar
+import com.devson.vedtune.ui.components.VedTuneTopAppBar
 
 @Composable
 fun ArtistsScreen(
@@ -42,14 +43,20 @@ fun ArtistsScreen(
 ) {
     val artists by viewModel.artists.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val totalItemCount by viewModel.totalItemCount.collectAsState()
+    val totalDurationMs by viewModel.totalDurationMs.collectAsState()
 
     Column(
         modifier = modifier.fillMaxSize()
     ) {
-        SearchBar(
-            query = searchQuery,
+        VedTuneTopAppBar(
+            title = "Artists",
+            searchQuery = searchQuery,
             onQueryChange = { viewModel.setSearchQuery(it) },
-            placeholder = "Search artists...",
+            searchPlaceholder = "Search artists...",
+            totalItemCount = totalItemCount,
+            itemTypeLabel = "artists",
+            totalDurationMs = totalDurationMs,
             modifier = Modifier.statusBarsPadding()
         )
 

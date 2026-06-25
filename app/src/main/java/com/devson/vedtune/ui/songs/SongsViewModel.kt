@@ -86,10 +86,14 @@ class SongsViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             songsFlow.collect { filteredSongs ->
+                val totalCount = filteredSongs.size
+                val totalDuration = filteredSongs.sumOf { it.duration }
                 updateState {
                     it.copy(
                         songs = filteredSongs,
-                        isLoading = false
+                        isLoading = false,
+                        totalItemCount = totalCount,
+                        totalDurationMs = totalDuration
                     )
                 }
             }
