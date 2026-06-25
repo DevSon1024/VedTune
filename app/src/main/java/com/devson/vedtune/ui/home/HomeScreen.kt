@@ -27,6 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.devson.vedtune.ui.MainViewModel
 import com.devson.vedtune.ui.components.MiniPlayer
+import com.devson.vedtune.ui.navigation.navigateSafe
 import com.devson.vedtune.ui.songs.SongsScreen
 import com.devson.vedtune.ui.songs.SongsViewModel
 import com.devson.vedtune.ui.albums.AlbumsScreen
@@ -102,7 +103,7 @@ fun HomeScreen(
                             mainViewModel.skipToPrevious()
                         },
                         onClick = {
-                            navController.navigate(Screen.Player.route)
+                            navController.navigateSafe(Screen.Player.route)
                         },
                         showArtwork = showAlbumArt,
                         showProgress = showMiniPlayerProgress,

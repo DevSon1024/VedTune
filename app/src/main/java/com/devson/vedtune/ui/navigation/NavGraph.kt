@@ -11,6 +11,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavController
+import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -71,19 +73,19 @@ fun NavGraph(
             HomeScreen(
                 navController = navController,
                 onNavigateToAlbum = { albumId ->
-                    navController.navigate(Screen.AlbumDetails.createRoute(albumId))
+                    navController.navigateSafe(Screen.AlbumDetails.createRoute(albumId))
                 },
                 onNavigateToArtist = { artistName ->
-                    navController.navigate(Screen.ArtistDetails.createRoute(artistName))
+                    navController.navigateSafe(Screen.ArtistDetails.createRoute(artistName))
                 },
                 onNavigateToPlaylist = { playlistId ->
-                    navController.navigate(Screen.PlaylistDetails.createRoute(playlistId))
+                    navController.navigateSafe(Screen.PlaylistDetails.createRoute(playlistId))
                 },
                 onNavigateToFolderSettings = {
-                    navController.navigate(Screen.FolderSettings.route)
+                    navController.navigateSafe(Screen.FolderSettings.route)
                 },
                 onNavigateToEditTags = { songId ->
-                    navController.navigate(Screen.EditTags.createRoute(songId))
+                    navController.navigateSafe(Screen.EditTags.createRoute(songId))
                 },
                 defaultStartScreen = defaultStartScreen,
                 mainViewModel = mainViewModel,
@@ -134,7 +136,7 @@ fun NavGraph(
                 viewModel = viewModel,
                 mainViewModel = mainViewModel,
                 onBackClick = { navController.popBackStack() },
-                onNavigateToPlayer = { navController.navigate(Screen.Player.route) }
+                onNavigateToPlayer = { navController.navigateSafe(Screen.Player.route) }
             )
         }
         composable(
@@ -181,7 +183,7 @@ fun NavGraph(
                 viewModel = viewModel,
                 mainViewModel = mainViewModel,
                 onBackClick = { navController.popBackStack() },
-                onNavigateToPlayer = { navController.navigate(Screen.Player.route) }
+                onNavigateToPlayer = { navController.navigateSafe(Screen.Player.route) }
             )
         }
         composable(
@@ -207,7 +209,7 @@ fun NavGraph(
                 viewModel = viewModel,
                 mainViewModel = mainViewModel,
                 onBackClick = { navController.popBackStack() },
-                onNavigateToPlayer = { navController.navigate(Screen.Player.route) }
+                onNavigateToPlayer = { navController.navigateSafe(Screen.Player.route) }
             )
         }
         composable(
@@ -234,5 +236,12 @@ fun NavGraph(
                 onBackClick = { navController.popBackStack() }
             )
         }
+    }
+}
+
+fun NavController.navigateSafe(route: String) {
+    val currentEntry = currentBackStackEntry
+    if (currentEntry == null || currentEntry.lifecycle.currentState == Lifecycle.State.RESUMED) {
+        navigate(route)
     }
 }
