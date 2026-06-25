@@ -66,6 +66,8 @@ class PlaybackConnection @Inject constructor(
     val sleepTimerRemaining: StateFlow<Long> = _sleepTimerRemaining.asStateFlow()
 
     private var sleepTimerJob: kotlinx.coroutines.Job? = null
+    private var fadeJob: kotlinx.coroutines.Job? = null
+    private var consecutiveErrors = 0
 
     companion object {
         private val KEY_CURRENT_SON_ID = longPreferencesKey("current_song_id")
@@ -105,11 +107,42 @@ class PlaybackConnection @Inject constructor(
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            consecutiveErrors = 0
             val songId = mediaItem?.mediaId?.toLongOrNull()
             _currentSongId.value = songId
-            mediaController?.let {
+            mediaController?.let { controller ->
                 _playbackPosition.value = 0L
-                _playbackDuration.value = it.duration.coerceAtLeast(0L)
+                _playbackDuration.value = controller.duration.coerceAtLeast(0L)
+
+                // Trigger auto transition fade-in
+                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
+                    scope.launch {
+                        val preferences = dataStore.data.first()
+                        val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
+                        if (fadeIn) {
+                            fadeJob?.cancel()
+                            fadeJob = launch {
+                                var waitCount = 0
+                                while (!controller.isPlaying && controller.playWhenReady && waitCount < 20) {
+                                    delay(50)
+                                    waitCount++
+                                }
+                                if (controller.isPlaying) {
+                                    controller.volume = 0f
+                                    var vol = 0f
+                                    while (vol < 1.0f && controller.isPlaying) {
+                                        delay(25)
+                                        vol += 0.05f
+                                        controller.volume = vol.coerceAtMost(1f)
+                                    }
+                                    if (controller.isPlaying) {
+                                        controller.volume = 1f
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
             scope.launch {
                 dataStore.edit { preferences ->
@@ -143,6 +176,47 @@ class PlaybackConnection @Inject constructor(
 
         override fun onPlayerError(error: PlaybackException) {
             super.onPlayerError(error)
+            consecutiveErrors++
+            scope.launch {
+                android.widget.Toast.makeText(
+                    context,
+                    "Playback error: ${error.localizedMessage ?: "Unknown error"}",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+
+                mediaController?.let { controller ->
+                    if (consecutiveErrors < 3 && controller.nextMediaItemIndex != androidx.media3.common.C.INDEX_UNSET) {
+                        controller.seekToNext()
+                        controller.prepare()
+                        controller.play()
+                    } else {
+                        controller.stop()
+                        consecutiveErrors = 0
+                    }
+                }
+            }
+        }
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            mediaController?.let { controller ->
+                _playbackDuration.value = controller.duration.coerceAtLeast(0L)
+                _playbackPosition.value = controller.currentPosition
+            }
+        }
+
+        override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
+            mediaController?.let { controller ->
+                _playbackDuration.value = controller.duration.coerceAtLeast(0L)
+                _playbackPosition.value = controller.currentPosition
+            }
+        }
+
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int
+        ) {
+            _playbackPosition.value = newPosition.positionMs
         }
     }
 
@@ -392,19 +466,25 @@ class PlaybackConnection @Inject constructor(
     }
 
     private fun playWithFadeIn(controller: MediaController) {
-        scope.launch {
+        fadeJob?.cancel()
+        fadeJob = scope.launch {
             val preferences = dataStore.data.first()
             val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
             if (fadeIn) {
                 controller.volume = 0f
                 controller.play()
+                var waitCount = 0
+                while (!controller.isPlaying && controller.playWhenReady && waitCount < 20) {
+                    delay(50)
+                    waitCount++
+                }
                 var vol = 0f
                 while (vol < 1.0f && controller.isPlaying) {
-                    delay(40)
-                    vol += 0.1f
+                    delay(25)
+                    vol += 0.05f
                     controller.volume = vol.coerceAtMost(1f)
                 }
-                if (controller.isPlaying) {
+                if (controller.playWhenReady) {
                     controller.volume = 1f
                 }
             } else {
@@ -420,17 +500,99 @@ class PlaybackConnection @Inject constructor(
 
     fun pause() {
         mediaController?.let { controller ->
-            controller.pause()
-            savePlaybackPosition(controller.currentPosition)
+            fadeJob?.cancel()
+            fadeJob = scope.launch {
+                val preferences = dataStore.data.first()
+                val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
+                if (fadeIn && controller.isPlaying) {
+                    var vol = controller.volume
+                    while (vol > 0.0f && controller.isPlaying) {
+                        delay(20)
+                        vol -= 0.05f
+                        controller.volume = vol.coerceAtLeast(0f)
+                    }
+                    if (controller.isPlaying) {
+                        controller.pause()
+                    }
+                    controller.volume = 1f
+                } else {
+                    controller.pause()
+                }
+                savePlaybackPosition(controller.currentPosition)
+            }
         }
     }
 
     fun skipToNext() {
-        mediaController?.seekToNext()
+        mediaController?.let { controller ->
+            fadeJob?.cancel()
+            fadeJob = scope.launch {
+                val preferences = dataStore.data.first()
+                val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
+                if (fadeIn && controller.isPlaying && controller.nextMediaItemIndex != androidx.media3.common.C.INDEX_UNSET) {
+                    var vol = controller.volume
+                    while (vol > 0.0f && controller.isPlaying) {
+                        delay(15)
+                        vol -= 0.1f
+                        controller.volume = vol.coerceAtLeast(0f)
+                    }
+                    controller.seekToNext()
+                    var waitCount = 0
+                    while (!controller.isPlaying && controller.playWhenReady && waitCount < 20) {
+                        delay(50)
+                        waitCount++
+                    }
+                    controller.volume = 0f
+                    var newVol = 0f
+                    while (newVol < 1.0f && controller.isPlaying) {
+                        delay(20)
+                        newVol += 0.08f
+                        controller.volume = newVol.coerceAtMost(1f)
+                    }
+                    if (controller.playWhenReady) {
+                        controller.volume = 1f
+                    }
+                } else {
+                    controller.seekToNext()
+                }
+            }
+        }
     }
 
     fun skipToPrevious() {
-        mediaController?.seekToPrevious()
+        mediaController?.let { controller ->
+            fadeJob?.cancel()
+            fadeJob = scope.launch {
+                val preferences = dataStore.data.first()
+                val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
+                if (fadeIn && controller.isPlaying && controller.previousMediaItemIndex != androidx.media3.common.C.INDEX_UNSET) {
+                    var vol = controller.volume
+                    while (vol > 0.0f && controller.isPlaying) {
+                        delay(15)
+                        vol -= 0.1f
+                        controller.volume = vol.coerceAtLeast(0f)
+                    }
+                    controller.seekToPrevious()
+                    var waitCount = 0
+                    while (!controller.isPlaying && controller.playWhenReady && waitCount < 20) {
+                        delay(50)
+                        waitCount++
+                    }
+                    controller.volume = 0f
+                    var newVol = 0f
+                    while (newVol < 1.0f && controller.isPlaying) {
+                        delay(20)
+                        newVol += 0.08f
+                        controller.volume = newVol.coerceAtMost(1f)
+                    }
+                    if (controller.playWhenReady) {
+                        controller.volume = 1f
+                    }
+                } else {
+                    controller.seekToPrevious()
+                }
+            }
+        }
     }
 
     fun seekTo(positionMs: Long) {
