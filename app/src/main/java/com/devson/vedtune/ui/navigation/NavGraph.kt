@@ -157,7 +157,16 @@ fun NavGraph(
             val viewModel: PlayerViewModel = hiltViewModel()
             PlayerScreen(
                 viewModel = viewModel,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onNavigateToArtist = { artistName ->
+                    navController.navigateSafe(Screen.ArtistDetails.createRoute(artistName))
+                },
+                onNavigateToAlbum = { albumId ->
+                    navController.navigateSafe(Screen.AlbumDetails.createRoute(albumId))
+                },
+                onNavigateToEditTags = { songId ->
+                    navController.navigateSafe(Screen.EditTags.createRoute(songId))
+                }
             )
         }
         composable(

@@ -65,6 +65,9 @@ class PlaybackConnection @Inject constructor(
     private val _sleepTimerRemaining = MutableStateFlow(0L)
     val sleepTimerRemaining: StateFlow<Long> = _sleepTimerRemaining.asStateFlow()
 
+    private val _playlistQueue = MutableStateFlow<List<Song>>(emptyList())
+    val playlistQueue: StateFlow<List<Song>> = _playlistQueue.asStateFlow()
+
     private var sleepTimerJob: kotlinx.coroutines.Job? = null
     private var fadeJob: kotlinx.coroutines.Job? = null
     private var consecutiveErrors = 0
@@ -110,6 +113,7 @@ class PlaybackConnection @Inject constructor(
             consecutiveErrors = 0
             val songId = mediaItem?.mediaId?.toLongOrNull()
             _currentSongId.value = songId
+            updateQueue()
             mediaController?.let { controller ->
                 _playbackPosition.value = 0L
                 _playbackDuration.value = controller.duration.coerceAtLeast(0L)
@@ -201,6 +205,7 @@ class PlaybackConnection @Inject constructor(
             mediaController?.let { controller ->
                 _playbackDuration.value = controller.duration.coerceAtLeast(0L)
                 _playbackPosition.value = controller.currentPosition
+                updateQueue()
             }
         }
 
@@ -208,6 +213,7 @@ class PlaybackConnection @Inject constructor(
             mediaController?.let { controller ->
                 _playbackDuration.value = controller.duration.coerceAtLeast(0L)
                 _playbackPosition.value = controller.currentPosition
+                updateQueue()
             }
         }
 
@@ -228,6 +234,7 @@ class PlaybackConnection @Inject constructor(
             _playbackDuration.value = controller.duration.coerceAtLeast(0L)
             _repeatMode.value = controller.repeatMode
             _shuffleModeEnabled.value = controller.shuffleModeEnabled
+            updateQueue()
         }
     }
 
@@ -649,5 +656,50 @@ class PlaybackConnection @Inject constructor(
     fun cancelSleepTimer() {
         sleepTimerJob?.cancel()
         _sleepTimerRemaining.value = 0L
+    }
+
+    private fun updateQueue() {
+        val controller = mediaController ?: return
+        val count = controller.mediaItemCount
+        val songIds = (0 until count).mapNotNull { index ->
+            controller.getMediaItemAt(index).mediaId?.toLongOrNull()
+        }
+        scope.launch(Dispatchers.IO) {
+            try {
+                val songs = repository.getSongsByIds(songIds)
+                val songsMap = songs.associateBy { it.id }
+                val orderedSongs = songIds.mapNotNull { id -> songsMap[id] }
+                _playlistQueue.value = orderedSongs
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun moveQueueItem(fromIndex: Int, toIndex: Int) {
+        mediaController?.let { controller ->
+            if (fromIndex in 0 until controller.mediaItemCount && toIndex in 0 until controller.mediaItemCount) {
+                controller.moveMediaItem(fromIndex, toIndex)
+                // Save updated queue to repository
+                scope.launch {
+                    val updatedQueue = _playlistQueue.value.toMutableList()
+                    if (fromIndex < updatedQueue.size && toIndex < updatedQueue.size) {
+                        val item = updatedQueue.removeAt(fromIndex)
+                        updatedQueue.add(toIndex, item)
+                        _playlistQueue.value = updatedQueue
+                        repository.saveQueue(updatedQueue)
+                    }
+                }
+            }
+        }
+    }
+
+    fun skipToQueueItem(index: Int) {
+        mediaController?.let { controller ->
+            if (index in 0 until controller.mediaItemCount) {
+                controller.seekTo(index, 0L)
+                controller.play()
+            }
+        }
     }
 }

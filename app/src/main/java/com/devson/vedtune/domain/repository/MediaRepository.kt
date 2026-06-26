@@ -26,4 +26,6 @@ interface MediaRepository {
     suspend fun removeSongFromPlaylist(playlistId: Long, songId: Long)
     suspend fun deleteSong(songId: Long)
     suspend fun updateSong(song: Song)
+    fun isSongInPlaylist(playlistId: Long, songId: Long): Flow<Boolean>
+    suspend fun getSongsByIds(ids: List<Long>): List<Song>
 }

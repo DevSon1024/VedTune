@@ -39,8 +39,11 @@ interface PlaylistDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPlaylist(playlist: PlaylistEntity): Long
 
-    @Query("DELETE FROM playlists WHERE id = :playlistId")
+    @Query("DELETE FROM playlists WHERE id = :playlistId AND name != 'Favorites'")
     suspend fun deletePlaylistById(playlistId: Long)
+
+    @Query("SELECT EXISTS(SELECT 1 FROM playlist_songs WHERE playlistId = :playlistId AND songId = :songId)")
+    fun isSongInPlaylist(playlistId: Long, songId: Long): Flow<Boolean>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertPlaylistSong(crossRef: PlaylistSongCrossRef)

@@ -150,4 +150,12 @@ class MediaRepositoryImpl @Inject constructor(
     override suspend fun updateSong(song: Song) {
         songDao.insertSongs(listOf(song.toEntity()))
     }
+
+    override fun isSongInPlaylist(playlistId: Long, songId: Long): Flow<Boolean> {
+        return playlistDao.isSongInPlaylist(playlistId, songId)
+    }
+
+    override suspend fun getSongsByIds(ids: List<Long>): List<Song> {
+        return songDao.getSongsByIds(ids).map { it.toSong() }
+    }
 }
