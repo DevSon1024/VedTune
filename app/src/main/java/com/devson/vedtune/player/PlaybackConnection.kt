@@ -1,8 +1,8 @@
 package com.devson.vedtune.player
 
-import android.content.ComponentName
 import android.content.ContentUris
 import android.content.Context
+import android.net.Uri
 import android.provider.MediaStore
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -10,17 +10,13 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
-import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
-import androidx.media3.session.MediaController
-import androidx.media3.session.SessionToken
+import androidx.media3.exoplayer.ExoPlayer
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.domain.repository.MediaRepository
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,11 +34,13 @@ import javax.inject.Singleton
 class PlaybackConnection @Inject constructor(
     @ApplicationContext private val context: Context,
     private val repository: MediaRepository,
-    private val dataStore: DataStore<Preferences>
+    private val dataStore: DataStore<Preferences>,
+    private val exoPlayer: ExoPlayer
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private var controllerFuture: ListenableFuture<MediaController>? = null
-    private var mediaController: MediaController? = null
+    private var fadeJob: kotlinx.coroutines.Job? = null
+    private var sleepTimerJob: kotlinx.coroutines.Job? = null
+    private var consecutiveErrors = 0
 
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
@@ -68,10 +66,6 @@ class PlaybackConnection @Inject constructor(
     private val _playlistQueue = MutableStateFlow<List<Song>>(emptyList())
     val playlistQueue: StateFlow<List<Song>> = _playlistQueue.asStateFlow()
 
-    private var sleepTimerJob: kotlinx.coroutines.Job? = null
-    private var fadeJob: kotlinx.coroutines.Job? = null
-    private var consecutiveErrors = 0
-
     companion object {
         private val KEY_CURRENT_SON_ID = longPreferencesKey("current_song_id")
         private val KEY_PLAYBACK_POSITION = longPreferencesKey("playback_position")
@@ -81,31 +75,13 @@ class PlaybackConnection @Inject constructor(
         private val KEY_AUDIO_FADE_IN_ENABLED = booleanPreferencesKey("audio_fade_in_enabled")
     }
 
-    init {
-        val sessionToken = SessionToken(context, ComponentName(context, MusicService::class.java))
-        controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
-        controllerFuture?.addListener({
-            try {
-                mediaController = controllerFuture?.get()
-                mediaController?.addListener(playerListener)
-                updateState()
-                startPositionTracker()
-                restorePlaybackState()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }, MoreExecutors.directExecutor())
-    }
-
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _isPlaying.value = isPlaying
             if (!isPlaying) {
-                mediaController?.let { 
-                    val pos = it.currentPosition
-                    _playbackPosition.value = pos
-                    savePlaybackPosition(pos)
-                }
+                val pos = exoPlayer.currentPosition
+                _playbackPosition.value = pos
+                savePlaybackPosition(pos)
             }
         }
 
@@ -114,40 +90,39 @@ class PlaybackConnection @Inject constructor(
             val songId = mediaItem?.mediaId?.toLongOrNull()
             _currentSongId.value = songId
             updateQueue()
-            mediaController?.let { controller ->
-                _playbackPosition.value = 0L
-                _playbackDuration.value = controller.duration.coerceAtLeast(0L)
+            _playbackPosition.value = 0L
+            _playbackDuration.value = exoPlayer.duration.coerceAtLeast(0L)
 
-                // Trigger auto transition fade-in
-                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
-                    scope.launch {
-                        val preferences = dataStore.data.first()
-                        val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
-                        if (fadeIn) {
-                            fadeJob?.cancel()
-                            fadeJob = launch {
-                                var waitCount = 0
-                                while (!controller.isPlaying && controller.playWhenReady && waitCount < 20) {
-                                    delay(50)
-                                    waitCount++
+            // Trigger auto transition fade-in
+            if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
+                scope.launch {
+                    val preferences = dataStore.data.first()
+                    val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
+                    if (fadeIn) {
+                        fadeJob?.cancel()
+                        fadeJob = launch {
+                            var waitCount = 0
+                            while (!exoPlayer.isPlaying && exoPlayer.playWhenReady && waitCount < 20) {
+                                delay(50)
+                                waitCount++
+                            }
+                            if (exoPlayer.isPlaying) {
+                                exoPlayer.volume = 0f
+                                var vol = 0f
+                                while (vol < 1.0f && exoPlayer.isPlaying) {
+                                    delay(25)
+                                    vol += 0.05f
+                                    exoPlayer.volume = vol.coerceAtMost(1f)
                                 }
-                                if (controller.isPlaying) {
-                                    controller.volume = 0f
-                                    var vol = 0f
-                                    while (vol < 1.0f && controller.isPlaying) {
-                                        delay(25)
-                                        vol += 0.05f
-                                        controller.volume = vol.coerceAtMost(1f)
-                                    }
-                                    if (controller.isPlaying) {
-                                        controller.volume = 1f
-                                    }
+                                if (exoPlayer.isPlaying) {
+                                    exoPlayer.volume = 1f
                                 }
                             }
                         }
                     }
                 }
             }
+
             scope.launch {
                 dataStore.edit { preferences ->
                     if (songId != null) {
@@ -188,33 +163,27 @@ class PlaybackConnection @Inject constructor(
                     android.widget.Toast.LENGTH_SHORT
                 ).show()
 
-                mediaController?.let { controller ->
-                    if (consecutiveErrors < 3 && controller.nextMediaItemIndex != androidx.media3.common.C.INDEX_UNSET) {
-                        controller.seekToNext()
-                        controller.prepare()
-                        controller.play()
-                    } else {
-                        controller.stop()
-                        consecutiveErrors = 0
-                    }
+                if (consecutiveErrors < 3 && exoPlayer.nextMediaItemIndex != androidx.media3.common.C.INDEX_UNSET) {
+                    exoPlayer.seekToNext()
+                    exoPlayer.prepare()
+                    exoPlayer.play()
+                } else {
+                    exoPlayer.stop()
+                    consecutiveErrors = 0
                 }
             }
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
-            mediaController?.let { controller ->
-                _playbackDuration.value = controller.duration.coerceAtLeast(0L)
-                _playbackPosition.value = controller.currentPosition
-                updateQueue()
-            }
+            _playbackDuration.value = exoPlayer.duration.coerceAtLeast(0L)
+            _playbackPosition.value = exoPlayer.currentPosition
+            updateQueue()
         }
 
         override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
-            mediaController?.let { controller ->
-                _playbackDuration.value = controller.duration.coerceAtLeast(0L)
-                _playbackPosition.value = controller.currentPosition
-                updateQueue()
-            }
+            _playbackDuration.value = exoPlayer.duration.coerceAtLeast(0L)
+            _playbackPosition.value = exoPlayer.currentPosition
+            updateQueue()
         }
 
         override fun onPositionDiscontinuity(
@@ -226,16 +195,22 @@ class PlaybackConnection @Inject constructor(
         }
     }
 
+    init {
+        exoPlayer.addListener(playerListener)
+        updateState()
+        startPositionTracker()
+        restorePlaybackState()
+    }
+
+
     private fun updateState() {
-        mediaController?.let { controller ->
-            _isPlaying.value = controller.isPlaying
-            _currentSongId.value = controller.currentMediaItem?.mediaId?.toLongOrNull()
-            _playbackPosition.value = controller.currentPosition
-            _playbackDuration.value = controller.duration.coerceAtLeast(0L)
-            _repeatMode.value = controller.repeatMode
-            _shuffleModeEnabled.value = controller.shuffleModeEnabled
-            updateQueue()
-        }
+        _isPlaying.value = exoPlayer.isPlaying
+        _currentSongId.value = exoPlayer.currentMediaItem?.mediaId?.toLongOrNull()
+        _playbackPosition.value = exoPlayer.currentPosition
+        _playbackDuration.value = exoPlayer.duration.coerceAtLeast(0L)
+        _repeatMode.value = exoPlayer.repeatMode
+        _shuffleModeEnabled.value = exoPlayer.shuffleModeEnabled
+        updateQueue()
     }
 
     private fun startPositionTracker() {
@@ -243,16 +218,14 @@ class PlaybackConnection @Inject constructor(
             var lastSaveTime = 0L
             while (true) {
                 if (isPlaying.value) {
-                    mediaController?.let { controller ->
-                        val currentPos = controller.currentPosition
-                        _playbackPosition.value = currentPos
-                        _playbackDuration.value = controller.duration.coerceAtLeast(0L)
-                        
-                        val now = System.currentTimeMillis()
-                        if (now - lastSaveTime > 5000) {
-                            savePlaybackPosition(currentPos)
-                            lastSaveTime = now
-                        }
+                    val currentPos = exoPlayer.currentPosition
+                    _playbackPosition.value = currentPos
+                    _playbackDuration.value = exoPlayer.duration.coerceAtLeast(0L)
+                    
+                    val now = System.currentTimeMillis()
+                    if (now - lastSaveTime > 5000) {
+                        savePlaybackPosition(currentPos)
+                        lastSaveTime = now
                     }
                 }
                 delay(500)
@@ -270,196 +243,185 @@ class PlaybackConnection @Inject constructor(
 
     private fun restorePlaybackState() {
         scope.launch {
-            mediaController?.let { controller ->
-                if (controller.mediaItemCount == 0) {
-                    val savedQueue = repository.getQueue()
-                    if (savedQueue.isNotEmpty()) {
-                        val preferences = dataStore.data.first()
-                        val savedSongId = preferences[KEY_CURRENT_SON_ID]
-                        val savedPosition = preferences[KEY_PLAYBACK_POSITION] ?: 0L
-                        val savedRepeatMode = preferences[KEY_REPEAT_MODE] ?: Player.REPEAT_MODE_OFF
-                        val savedShuffleMode = preferences[KEY_SHUFFLE_MODE] ?: false
+            if (exoPlayer.mediaItemCount == 0) {
+                val savedQueue = repository.getQueue()
+                if (savedQueue.isNotEmpty()) {
+                    val preferences = dataStore.data.first()
+                    val savedSongId = preferences[KEY_CURRENT_SON_ID]
+                    val savedPosition = preferences[KEY_PLAYBACK_POSITION] ?: 0L
+                    val savedRepeatMode = preferences[KEY_REPEAT_MODE] ?: Player.REPEAT_MODE_OFF
+                    val savedShuffleMode = preferences[KEY_SHUFFLE_MODE] ?: false
 
-                        val mediaItems = savedQueue.map { s ->
-                            MediaItem.Builder()
-                                .setMediaId(s.id.toString())
-                                .setUri(ContentUris.withAppendedId(
-                                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                                    s.id
-                                ))
-                                .setMediaMetadata(
-                                    MediaMetadata.Builder()
-                                        .setTitle(s.title)
-                                        .setArtist(s.artist)
-                                        .setAlbumTitle(s.album)
-                                        .setArtworkUri(Uri.parse("content://media/external/audio/albumart/${s.albumId}"))
-                                        .build()
-                                )
-                                .build()
-                        }
-                        controller.setMediaItems(mediaItems)
-                        
-                        val index = savedQueue.indexOfFirst { it.id == savedSongId }
-                        if (index != -1) {
-                            controller.seekTo(index, savedPosition)
-                        } else {
-                            controller.seekTo(0, savedPosition)
-                        }
-                        
-                        controller.repeatMode = savedRepeatMode
-                        controller.shuffleModeEnabled = savedShuffleMode
-                        controller.prepare()
-                        
-                        _repeatMode.value = savedRepeatMode
-                        _shuffleModeEnabled.value = savedShuffleMode
-                        
-                        val autoplay = preferences[KEY_AUTOPLAY_ON_STARTUP] ?: false
-                        if (autoplay) {
-                            playWithFadeIn(controller)
-                        }
-                        
-                        updateState()
+                    val mediaItems = savedQueue.map { s ->
+                        MediaItem.Builder()
+                            .setMediaId(s.id.toString())
+                            .setUri(ContentUris.withAppendedId(
+                                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                                s.id
+                            ))
+                            .setMediaMetadata(
+                                MediaMetadata.Builder()
+                                    .setTitle(s.title)
+                                    .setArtist(s.artist)
+                                    .setAlbumTitle(s.album)
+                                    .setArtworkUri(Uri.parse("content://media/external/audio/albumart/${s.albumId}"))
+                                    .build()
+                            )
+                            .build()
                     }
-                } else {
-                    _repeatMode.value = controller.repeatMode
-                    _shuffleModeEnabled.value = controller.shuffleModeEnabled
+                    exoPlayer.setMediaItems(mediaItems)
+                    
+                    val index = savedQueue.indexOfFirst { it.id == savedSongId }
+                    if (index != -1) {
+                        exoPlayer.seekTo(index, savedPosition)
+                    } else {
+                        exoPlayer.seekTo(0, savedPosition)
+                    }
+                    
+                    exoPlayer.repeatMode = savedRepeatMode
+                    exoPlayer.shuffleModeEnabled = savedShuffleMode
+                    exoPlayer.prepare()
+                    
+                    _repeatMode.value = savedRepeatMode
+                    _shuffleModeEnabled.value = savedShuffleMode
+                    
+                    val autoplay = preferences[KEY_AUTOPLAY_ON_STARTUP] ?: false
+                    if (autoplay) {
+                        playWithFadeIn()
+                    }
+                    
+                    updateState()
                 }
+            } else {
+                _repeatMode.value = exoPlayer.repeatMode
+                _shuffleModeEnabled.value = exoPlayer.shuffleModeEnabled
             }
         }
     }
 
     fun playSong(song: Song, playlist: List<Song>) {
-        mediaController?.let { controller ->
-            val mediaItems = playlist.map { s ->
-                MediaItem.Builder()
-                    .setMediaId(s.id.toString())
-                    .setUri(ContentUris.withAppendedId(
-                        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                        s.id
-                    ))
-                    .setMediaMetadata(
-                        MediaMetadata.Builder()
-                            .setTitle(s.title)
-                            .setArtist(s.artist)
-                            .setAlbumTitle(s.album)
-                            .setArtworkUri(Uri.parse("content://media/external/audio/albumart/${s.albumId}"))
-                            .build()
-                    )
-                    .build()
-            }
-            controller.setMediaItems(mediaItems)
-            val index = playlist.indexOfFirst { it.id == song.id }
-            if (index != -1) {
-                controller.seekTo(index, 0L)
-            }
-            controller.prepare()
-            playWithFadeIn(controller)
+        val mediaItems = playlist.map { s ->
+            MediaItem.Builder()
+                .setMediaId(s.id.toString())
+                .setUri(ContentUris.withAppendedId(
+                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                    s.id
+                ))
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(s.title)
+                        .setArtist(s.artist)
+                        .setAlbumTitle(s.album)
+                        .setArtworkUri(Uri.parse("content://media/external/audio/albumart/${s.albumId}"))
+                        .build()
+                )
+                .build()
+        }
+        exoPlayer.setMediaItems(mediaItems)
+        val index = playlist.indexOfFirst { it.id == song.id }
+        if (index != -1) {
+            exoPlayer.seekTo(index, 0L)
+        }
+        exoPlayer.prepare()
+        playWithFadeIn()
 
-            scope.launch {
-                repository.saveQueue(playlist)
-                dataStore.edit { preferences ->
-                    preferences[KEY_CURRENT_SON_ID] = song.id
-                    preferences[KEY_PLAYBACK_POSITION] = 0L
-                }
+        scope.launch {
+            repository.saveQueue(playlist)
+            dataStore.edit { preferences ->
+                preferences[KEY_CURRENT_SON_ID] = song.id
+                preferences[KEY_PLAYBACK_POSITION] = 0L
             }
         }
     }
 
     fun playNext(song: Song) {
-        mediaController?.let { controller ->
-            val currentItemIndex = if (controller.mediaItemCount > 0) controller.currentMediaItemIndex else -1
-            val mediaItem = MediaItem.Builder()
-                .setMediaId(song.id.toString())
-                .setUri(ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, song.id))
-                .setMediaMetadata(
-                    MediaMetadata.Builder()
-                        .setTitle(song.title)
-                        .setArtist(song.artist)
-                        .setAlbumTitle(song.album)
-                        .setArtworkUri(Uri.parse("content://media/external/audio/albumart/${song.albumId}"))
-                        .build()
-                )
-                .build()
-            if (currentItemIndex != -1) {
-                var existingIndex = -1
-                for (i in 0 until controller.mediaItemCount) {
-                    if (controller.getMediaItemAt(i).mediaId == song.id.toString()) {
-                        existingIndex = i
-                        break
-                    }
+        val currentItemIndex = if (exoPlayer.mediaItemCount > 0) exoPlayer.currentMediaItemIndex else -1
+        val mediaItem = MediaItem.Builder()
+            .setMediaId(song.id.toString())
+            .setUri(ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, song.id))
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(song.title)
+                    .setArtist(song.artist)
+                    .setAlbumTitle(song.album)
+                    .setArtworkUri(Uri.parse("content://media/external/audio/albumart/${song.albumId}"))
+                    .build()
+            )
+            .build()
+        if (currentItemIndex != -1) {
+            var existingIndex = -1
+            for (i in 0 until exoPlayer.mediaItemCount) {
+                if (exoPlayer.getMediaItemAt(i).mediaId == song.id.toString()) {
+                    existingIndex = i
+                    break
                 }
-                if (existingIndex != -1) {
-                    controller.removeMediaItem(existingIndex)
-                }
-                val insertIndex = if (existingIndex != -1 && existingIndex <= currentItemIndex) {
-                    currentItemIndex
-                } else {
-                    currentItemIndex + 1
-                }
-                controller.addMediaItem(insertIndex, mediaItem)
+            }
+            if (existingIndex != -1) {
+                exoPlayer.removeMediaItem(existingIndex)
+            }
+            val insertIndex = if (existingIndex != -1 && existingIndex <= currentItemIndex) {
+                currentItemIndex
             } else {
-                controller.addMediaItem(mediaItem)
-                controller.prepare()
-                playWithFadeIn(controller)
+                currentItemIndex + 1
             }
-            scope.launch {
-                val currentQueue = repository.getQueue().toMutableList()
-                val indexInQueue = currentQueue.indexOfFirst { it.id == song.id }
-                if (indexInQueue != -1) {
-                    currentQueue.removeAt(indexInQueue)
-                }
-                val insertIndex = if (currentItemIndex != -1) {
-                    val index = currentQueue.indexOfFirst { it.id == currentSongId.value }
-                    if (index != -1) index + 1 else 0
-                } else {
-                    0
-                }
-                currentQueue.add(insertIndex.coerceIn(0, currentQueue.size), song)
-                repository.saveQueue(currentQueue)
+            exoPlayer.addMediaItem(insertIndex, mediaItem)
+        } else {
+            exoPlayer.addMediaItem(mediaItem)
+            exoPlayer.prepare()
+            playWithFadeIn()
+        }
+        scope.launch {
+            val currentQueue = repository.getQueue().toMutableList()
+            val indexInQueue = currentQueue.indexOfFirst { it.id == song.id }
+            if (indexInQueue != -1) {
+                currentQueue.removeAt(indexInQueue)
             }
+            val insertIndex = if (currentItemIndex != -1) {
+                val index = currentQueue.indexOfFirst { it.id == currentSongId.value }
+                if (index != -1) index + 1 else 0
+            } else {
+                0
+            }
+            currentQueue.add(insertIndex.coerceIn(0, currentQueue.size), song)
+            repository.saveQueue(currentQueue)
         }
     }
 
     fun playShuffle(song: Song, playlist: List<Song>) {
-        mediaController?.let { controller ->
-            val remaining = playlist.filter { it.id != song.id }.shuffled()
-            val fullList = listOf(song) + remaining
-            
-            val mediaItems = fullList.map { s ->
-                MediaItem.Builder()
-                    .setMediaId(s.id.toString())
-                    .setUri(ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, s.id))
-                    .setMediaMetadata(
-                        MediaMetadata.Builder()
-                            .setTitle(s.title)
-                            .setArtist(s.artist)
-                            .setAlbumTitle(s.album)
-                            .setArtworkUri(Uri.parse("content://media/external/audio/albumart/${s.albumId}"))
-                            .build()
-                    )
-                    .build()
-            }
-            controller.setMediaItems(mediaItems)
-            controller.seekTo(0, 0L)
-            controller.prepare()
-            playWithFadeIn(controller)
-            
-            scope.launch {
-                repository.saveQueue(fullList)
-                dataStore.edit { preferences ->
-                    preferences[KEY_CURRENT_SON_ID] = song.id
-                    preferences[KEY_PLAYBACK_POSITION] = 0L
-                }
+        val remaining = playlist.filter { it.id != song.id }.shuffled()
+        val fullList = listOf(song) + remaining
+        
+        val mediaItems = fullList.map { s ->
+            MediaItem.Builder()
+                .setMediaId(s.id.toString())
+                .setUri(ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, s.id))
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(s.title)
+                        .setArtist(s.artist)
+                        .setAlbumTitle(s.album)
+                        .setArtworkUri(Uri.parse("content://media/external/audio/albumart/${s.albumId}"))
+                        .build()
+                )
+                .build()
+        }
+        exoPlayer.setMediaItems(mediaItems)
+        exoPlayer.seekTo(0, 0L)
+        exoPlayer.prepare()
+        playWithFadeIn()
+        
+        scope.launch {
+            repository.saveQueue(fullList)
+            dataStore.edit { preferences ->
+                preferences[KEY_CURRENT_SON_ID] = song.id
+                preferences[KEY_PLAYBACK_POSITION] = 0L
             }
         }
     }
 
-
     fun clearQueue() {
-        mediaController?.let { controller ->
-            controller.stop()
-            controller.clearMediaItems()
-        }
+        exoPlayer.stop()
+        exoPlayer.clearMediaItems()
         _currentSongId.value = null
         _playbackPosition.value = 0L
         _playbackDuration.value = 0L
@@ -472,162 +434,152 @@ class PlaybackConnection @Inject constructor(
         }
     }
 
-    private fun playWithFadeIn(controller: MediaController) {
+    private fun playWithFadeIn() {
         fadeJob?.cancel()
         fadeJob = scope.launch {
             val preferences = dataStore.data.first()
             val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
             if (fadeIn) {
-                controller.volume = 0f
-                controller.play()
+                exoPlayer.volume = 0f
+                exoPlayer.play()
                 var waitCount = 0
-                while (!controller.isPlaying && controller.playWhenReady && waitCount < 20) {
+                while (!exoPlayer.isPlaying && exoPlayer.playWhenReady && waitCount < 20) {
                     delay(50)
                     waitCount++
                 }
                 var vol = 0f
-                while (vol < 1.0f && controller.isPlaying) {
+                while (vol < 1.0f && exoPlayer.isPlaying) {
                     delay(25)
                     vol += 0.05f
-                    controller.volume = vol.coerceAtMost(1f)
+                    exoPlayer.volume = vol.coerceAtMost(1f)
                 }
-                if (controller.playWhenReady) {
-                    controller.volume = 1f
+                if (exoPlayer.playWhenReady) {
+                    exoPlayer.volume = 1f
                 }
             } else {
-                controller.volume = 1f
-                controller.play()
+                exoPlayer.volume = 1f
+                exoPlayer.play()
             }
         }
     }
 
     fun play() {
-        mediaController?.let { playWithFadeIn(it) }
+        playWithFadeIn()
     }
 
     fun pause() {
-        mediaController?.let { controller ->
-            fadeJob?.cancel()
-            fadeJob = scope.launch {
-                val preferences = dataStore.data.first()
-                val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
-                if (fadeIn && controller.isPlaying) {
-                    var vol = controller.volume
-                    while (vol > 0.0f && controller.isPlaying) {
-                        delay(20)
-                        vol -= 0.05f
-                        controller.volume = vol.coerceAtLeast(0f)
-                    }
-                    if (controller.isPlaying) {
-                        controller.pause()
-                    }
-                    controller.volume = 1f
-                } else {
-                    controller.pause()
+        fadeJob?.cancel()
+        fadeJob = scope.launch {
+            val preferences = dataStore.data.first()
+            val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
+            if (fadeIn && exoPlayer.isPlaying) {
+                var vol = exoPlayer.volume
+                while (vol > 0.0f && exoPlayer.isPlaying) {
+                    delay(20)
+                    vol -= 0.05f
+                    exoPlayer.volume = vol.coerceAtLeast(0f)
                 }
-                savePlaybackPosition(controller.currentPosition)
+                if (exoPlayer.isPlaying) {
+                    exoPlayer.pause()
+                }
+                exoPlayer.volume = 1f
+            } else {
+                exoPlayer.pause()
             }
+            savePlaybackPosition(exoPlayer.currentPosition)
         }
     }
 
     fun skipToNext() {
-        mediaController?.let { controller ->
-            fadeJob?.cancel()
-            fadeJob = scope.launch {
-                val preferences = dataStore.data.first()
-                val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
-                if (fadeIn && controller.isPlaying && controller.nextMediaItemIndex != androidx.media3.common.C.INDEX_UNSET) {
-                    var vol = controller.volume
-                    while (vol > 0.0f && controller.isPlaying) {
-                        delay(15)
-                        vol -= 0.1f
-                        controller.volume = vol.coerceAtLeast(0f)
-                    }
-                    controller.seekToNext()
-                    var waitCount = 0
-                    while (!controller.isPlaying && controller.playWhenReady && waitCount < 20) {
-                        delay(50)
-                        waitCount++
-                    }
-                    controller.volume = 0f
-                    var newVol = 0f
-                    while (newVol < 1.0f && controller.isPlaying) {
-                        delay(20)
-                        newVol += 0.08f
-                        controller.volume = newVol.coerceAtMost(1f)
-                    }
-                    if (controller.playWhenReady) {
-                        controller.volume = 1f
-                    }
-                } else {
-                    controller.seekToNext()
+        fadeJob?.cancel()
+        fadeJob = scope.launch {
+            val preferences = dataStore.data.first()
+            val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
+            if (fadeIn && exoPlayer.isPlaying && exoPlayer.nextMediaItemIndex != androidx.media3.common.C.INDEX_UNSET) {
+                var vol = exoPlayer.volume
+                while (vol > 0.0f && exoPlayer.isPlaying) {
+                    delay(15)
+                    vol -= 0.1f
+                    exoPlayer.volume = vol.coerceAtLeast(0f)
                 }
+                exoPlayer.seekToNext()
+                var waitCount = 0
+                while (!exoPlayer.isPlaying && exoPlayer.playWhenReady && waitCount < 20) {
+                    delay(50)
+                    waitCount++
+                }
+                exoPlayer.volume = 0f
+                var newVol = 0f
+                while (newVol < 1.0f && exoPlayer.isPlaying) {
+                    delay(20)
+                    newVol += 0.08f
+                    exoPlayer.volume = newVol.coerceAtMost(1f)
+                }
+                if (exoPlayer.playWhenReady) {
+                    exoPlayer.volume = 1f
+                }
+            } else {
+                exoPlayer.seekToNext()
             }
         }
     }
 
     fun skipToPrevious() {
-        mediaController?.let { controller ->
-            fadeJob?.cancel()
-            fadeJob = scope.launch {
-                val preferences = dataStore.data.first()
-                val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
-                if (fadeIn && controller.isPlaying && controller.previousMediaItemIndex != androidx.media3.common.C.INDEX_UNSET) {
-                    var vol = controller.volume
-                    while (vol > 0.0f && controller.isPlaying) {
-                        delay(15)
-                        vol -= 0.1f
-                        controller.volume = vol.coerceAtLeast(0f)
-                    }
-                    controller.seekToPrevious()
-                    var waitCount = 0
-                    while (!controller.isPlaying && controller.playWhenReady && waitCount < 20) {
-                        delay(50)
-                        waitCount++
-                    }
-                    controller.volume = 0f
-                    var newVol = 0f
-                    while (newVol < 1.0f && controller.isPlaying) {
-                        delay(20)
-                        newVol += 0.08f
-                        controller.volume = newVol.coerceAtMost(1f)
-                    }
-                    if (controller.playWhenReady) {
-                        controller.volume = 1f
-                    }
-                } else {
-                    controller.seekToPrevious()
+        fadeJob?.cancel()
+        fadeJob = scope.launch {
+            val preferences = dataStore.data.first()
+            val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
+            if (fadeIn && exoPlayer.isPlaying && exoPlayer.previousMediaItemIndex != androidx.media3.common.C.INDEX_UNSET) {
+                var vol = exoPlayer.volume
+                while (vol > 0.0f && exoPlayer.isPlaying) {
+                    delay(15)
+                    vol -= 0.1f
+                    exoPlayer.volume = vol.coerceAtLeast(0f)
                 }
+                exoPlayer.seekToPrevious()
+                var waitCount = 0
+                while (!exoPlayer.isPlaying && exoPlayer.playWhenReady && waitCount < 20) {
+                    delay(50)
+                    waitCount++
+                }
+                exoPlayer.volume = 0f
+                var newVol = 0f
+                while (newVol < 1.0f && exoPlayer.isPlaying) {
+                    delay(20)
+                    newVol += 0.08f
+                    exoPlayer.volume = newVol.coerceAtMost(1f)
+                }
+                if (exoPlayer.playWhenReady) {
+                    exoPlayer.volume = 1f
+                }
+            } else {
+                exoPlayer.seekToPrevious()
             }
         }
     }
 
     fun seekTo(positionMs: Long) {
-        mediaController?.seekTo(positionMs)
+        exoPlayer.seekTo(positionMs)
         _playbackPosition.value = positionMs
         savePlaybackPosition(positionMs)
     }
 
     fun setRepeatMode(repeatMode: Int) {
-        mediaController?.let { controller ->
-            controller.repeatMode = repeatMode
-            _repeatMode.value = repeatMode
-            scope.launch {
-                dataStore.edit { preferences ->
-                    preferences[KEY_REPEAT_MODE] = repeatMode
-                }
+        exoPlayer.repeatMode = repeatMode
+        _repeatMode.value = repeatMode
+        scope.launch {
+            dataStore.edit { preferences ->
+                preferences[KEY_REPEAT_MODE] = repeatMode
             }
         }
     }
 
     fun setShuffleModeEnabled(enabled: Boolean) {
-        mediaController?.let { controller ->
-            controller.shuffleModeEnabled = enabled
-            _shuffleModeEnabled.value = enabled
-            scope.launch {
-                dataStore.edit { preferences ->
-                    preferences[KEY_SHUFFLE_MODE] = enabled
-                }
+        exoPlayer.shuffleModeEnabled = enabled
+        _shuffleModeEnabled.value = enabled
+        scope.launch {
+            dataStore.edit { preferences ->
+                preferences[KEY_SHUFFLE_MODE] = enabled
             }
         }
     }
@@ -659,10 +611,9 @@ class PlaybackConnection @Inject constructor(
     }
 
     private fun updateQueue() {
-        val controller = mediaController ?: return
-        val count = controller.mediaItemCount
+        val count = exoPlayer.mediaItemCount
         val songIds = (0 until count).mapNotNull { index ->
-            controller.getMediaItemAt(index).mediaId?.toLongOrNull()
+            exoPlayer.getMediaItemAt(index).mediaId?.toLongOrNull()
         }
         scope.launch(Dispatchers.IO) {
             try {
@@ -677,29 +628,25 @@ class PlaybackConnection @Inject constructor(
     }
 
     fun moveQueueItem(fromIndex: Int, toIndex: Int) {
-        mediaController?.let { controller ->
-            if (fromIndex in 0 until controller.mediaItemCount && toIndex in 0 until controller.mediaItemCount) {
-                controller.moveMediaItem(fromIndex, toIndex)
-                // Save updated queue to repository
-                scope.launch {
-                    val updatedQueue = _playlistQueue.value.toMutableList()
-                    if (fromIndex < updatedQueue.size && toIndex < updatedQueue.size) {
-                        val item = updatedQueue.removeAt(fromIndex)
-                        updatedQueue.add(toIndex, item)
-                        _playlistQueue.value = updatedQueue
-                        repository.saveQueue(updatedQueue)
-                    }
+        if (fromIndex in 0 until exoPlayer.mediaItemCount && toIndex in 0 until exoPlayer.mediaItemCount) {
+            exoPlayer.moveMediaItem(fromIndex, toIndex)
+            // Save updated queue to repository
+            scope.launch {
+                val updatedQueue = _playlistQueue.value.toMutableList()
+                if (fromIndex < updatedQueue.size && toIndex < updatedQueue.size) {
+                    val item = updatedQueue.removeAt(fromIndex)
+                    updatedQueue.add(toIndex, item)
+                    _playlistQueue.value = updatedQueue
+                    repository.saveQueue(updatedQueue)
                 }
             }
         }
     }
 
     fun skipToQueueItem(index: Int) {
-        mediaController?.let { controller ->
-            if (index in 0 until controller.mediaItemCount) {
-                controller.seekTo(index, 0L)
-                controller.play()
-            }
+        if (index in 0 until exoPlayer.mediaItemCount) {
+            exoPlayer.seekTo(index, 0L)
+            exoPlayer.play()
         }
     }
 }

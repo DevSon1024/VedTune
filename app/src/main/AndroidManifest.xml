@@ -28,17 +28,5 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <service
-            android:name=".player.MusicService"
-            android:exported="false"
-            android:foregroundServiceType="mediaPlayback"
-            tools:targetApi="q">
-            <intent-filter>
-                <action android:name="androidx.media3.session.MediaSessionService" />
-                <action android:name="android.intent.action.MEDIA_BUTTON" />
-            </intent-filter>
-        </service>
     </application>
-
 </manifest>
