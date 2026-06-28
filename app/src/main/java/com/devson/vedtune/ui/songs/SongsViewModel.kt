@@ -38,6 +38,20 @@ class SongsViewModel @Inject constructor(
 
     val currentSongId: StateFlow<Long?> = playbackConnection.currentSongId
     val isPlaying: StateFlow<Boolean> = playbackConnection.isPlaying
+    val playbackPosition: StateFlow<Long> = playbackConnection.playbackPosition
+    val playbackDuration: StateFlow<Long> = playbackConnection.playbackDuration
+
+    fun play() {
+        playbackConnection.play()
+    }
+
+    fun pause() {
+        playbackConnection.pause()
+    }
+
+    fun seekTo(positionMs: Long) {
+        playbackConnection.seekTo(positionMs)
+    }
 
     val playlists: StateFlow<List<Playlist>> = repository.getAllPlaylists()
         .stateIn(

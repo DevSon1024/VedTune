@@ -2,9 +2,7 @@ package com.devson.vedtune.ui.songs
 
 import android.Manifest
 import androidx.compose.runtime.DisposableEffect
-import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
 import android.content.ContentUris
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -561,6 +559,7 @@ fun SongsScreen(
         val song = showPreviewDialogSong!!
         SongPreviewDialog(
             song = song,
+            viewModel = viewModel,
             onDismiss = { showPreviewDialogSong = null }
         )
     }
@@ -896,49 +895,23 @@ fun InfoRow(label: String, value: String) {
 @Composable
 fun SongPreviewDialog(
     song: Song,
+    viewModel: SongsViewModel,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
-    val uri = remember(song.id) {
-        ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, song.id)
-    }
+    val isPlaying by viewModel.isPlaying.collectAsState()
+    val currentPositionLong by viewModel.playbackPosition.collectAsState()
+    val durationLong by viewModel.playbackDuration.collectAsState()
 
-    val exoPlayer = remember {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(uri))
-            prepare()
-            playWhenReady = true
-        }
-    }
+    val currentPosition = currentPositionLong.toFloat()
+    val duration = durationLong.toFloat()
 
-    var isPlaying by remember { mutableStateOf(true) }
-    var currentPosition by remember { mutableStateOf(0f) }
-    var duration by remember { mutableStateOf(0f) }
-
-    LaunchedEffect(exoPlayer) {
-        val listener = object : Player.Listener {
-            override fun onIsPlayingChanged(playing: Boolean) {
-                isPlaying = playing
-            }
-            override fun onPlaybackStateChanged(state: Int) {
-                if (state == Player.STATE_READY) {
-                    duration = exoPlayer.duration.toFloat()
-                }
-            }
-        }
-        exoPlayer.addListener(listener)
-
-        while (true) {
-            if (exoPlayer.isPlaying) {
-                currentPosition = exoPlayer.currentPosition.toFloat()
-            }
-            kotlinx.coroutines.delay(200)
-        }
+    LaunchedEffect(song) {
+        viewModel.playSong(song)
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            exoPlayer.release()
+            viewModel.pause()
         }
     }
 
@@ -996,8 +969,7 @@ fun SongPreviewDialog(
                 Slider(
                     value = currentPosition,
                     onValueChange = {
-                        currentPosition = it
-                        exoPlayer.seekTo(it.toLong())
+                        viewModel.seekTo(it.toLong())
                     },
                     valueRange = 0f..duration.coerceAtLeast(1f),
                     modifier = Modifier.fillMaxWidth()
@@ -1029,9 +1001,9 @@ fun SongPreviewDialog(
                     IconButton(
                         onClick = {
                             if (isPlaying) {
-                                exoPlayer.pause()
+                                viewModel.pause()
                             } else {
-                                exoPlayer.play()
+                                viewModel.play()
                             }
                         },
                         modifier = Modifier
