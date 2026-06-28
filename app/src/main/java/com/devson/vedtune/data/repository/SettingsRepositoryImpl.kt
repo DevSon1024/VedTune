@@ -35,6 +35,7 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_FOLDER_FILTER_MODE = stringPreferencesKey("folder_filter_mode")
         private val KEY_BLACKLISTED_FOLDERS = stringPreferencesKey("blacklisted_folders")
         private val KEY_WHITELISTED_FOLDERS = stringPreferencesKey("whitelisted_folders")
+        private val KEY_INCLUDE_SUBFOLDERS = booleanPreferencesKey("include_subfolders")
 
         /** Delimiter used to serialise/deserialise folder sets as a single DataStore string. */
         private const val FOLDER_DELIMITER = "|||"
@@ -100,6 +101,10 @@ class SettingsRepositoryImpl @Inject constructor(
         decodeFolderSet(preferences[KEY_WHITELISTED_FOLDERS])
     }
 
+    override val includeSubfolders: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[KEY_INCLUDE_SUBFOLDERS] ?: true
+    }
+
     //  Existing setters 
 
     override suspend fun setShowAlbumArt(show: Boolean) {
@@ -158,6 +163,10 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setWhitelistedFolders(folders: Set<String>) {
         dataStore.edit { it[KEY_WHITELISTED_FOLDERS] = encodeFolderSet(folders) }
+    }
+
+    override suspend fun setIncludeSubfolders(include: Boolean) {
+        dataStore.edit { it[KEY_INCLUDE_SUBFOLDERS] = include }
     }
 
     //  Serialisation helpers 

@@ -46,6 +46,7 @@ class MediaSyncEngine @Inject constructor(
             val filterMode = settingsRepository.folderFilterMode.first()
             val blacklist = settingsRepository.blacklistedFolders.first()
             val whitelist = settingsRepository.whitelistedFolders.first()
+            val includeSubfolders = settingsRepository.includeSubfolders.first()
 
         //  1. Fetch current songs in Room (ID and dateModified) 
         val roomSongs = songDao.getSongIdAndModifiedMap()
@@ -61,7 +62,7 @@ class MediaSyncEngine @Inject constructor(
             MediaStore.Audio.Media.DATE_MODIFIED,
             MediaStore.Audio.Media.DATA
         )
-        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+        val selection = "${MediaStore.Audio.Media.IS_ALARM} == 0 AND ${MediaStore.Audio.Media.IS_RINGTONE} == 0 AND ${MediaStore.Audio.Media.IS_NOTIFICATION} == 0"
 
         context.contentResolver.query(
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
@@ -94,7 +95,11 @@ class MediaSyncEngine @Inject constructor(
                 } else {
                     mediaStoreSongsMap.filter { (id, _) ->
                         val folder = mediaStoreDataMap[id]?.substringBeforeLast('/') ?: return@filter false
-                        whitelist.any { whitelisted -> folder == whitelisted || folder.startsWith("$whitelisted/") }
+                        if (includeSubfolders) {
+                            whitelist.any { whitelisted -> folder == whitelisted || folder.startsWith("$whitelisted/") }
+                        } else {
+                            whitelist.any { whitelisted -> folder == whitelisted }
+                        }
                     }
                 }
             }
@@ -105,7 +110,11 @@ class MediaSyncEngine @Inject constructor(
                 } else {
                     mediaStoreSongsMap.filter { (id, _) ->
                         val folder = mediaStoreDataMap[id]?.substringBeforeLast('/') ?: return@filter true
-                        blacklist.none { blacklisted -> folder == blacklisted || folder.startsWith("$blacklisted/") }
+                        if (includeSubfolders) {
+                            blacklist.none { blacklisted -> folder == blacklisted || folder.startsWith("$blacklisted/") }
+                        } else {
+                            blacklist.none { blacklisted -> folder == blacklisted }
+                        }
                     }
                 }
             }
@@ -183,7 +192,8 @@ class MediaSyncEngine @Inject constructor(
                 val artist = cursor.getString(artistCol) ?: "Unknown Artist"
                 val album = cursor.getString(albumCol) ?: "Unknown Album"
                 val albumId = cursor.getLong(albumIdCol)
-                val duration = cursor.getLong(durationCol)
+                val rawDuration = cursor.getLong(durationCol)
+                val duration = if (rawDuration < 0L || rawDuration > 86400000L) 0L else rawDuration
                 val track = cursor.getInt(trackCol)
                 val year = cursor.getInt(yearCol)
                 val dateAdded = cursor.getLong(dateAddedCol)

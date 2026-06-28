@@ -61,6 +61,9 @@ class SettingsViewModel @Inject constructor(
     val whitelistedFolders: StateFlow<Set<String>> = settingsRepository.whitelistedFolders
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
+    val includeSubfolders: StateFlow<Boolean> = settingsRepository.includeSubfolders
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     //  Existing dispatchers 
 
     fun setShowAlbumArt(show: Boolean) {
@@ -150,5 +153,9 @@ class SettingsViewModel @Inject constructor(
 
     fun clearWhitelist() {
         viewModelScope.launch { settingsRepository.setWhitelistedFolders(emptySet()) }
+    }
+
+    fun setIncludeSubfolders(include: Boolean) {
+        viewModelScope.launch { settingsRepository.setIncludeSubfolders(include) }
     }
 }

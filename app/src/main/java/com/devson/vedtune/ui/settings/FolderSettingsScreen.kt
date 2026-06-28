@@ -48,6 +48,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -85,6 +86,7 @@ fun FolderSettingsScreen(
     val filterMode by viewModel.folderFilterMode.collectAsState()
     val blacklistedFolders by viewModel.blacklistedFolders.collectAsState()
     val whitelistedFolders by viewModel.whitelistedFolders.collectAsState()
+    val includeSubfolders by viewModel.includeSubfolders.collectAsState()
 
     // Tab: 0 = Whitelist, 1 = Blacklist
     var selectedTab by remember { mutableIntStateOf(if (filterMode == FolderFilterMode.WHITELIST) 0 else 1) }
@@ -168,6 +170,39 @@ fun FolderSettingsScreen(
                     }
                 }
             )
+
+            AnimatedVisibility(visible = filterMode != FolderFilterMode.NONE) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Include Subfolders",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Include files in subfolders of selected folders",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Switch(
+                            checked = includeSubfolders,
+                            onCheckedChange = { viewModel.setIncludeSubfolders(it) }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
@@ -618,7 +653,7 @@ private fun FolderPickerContent(
         value = withContext(Dispatchers.IO) {
             val folders = mutableSetOf<String>()
             val projection = arrayOf(MediaStore.Audio.Media.DATA)
-            val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+            val selection = "${MediaStore.Audio.Media.IS_ALARM} == 0 AND ${MediaStore.Audio.Media.IS_RINGTONE} == 0 AND ${MediaStore.Audio.Media.IS_NOTIFICATION} == 0"
             context.contentResolver.query(
                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                 projection,

@@ -19,6 +19,7 @@ interface SettingsRepository {
     val folderFilterMode: Flow<FolderFilterMode>
     val blacklistedFolders: Flow<Set<String>>
     val whitelistedFolders: Flow<Set<String>>
+    val includeSubfolders: Flow<Boolean>
 
     suspend fun setShowAlbumArt(show: Boolean)
     suspend fun setShowRemainingTime(show: Boolean)
@@ -36,4 +37,5 @@ interface SettingsRepository {
     suspend fun setFolderFilterMode(mode: FolderFilterMode)
     suspend fun setBlacklistedFolders(folders: Set<String>)
     suspend fun setWhitelistedFolders(folders: Set<String>)
+    suspend fun setIncludeSubfolders(include: Boolean)
 }
