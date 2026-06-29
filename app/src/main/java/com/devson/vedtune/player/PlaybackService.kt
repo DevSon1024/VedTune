@@ -18,8 +18,12 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import com.devson.vedtune.MainActivity
 import com.devson.vedtune.domain.repository.MediaRepository
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,13 +57,10 @@ class PlaybackService : MediaSessionService() {
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
             when (playbackState) {
-                Player.STATE_IDLE -> {
-                    // Playback stopped or released
-                    stopPlaybackAndRelease()
-                }
-                Player.STATE_ENDED -> {
-                    // End of playlist
-                    stopPlaybackAndRelease()
+                Player.STATE_IDLE, Player.STATE_ENDED -> {
+                    // Let Media3 handle demotion, just request service stop
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
                 }
                 Player.STATE_READY, Player.STATE_BUFFERING -> {
                     // Handled automatically by MediaSessionService
@@ -89,15 +90,69 @@ class PlaybackService : MediaSessionService() {
             .setPlayerCommand(Player.COMMAND_STOP)
             .build()
 
+        val closeButton = CommandButton.Builder()
+            .setDisplayName("Close")
+            .setIconResId(com.devson.vedtune.R.drawable.ic_close)
+            .setSessionCommand(SessionCommand("ACTION_CLOSE", Bundle.EMPTY))
+            .build()
+
         mediaSession = MediaSession.Builder(this, exoPlayer)
             .setSessionActivity(pendingIntent)
-            .setCustomLayout(listOf(stopButton))
+            .setCustomLayout(listOf(stopButton, closeButton))
+            .setCallback(mediaSessionCallback)
             .build()
 
         // Restore playback state
         serviceScope.launch {
             restorePlaybackState()
         }
+    }
+
+    private val mediaSessionCallback = object : MediaSession.Callback {
+        override fun onConnect(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo
+        ): MediaSession.ConnectionResult {
+            val connectionResult = super.onConnect(session, controller)
+            val sessionCommands = connectionResult.availableSessionCommands
+                .buildUpon()
+                .add(SessionCommand("ACTION_CLOSE", Bundle.EMPTY))
+                .build()
+            return MediaSession.ConnectionResult.accept(
+                sessionCommands,
+                connectionResult.availablePlayerCommands
+            )
+        }
+
+        override fun onCustomCommand(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            customCommand: SessionCommand,
+            args: Bundle
+        ): ListenableFuture<SessionResult> {
+            if (customCommand.customAction == "ACTION_CLOSE") {
+                closeAppAndRelease()
+                return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+            }
+            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_UNKNOWN))
+        }
+    }
+
+    private fun closeAppAndRelease() {
+        exoPlayer.pause()
+        exoPlayer.clearMediaItems()
+        mediaSession?.run {
+            release()
+        }
+        mediaSession = null
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra("EXTRA_CLOSE_APP", true)
+        }
+        startActivity(intent)
     }
 
     private suspend fun restorePlaybackState() {
@@ -148,37 +203,31 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        val player = mediaSession?.player
-        if (player != null) {
-            if (player.playWhenReady && player.playbackState == Player.STATE_READY) {
-                // Case 1: Music is playing. Keep foreground service and notification active.
-            } else {
-                // Case 2: Music is paused/stopped. Stop everything cleanly.
-                stopPlaybackAndRelease()
-            }
-        } else {
-            stopPlaybackAndRelease()
-        }
         super.onTaskRemoved(rootIntent)
-    }
-
-    private fun stopPlaybackAndRelease() {
+        
+        // 1. Pause playback so audio doesn't continue in the background
+        exoPlayer.pause()
+        
+        // 2. Explicitly release the MediaSession to instantly kill the System UI ghost notification
         mediaSession?.run {
-            if (player.isPlaying) {
-                player.pause()
-            }
-            player.stop()
-            player.release()
             release()
         }
         mediaSession = null
+        
+        // 3. Remove foreground status and stop the service
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
     override fun onDestroy() {
         exoPlayer.removeListener(playerListener)
-        stopPlaybackAndRelease()
+        mediaSession?.run {
+            release()
+        }
+        mediaSession = null
+        // Note: Do NOT call exoPlayer.release() here. Since ExoPlayer is provided 
+        // via Hilt injection, its lifecycle outlives this service. Releasing it 
+        // will cause a crash if the user re-opens the app while the process is alive.
         super.onDestroy()
     }
 }

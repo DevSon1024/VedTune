@@ -1,5 +1,6 @@
 package com.devson.vedtune
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -44,6 +45,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (intent.getBooleanExtra("EXTRA_CLOSE_APP", false)) {
+            finishAndRemoveTask()
+            return
+        }
         enableEdgeToEdge()
 
         val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
@@ -71,6 +76,13 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.getBooleanExtra("EXTRA_CLOSE_APP", false)) {
+            finishAndRemoveTask()
         }
     }
 
