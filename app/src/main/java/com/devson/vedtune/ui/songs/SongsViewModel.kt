@@ -287,6 +287,7 @@ class SongsViewModel @Inject constructor(
                         input.copyTo(output)
                     }
                 }
+                com.devson.vedtune.ui.components.ArtworkCache.addCustomArtwork(update.song.albumId)
             }
             
             repository.synchronizeLibrary()

@@ -132,11 +132,19 @@ class EditTagsViewModel @Inject constructor(
                 val customFile = File(context.filesDir, "custom_artwork/${songData.albumId}.jpg")
                 hasExistingCustomArtwork = customFile.exists()
 
-                // Read advanced tags via jaudiotagger
-                withContext(Dispatchers.IO) {
+                // Read advanced tags via jaudiotagger from a temp file to bypass Scoped Storage file access limits
+                val loadSuccess = withContext(Dispatchers.IO) {
+                    var tempFile: File? = null
                     try {
-                        val file = File(path)
-                        val audioFile = AudioFileIO.read(file)
+                        tempFile = File(context.cacheDir, "temp_tag_load_${songId}.mp3")
+                        val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, songId)
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            tempFile.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        } ?: throw java.io.IOException("Failed to open input stream for original audio file.")
+
+                        val audioFile = AudioFileIO.read(tempFile)
                         val tag = audioFile.tag
                         if (tag != null) {
                             albumArtist = tag.getFirst(FieldKey.ALBUM_ARTIST) ?: ""
@@ -148,11 +156,20 @@ class EditTagsViewModel @Inject constructor(
                             val fileLyrics = tag.getFirst(FieldKey.LYRICS) ?: ""
                             lyrics = TextFieldValue(fileLyrics)
                         }
+                        true
                     } catch (e: Exception) {
                         e.printStackTrace()
+                        false
+                    } finally {
+                        tempFile?.delete()
                     }
                 }
-                uiState = EditTagsUiState.Success
+
+                if (loadSuccess) {
+                    uiState = EditTagsUiState.Success
+                } else {
+                    uiState = EditTagsUiState.Error("Failed to read audio tags from file. Make sure the file is not corrupted.")
+                }
             } catch (e: Exception) {
                 uiState = EditTagsUiState.Error(e.message ?: "Failed to load audio tags.")
             }
@@ -228,6 +245,7 @@ class EditTagsViewModel @Inject constructor(
         val path = filePath ?: return@withContext
         val targetSong = song ?: return@withContext
         val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, targetSong.id)
+        val tempFile = File(context.cacheDir, "temp_tag_edit_${targetSong.id}.mp3")
 
         try {
             if (shouldRemoveArtwork) {
@@ -236,6 +254,7 @@ class EditTagsViewModel @Inject constructor(
                 if (file.exists()) {
                     file.delete()
                 }
+                com.devson.vedtune.ui.components.ArtworkCache.removeCustomArtwork(targetSong.albumId)
             } else {
                 // Save custom artwork if picked
                 customArtworkUri?.let { artUri ->
@@ -247,12 +266,19 @@ class EditTagsViewModel @Inject constructor(
                             input.copyTo(output)
                         }
                     }
+                    com.devson.vedtune.ui.components.ArtworkCache.addCustomArtwork(targetSong.albumId)
                 }
             }
 
-            // 1. Physically write advanced tags using jaudiotagger
-            val file = File(path)
-            val audioFile = AudioFileIO.read(file)
+            // 1. Copy original file to temp file in internal cache
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                tempFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            } ?: throw java.io.IOException("Failed to open input stream for original audio file.")
+
+            // 2. Physically write advanced tags to the temp file using jaudiotagger
+            val audioFile = AudioFileIO.read(tempFile)
             val tag = audioFile.tag ?: audioFile.createDefaultTag().also { audioFile.tag = it }
 
             tag.setField(FieldKey.TITLE, title)
@@ -270,7 +296,14 @@ class EditTagsViewModel @Inject constructor(
 
             audioFile.commit()
 
-            // 2. Update MediaStore database so changes are visible to Android immediately
+            // 3. Write the modified temp file back to the original file via MediaStore
+            context.contentResolver.openOutputStream(uri, "rwt")?.use { output ->
+                tempFile.inputStream().use { input ->
+                    input.copyTo(output)
+                }
+            } ?: throw java.io.IOException("Failed to open output stream to write back modified audio file.")
+
+            // 4. Update MediaStore database so changes are visible to Android immediately
             val values = ContentValues().apply {
                 put(MediaStore.Audio.Media.TITLE, title)
                 put(MediaStore.Audio.Media.ARTIST, artist)
@@ -280,10 +313,10 @@ class EditTagsViewModel @Inject constructor(
             }
             context.contentResolver.update(uri, values, null, null)
 
-            // 3. Trigger MediaScanner to refresh files
+            // 5. Trigger MediaScanner to refresh files
             MediaScannerConnection.scanFile(context, arrayOf(path), null) { _, _ -> }
 
-            // 4. Update the local Room Database entity
+            // 6. Update the local Room Database entity
             val updatedSong = targetSong.copy(
                 title = title,
                 artist = artist,
@@ -298,6 +331,10 @@ class EditTagsViewModel @Inject constructor(
         } catch (e: Exception) {
             e.printStackTrace()
             _uiEvent.emit(EditTagsUiEvent.ShowError(e.message ?: "Failed to save tags physically to file."))
+        } finally {
+            if (tempFile.exists()) {
+                tempFile.delete()
+            }
         }
     }
 }

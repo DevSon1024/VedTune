@@ -94,11 +94,9 @@ class MediaSyncEngine @Inject constructor(
                     emptyMap()
                 } else {
                     mediaStoreSongsMap.filter { (id, _) ->
-                        val folder = mediaStoreDataMap[id]?.substringBeforeLast('/') ?: return@filter false
-                        if (includeSubfolders) {
-                            whitelist.any { whitelisted -> folder == whitelisted || folder.startsWith("$whitelisted/") }
-                        } else {
-                            whitelist.any { whitelisted -> folder == whitelisted }
+                        val filePath = mediaStoreDataMap[id] ?: return@filter false
+                        whitelist.any { whitelisted ->
+                            isInFolder(filePath, whitelisted, includeSubfolders)
                         }
                     }
                 }
@@ -109,11 +107,9 @@ class MediaSyncEngine @Inject constructor(
                     mediaStoreSongsMap
                 } else {
                     mediaStoreSongsMap.filter { (id, _) ->
-                        val folder = mediaStoreDataMap[id]?.substringBeforeLast('/') ?: return@filter true
-                        if (includeSubfolders) {
-                            blacklist.none { blacklisted -> folder == blacklisted || folder.startsWith("$blacklisted/") }
-                        } else {
-                            blacklist.none { blacklisted -> folder == blacklisted }
+                        val filePath = mediaStoreDataMap[id] ?: return@filter true
+                        blacklist.none { blacklisted ->
+                            isInFolder(filePath, blacklisted, includeSubfolders)
                         }
                     }
                 }
@@ -230,5 +226,24 @@ class MediaSyncEngine @Inject constructor(
                 Manifest.permission.READ_EXTERNAL_STORAGE
             ) == PackageManager.PERMISSION_GRANTED
         }
+    }
+
+    private fun isInFolder(filePath: String, folder: String, includeSubfolders: Boolean): Boolean {
+        val lastSlash = filePath.lastIndexOf('/')
+        if (lastSlash == -1) return false
+
+        // Check if the parent folder matches exactly
+        if (lastSlash == folder.length && filePath.regionMatches(0, folder, 0, lastSlash)) {
+            return true
+        }
+
+        // If including subfolders, check if parent folder is a subfolder of target folder
+        if (includeSubfolders && lastSlash > folder.length) {
+            if (filePath.regionMatches(0, folder, 0, folder.length) && filePath[folder.length] == '/') {
+                return true
+            }
+        }
+
+        return false
     }
 }

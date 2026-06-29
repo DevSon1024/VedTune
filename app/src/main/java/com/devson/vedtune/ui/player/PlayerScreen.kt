@@ -190,10 +190,9 @@ fun PlayerScreen(
                 Box(modifier = Modifier.fillMaxSize()) {
                     SongArtwork(
                         albumId = albumId,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .blur(40.dp),
-                        showArtwork = showArtwork
+                        modifier = Modifier.fillMaxSize(),
+                        showArtwork = showArtwork,
+                        blurRadius = 25
                     )
                     val isDark = isSystemInDarkTheme()
                     val overlayBrush = remember(isDark) {
@@ -932,9 +931,17 @@ private fun LyricsPanel(
         else -> Alignment.CenterHorizontally
     }
 
-    val parsedLines = remember(lyricsText) {
+    var parsedLines by remember { mutableStateOf<List<LrcLine>>(emptyList()) }
+
+    LaunchedEffect(lyricsText) {
         val text = lyricsText
-        if (!text.isNullOrBlank()) parseLrc(text) else emptyList()
+        if (!text.isNullOrBlank()) {
+            parsedLines = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                parseLrc(text)
+            }
+        } else {
+            parsedLines = emptyList()
+        }
     }
 
     Box(
@@ -1507,9 +1514,12 @@ fun parseLrc(lrcText: String): List<LrcLine> {
 }
 
 fun getActiveLyricsLineIndex(lines: List<LrcLine>, currentPosition: Long): Int {
-    var activeIndex = -1
-    for (i in lines.indices) {
-        if (currentPosition >= lines[i].timestamp) activeIndex = i else break
+    if (lines.isEmpty()) return -1
+    val index = lines.binarySearch { it.timestamp.compareTo(currentPosition) }
+    return if (index >= 0) {
+        index
+    } else {
+        val insertionPoint = -index - 1
+        insertionPoint - 1
     }
-    return activeIndex
 }
