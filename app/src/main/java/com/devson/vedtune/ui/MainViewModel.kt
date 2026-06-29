@@ -7,8 +7,12 @@ import com.devson.vedtune.domain.repository.MediaRepository
 import com.devson.vedtune.player.PlaybackConnection
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -19,7 +23,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import com.devson.vedtune.domain.repository.SettingsRepository
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val repository: MediaRepository,
@@ -27,7 +31,26 @@ class MainViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
+    private val syncTrigger = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
+    )
+
     init {
+        // Collect debounced sync triggers
+        viewModelScope.launch {
+            syncTrigger
+                .debounce(1000L) // Wait 1 second after rapid file changes stop
+                .collectLatest {
+                    try {
+                        repository.synchronizeLibrary()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+        }
+
+        // Keep the existing combine logic, but change `syncLibrary()` to `requestSync()`
         viewModelScope.launch {
             var isFirst = true
             combine(
@@ -40,10 +63,10 @@ class MainViewModel @Inject constructor(
                 if (isFirst) {
                     isFirst = false
                     if (settingsRepository.autoSyncOnStartup.first()) {
-                        syncLibrary()
+                        requestSync()
                     }
                 } else {
-                    syncLibrary()
+                    requestSync()
                 }
             }
         }
@@ -104,13 +127,12 @@ class MainViewModel @Inject constructor(
         playbackConnection.skipToPrevious()
     }
 
+    // Keep this function name so MainActivity doesn't break
     fun syncLibrary() {
-        viewModelScope.launch {
-            try {
-                repository.synchronizeLibrary()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+        requestSync()
+    }
+
+    private fun requestSync() {
+        syncTrigger.tryEmit(Unit)
     }
 }

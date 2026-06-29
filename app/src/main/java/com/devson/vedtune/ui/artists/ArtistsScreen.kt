@@ -31,7 +31,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.devson.vedtune.domain.model.Artist
-import com.devson.vedtune.ui.components.SearchBar
 import com.devson.vedtune.ui.components.VedTuneTopAppBar
 
 @Composable

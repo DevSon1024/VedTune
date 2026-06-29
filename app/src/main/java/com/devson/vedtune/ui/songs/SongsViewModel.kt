@@ -182,6 +182,14 @@ class SongsViewModel @Inject constructor(
         playbackConnection.playShuffle(song, currentState.songs)
     }
 
+    fun playShuffleAll() {
+        val songs = currentState.songs
+        if (songs.isNotEmpty()) {
+            val randomSong = songs.random()
+            playShuffle(randomSong)
+        }
+    }
+
     fun deleteSongPermanently(context: Context, song: Song) {
         viewModelScope.launch {
             val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, song.id)

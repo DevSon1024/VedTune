@@ -29,7 +29,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.devson.vedtune.domain.model.Album
 import com.devson.vedtune.ui.components.SongArtwork
-import com.devson.vedtune.ui.components.SearchBar
 import com.devson.vedtune.ui.components.VedTuneTopAppBar
 
 @Composable

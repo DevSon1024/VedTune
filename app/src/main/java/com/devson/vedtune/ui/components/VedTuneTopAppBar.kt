@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -56,7 +58,8 @@ fun VedTuneTopAppBar(
     onLayoutToggleClick: (() -> Unit)? = null,
     totalItemCount: Int? = null,
     itemTypeLabel: String = "songs",
-    totalDurationMs: Long? = null
+    totalDurationMs: Long? = null,
+    onShuffleClick: (() -> Unit)? = null
 ) {
     var isSearchActive by rememberSaveable { mutableStateOf(searchQuery.isNotEmpty()) }
 
@@ -180,7 +183,7 @@ fun VedTuneTopAppBar(
             val metadataText = buildString {
                 append("$totalItemCount $itemTypeLabel")
                 if (totalDurationMs != null && totalDurationMs > 0) {
-                    append(" . ${totalDurationMs.toFormattedDuration()}")
+                    append(" • ${totalDurationMs.toFormattedDuration()}")
                 }
             }
 
@@ -188,13 +191,28 @@ fun VedTuneTopAppBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = metadataText,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
                 )
+
+                if (onShuffleClick != null && totalItemCount > 0) {
+                    IconButton(
+                        onClick = onShuffleClick,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Shuffle,
+                            contentDescription = "Shuffle All",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
         }
     }

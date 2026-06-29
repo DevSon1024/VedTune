@@ -32,7 +32,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import com.devson.vedtune.ui.components.SearchBar
 import com.devson.vedtune.ui.components.VedTuneTopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
