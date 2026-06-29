@@ -134,6 +134,8 @@ fun PlayerScreen(
     val shuffleModeEnabled by viewModel.shuffleModeEnabled.collectAsStateWithLifecycle()
     val sleepTimerRemaining by viewModel.sleepTimerRemaining.collectAsStateWithLifecycle()
     val isFav by viewModel.isFavorite.collectAsStateWithLifecycle()
+    val showArtwork by viewModel.showAlbumArt.collectAsStateWithLifecycle()
+    val showRemainingTime by viewModel.showRemainingTime.collectAsStateWithLifecycle()
 
     val showForwardBackward by viewModel.showForwardBackward.collectAsStateWithLifecycle()
     val seekInterval by viewModel.seekInterval.collectAsStateWithLifecycle()
@@ -326,7 +328,8 @@ fun PlayerScreen(
                     positionState = viewModel.playbackPosition,
                     duration = duration,
                     showRemainingTime = showRemainingTime,
-                    onSeek = { viewModel.seekTo(it) }
+                    onSeek = { viewModel.seekTo(it) },
+                    onToggleRemainingTime = { viewModel.toggleRemainingTime() }
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -740,7 +743,8 @@ private fun SeekBar(
     positionState: StateFlow<Long>,
     duration: Long,
     showRemainingTime: Boolean,
-    onSeek: (Long) -> Unit
+    onSeek: (Long) -> Unit,
+    onToggleRemainingTime: () -> Unit
 ) {
     val position by positionState.collectAsStateWithLifecycle()
     var isDragging by remember { mutableStateOf(false) }
@@ -776,7 +780,8 @@ private fun SeekBar(
             Text(
                 text = formatTime(sliderValue.toLong()),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                modifier = Modifier.clickable { onToggleRemainingTime() }
             )
             val endLabel = if (showRemainingTime) {
                 "-${formatTime((duration - sliderValue.toLong()).coerceAtLeast(0L))}"
@@ -786,7 +791,8 @@ private fun SeekBar(
             Text(
                 text = endLabel,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                modifier = Modifier.clickable { onToggleRemainingTime() }
             )
         }
     }

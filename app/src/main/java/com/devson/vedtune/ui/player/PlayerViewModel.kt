@@ -187,6 +187,12 @@ class PlayerViewModel @Inject constructor(
         playbackConnection.cancelSleepTimer()
     }
 
+    fun toggleRemainingTime() {
+        viewModelScope.launch {
+            settingsRepository.setShowRemainingTime(!showRemainingTime.value)
+        }
+    }
+
     fun toggleFavorite() {
         val song = currentSong.value ?: return
         viewModelScope.launch {
