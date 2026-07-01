@@ -27,6 +27,9 @@ import com.devson.vedtune.ui.artists.ArtistDetailsScreen
 import com.devson.vedtune.ui.artists.ArtistDetailsViewModel
 import com.devson.vedtune.ui.settings.SettingsViewModel
 import com.devson.vedtune.ui.settings.FolderSettingsScreen
+import com.devson.vedtune.ui.settings.AppearanceSettingsScreen
+import com.devson.vedtune.ui.settings.PlaybackSettingsScreen
+import com.devson.vedtune.ui.settings.LibrarySettingsScreen
 import com.devson.vedtune.ui.playlists.PlaylistDetailsScreen
 import com.devson.vedtune.ui.playlists.PlaylistDetailsViewModel
 import com.devson.vedtune.ui.songs.EditTagsScreen
@@ -40,6 +43,9 @@ sealed class Screen(val route: String) {
     data object Playlists : Screen("playlists")
     data object Settings : Screen("settings")
     data object FolderSettings : Screen("folder_settings")
+    data object AppearanceSettings : Screen("appearance_settings")
+    data object PlaybackSettings : Screen("playback_settings")
+    data object LibrarySettings : Screen("library_settings")
     data object Player : Screen("player")
     data object AlbumDetails : Screen("album_details/{albumId}") {
         fun createRoute(albumId: Long) = "album_details/$albumId"
@@ -84,6 +90,15 @@ fun NavGraph(
                 onNavigateToFolderSettings = {
                     navController.navigateSafe(Screen.FolderSettings.route)
                 },
+                onNavigateToAppearanceSettings = {
+                    navController.navigateSafe(Screen.AppearanceSettings.route)
+                },
+                onNavigateToPlaybackSettings = {
+                    navController.navigateSafe(Screen.PlaybackSettings.route)
+                },
+                onNavigateToLibrarySettings = {
+                    navController.navigateSafe(Screen.LibrarySettings.route)
+                },
                 onNavigateToEditTags = { songId ->
                     navController.navigateSafe(Screen.EditTags.createRoute(songId))
                 },
@@ -111,6 +126,72 @@ fun NavGraph(
             FolderSettingsScreen(
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = Screen.AppearanceSettings.route,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(350)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(350)
+                )
+            }
+        ) {
+            val viewModel: SettingsViewModel = hiltViewModel()
+            AppearanceSettingsScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = Screen.PlaybackSettings.route,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(350)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(350)
+                )
+            }
+        ) {
+            val viewModel: SettingsViewModel = hiltViewModel()
+            PlaybackSettingsScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = Screen.LibrarySettings.route,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(350)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(350)
+                )
+            }
+        ) {
+            val viewModel: SettingsViewModel = hiltViewModel()
+            LibrarySettingsScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToFolderSettings = {
+                    navController.navigateSafe(Screen.FolderSettings.route)
+                }
             )
         }
         composable(

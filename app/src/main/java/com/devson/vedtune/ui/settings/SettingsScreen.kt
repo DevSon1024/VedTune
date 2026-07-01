@@ -1,8 +1,5 @@
 package com.devson.vedtune.ui.settings
 
-import android.content.Intent
-import android.media.audiofx.AudioEffect
-import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,7 +23,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -39,7 +35,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,10 +43,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.devson.vedtune.domain.model.FolderFilterMode
 import com.devson.vedtune.ui.components.VedTuneTopAppBar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -63,25 +56,13 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
-    onNavigateToFolderSettings: () -> Unit = {}
+    onNavigateToAppearanceSettings: () -> Unit = {},
+    onNavigateToPlaybackSettings: () -> Unit = {},
+    onNavigateToLibrarySettings: () -> Unit = {}
 ) {
-    val showAlbumArt by viewModel.showAlbumArt.collectAsState()
-    val showRemainingTime by viewModel.showRemainingTime.collectAsState()
-    val showMiniPlayerProgress by viewModel.showMiniPlayerProgress.collectAsState()
-    val autoplayOnStartup by viewModel.autoplayOnStartup.collectAsState()
-    val themeMode by viewModel.themeMode.collectAsState()
-    val dynamicColorsEnabled by viewModel.dynamicColorsEnabled.collectAsState()
-    val autoSyncOnStartup by viewModel.autoSyncOnStartup.collectAsState()
-    val audioFadeInEnabled by viewModel.audioFadeInEnabled.collectAsState()
-    val defaultStartScreen by viewModel.defaultStartScreen.collectAsState()
-    val isGestureMiniPlayerEnabled by viewModel.isGestureMiniPlayerEnabled.collectAsState()
-
-    val context = LocalContext.current
     var queueClearedMessageVisible by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = modifier.fillMaxSize()
-    ) {
+    Column(modifier = modifier.fillMaxSize()) {
         VedTuneTopAppBar(
             title = "Settings",
             searchQuery = "",
@@ -100,263 +81,97 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
 
-        // CARD 1: Appearance & Theme
-        SettingsCard(
-            title = "Appearance & Theme",
-            icon = Icons.Default.Palette
-        ) {
-            ThemeModeSelector(
-                currentMode = themeMode,
-                onModeSelected = { viewModel.setThemeMode(it) }
-            )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 12.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-
-            SettingSwitchRow(
-                title = "Dynamic Material You Colors",
-                description = "Match theme colors with device wallpaper (Android 12+).",
-                checked = dynamicColorsEnabled,
-                onCheckedChange = { viewModel.setDynamicColorsEnabled(it) },
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 12.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-
-            SettingSwitchRow(
-                title = "Show Album Artwork",
-                description = "Display cover art inside player screens and lists.",
-                checked = showAlbumArt,
-                onCheckedChange = { viewModel.setShowAlbumArt(it) },
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-        }
-
-        // CARD 2: Playback Configuration
-        SettingsCard(
-            title = "Playback Preferences",
-            icon = Icons.Default.PlayArrow
-        ) {
-            SettingSwitchRow(
-                title = "Auto-resume on Startup",
-                description = "Automatically resume playback when app is restarted.",
-                checked = autoplayOnStartup,
-                onCheckedChange = { viewModel.setAutoplayOnStartup(it) },
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 12.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-
-            SettingSwitchRow(
-                title = "Audio Fade-in on Play/Resume",
-                description = "Gradually fade in sound when starting or resuming playback.",
-                checked = audioFadeInEnabled,
-                onCheckedChange = { viewModel.setAudioFadeInEnabled(it) },
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 12.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-
-            SettingSwitchRow(
-                title = "Show Remaining Time",
-                description = "Show negative countdown remaining time instead of duration.",
-                checked = showRemainingTime,
-                onCheckedChange = { viewModel.setShowRemainingTime(it) },
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 12.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-
-            SettingSwitchRow(
-                title = "Show Mini Player Progress",
-                description = "Display the thin progress line along the top of the mini player card.",
-                checked = showMiniPlayerProgress,
-                onCheckedChange = { viewModel.setShowMiniPlayerProgress(it) },
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 12.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-
-            SettingSwitchRow(
-                title = "Gesture-Based Mini Player",
-                description = "Control playback using gestures (swipe left/right to next/previous, double-tap to play/pause).",
-                checked = isGestureMiniPlayerEnabled,
-                onCheckedChange = { viewModel.setGestureMiniPlayerEnabled(it) },
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 12.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-
-            DefaultStartScreenSelector(
-                currentScreen = defaultStartScreen,
-                onScreenSelected = { viewModel.setDefaultStartScreen(it) }
-            )
-        }
-
-        // CARD 3: Library & Sync
-        SettingsCard(
-            title = "Library & Folders",
-            icon = Icons.Default.Folder
-        ) {
-            SettingSwitchRow(
-                title = "Auto-sync Library on Startup",
-                description = "Scan and sync device audio files on app launch.",
-                checked = autoSyncOnStartup,
-                onCheckedChange = { viewModel.setAutoSyncOnStartup(it) },
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 12.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-
-            val folderFilterMode by viewModel.folderFilterMode.collectAsState()
-            val folderModeLabel = when (folderFilterMode) {
-                FolderFilterMode.NONE -> "None"
-                FolderFilterMode.WHITELIST -> "Whitelist"
-                FolderFilterMode.BLACKLIST -> "Blacklist"
+            // CARD 1: Appearance & Theme
+            SettingsCard(
+                title = "Appearance & Theme",
+                icon = Icons.Default.Palette
+            ) {
+                SettingsNavigationRow(
+                    title = "Appearance & Theme",
+                    description = "Theme mode, dynamic colors, album artwork display.",
+                    onClick = onNavigateToAppearanceSettings
+                )
             }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable { onNavigateToFolderSettings() }
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            // CARD 2: Playback Preferences
+            SettingsCard(
+                title = "Playback Preferences",
+                icon = Icons.Default.PlayArrow
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                SettingsNavigationRow(
+                    title = "Playback & Equalizer",
+                    description = "Auto-resume, fade-in, gestures, system equalizer.",
+                    onClick = onNavigateToPlaybackSettings
+                )
+            }
+
+            // CARD 3: Library & Folders
+            SettingsCard(
+                title = "Library & Folders",
+                icon = Icons.Default.Folder
+            ) {
+                SettingsNavigationRow(
+                    title = "Library & Folders",
+                    description = "Auto-sync on startup, folder visibility filters.",
+                    onClick = onNavigateToLibrarySettings
+                )
+            }
+
+            // CARD 4: Cache & Storage (inline — single destructive action)
+            SettingsCard(
+                title = "Cache & Storage",
+                icon = Icons.Default.Delete
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text(
-                        text = "Folder Visibility",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Filter mode: $folderModeLabel",
+                        text = "Clears all cached song items from the active queue. Restores play state to default.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = "Open",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-
-        // CARD 4: System Equalizer
-        SettingsCard(
-            title = "System Equalizer",
-            icon = Icons.Default.Tune
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "Launch system audio equalizer control panel to adjust sound settings.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                OutlinedButton(
-                    onClick = {
-                        try {
-                            val intent = Intent(AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL).apply {
-                                putExtra(AudioEffect.EXTRA_PACKAGE_NAME, context.packageName)
-                                putExtra(AudioEffect.EXTRA_CONTENT_TYPE, AudioEffect.CONTENT_TYPE_MUSIC)
+                    ElevatedButton(
+                        onClick = {
+                            viewModel.clearPlaybackQueue()
+                            queueClearedMessageVisible = true
+                            CoroutineScope(Dispatchers.Main).launch {
+                                delay(3000)
+                                queueClearedMessageVisible = false
                             }
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "System Equalizer not supported on this device.", Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = "Open Equalizer")
+                        },
+                        colors = ButtonDefaults.elevatedButtonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Clear Playback Queue")
+                    }
+
+                    if (queueClearedMessageVisible) {
+                        Text(
+                            text = "Playback queue cache cleared successfully.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "VedTune v1.0.0",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+
+            Spacer(modifier = Modifier.height(contentPadding.calculateBottomPadding()))
         }
-
-        // CARD 5: Cache Management
-        SettingsCard(
-            title = "Cache & Storage",
-            icon = Icons.Default.Delete
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "Clears all cached song items from the active queue. Restores play state to default.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                ElevatedButton(
-                    onClick = {
-                        viewModel.clearPlaybackQueue()
-                        queueClearedMessageVisible = true
-                        CoroutineScope(Dispatchers.Main).launch {
-                            delay(3000)
-                            queueClearedMessageVisible = false
-                        }
-                    },
-                    colors = ButtonDefaults.elevatedButtonColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = "Clear Playback Queue")
-                }
-
-                if (queueClearedMessageVisible) {
-                    Text(
-                        text = "Playback queue cache cleared successfully.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "VedTune v1.0.0",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
-
-        // Bottom spacer to offset the mini-player and navigation bar padding cleanly
-        Spacer(modifier = Modifier.height(contentPadding.calculateBottomPadding()))
-    }
     }
 }
 
@@ -399,6 +214,44 @@ fun SettingsCard(
             }
             content()
         }
+    }
+}
+
+@Composable
+fun SettingsNavigationRow(
+    title: String,
+    description: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { onClick() }
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+            contentDescription = "Navigate",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp)
+        )
     }
 }
 

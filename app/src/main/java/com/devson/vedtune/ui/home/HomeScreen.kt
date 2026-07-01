@@ -48,6 +48,9 @@ fun HomeScreen(
     onNavigateToArtist: (String) -> Unit,
     onNavigateToPlaylist: (Long) -> Unit,
     onNavigateToFolderSettings: () -> Unit,
+    onNavigateToAppearanceSettings: () -> Unit,
+    onNavigateToPlaybackSettings: () -> Unit,
+    onNavigateToLibrarySettings: () -> Unit,
     onNavigateToEditTags: (Long) -> Unit,
     defaultStartScreen: String,
     mainViewModel: MainViewModel,
@@ -182,7 +185,9 @@ fun HomeScreen(
                     val viewModel: SettingsViewModel = hiltViewModel()
                     SettingsScreen(
                         viewModel = viewModel,
-                        onNavigateToFolderSettings = onNavigateToFolderSettings,
+                        onNavigateToAppearanceSettings = onNavigateToAppearanceSettings,
+                        onNavigateToPlaybackSettings = onNavigateToPlaybackSettings,
+                        onNavigateToLibrarySettings = onNavigateToLibrarySettings,
                         contentPadding = innerPadding,
                         modifier = Modifier.fillMaxSize()
                     )

@@ -210,12 +210,18 @@ After every completed task, error resolution, or feature addition, **append** an
 - Include a **Date and Time** stamp as per IST.
 - Use this exact format:
 
+````
+- **Issue:** (Briefly describe the exact issue or bottleneck that was solved)
+- **Type:** (Error | Bug | UI | Performance | Architecture | Feature)
+- **Solution:** (How it was solved — maximum 10 lines)
+- **Prompt:** add that given prompt as it is with proper notation like - **Pronmpt:** add that given prompt as it is with proper notation like e.g.:,
 ```
-**Issue:** (Briefly describe the exact issue or bottleneck that was solved)
-**Type:** (Error | Bug | UI | Performance | Architecture | Feature)
-**Solution:** (How it was solved — maximum 10 lines)
+---full prompt---
+```
+
+ in the file
 ---
-```
+````
 
 - End every session entry with `---` on a new line.
 - No conversational filler in the file.
