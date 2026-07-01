@@ -303,5 +303,11 @@ class SongsViewModel @Inject constructor(
             false
         }
     }
+
+    fun clearPlaybackHistory(songId: Long) {
+        viewModelScope.launch {
+            repository.clearPlaybackHistory(songId)
+        }
+    }
 }
 

@@ -247,6 +247,10 @@ fun NavGraph(
                 },
                 onNavigateToEditTags = { songId ->
                     navController.navigateSafe(Screen.EditTags.createRoute(songId))
+                },
+                onNavigateToLocation = { songId ->
+                    navController.popBackStack()
+                    mainViewModel.navigateToLocation(songId)
                 }
             )
         }

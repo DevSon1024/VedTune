@@ -2,6 +2,7 @@ package com.devson.vedtune.ui.songs
 
 import android.Manifest
 import androidx.compose.runtime.DisposableEffect
+import kotlinx.coroutines.launch
 import androidx.media3.common.Player
 import android.content.ContentUris
 import android.content.Intent
@@ -32,6 +33,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.repeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -64,6 +71,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -89,7 +97,8 @@ fun SongsScreen(
     onNavigateToArtist: (String) -> Unit,
     onNavigateToEditTags: (Long) -> Unit,
     contentPadding: PaddingValues,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    navigateToLocationEvent: kotlinx.coroutines.flow.SharedFlow<Long>? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val currentSongId by viewModel.currentSongId.collectAsState()
@@ -97,6 +106,37 @@ fun SongsScreen(
     var showSortMenu by remember { mutableStateOf(false) }
     val playlists by viewModel.playlists.collectAsState()
     var songForPlaylist by remember { mutableStateOf<Song?>(null) }
+
+    val lazyListState = rememberLazyListState()
+    val lazyGridState = rememberLazyGridState()
+    val scope = rememberCoroutineScope()
+    var highlightedSongId by remember { mutableStateOf<Long?>(null) }
+    val highlightAlpha = remember { Animatable(0f) }
+
+    LaunchedEffect(navigateToLocationEvent) {
+        navigateToLocationEvent?.collect { songId ->
+            val index = uiState.songs.indexOfFirst { it.id == songId }
+            if (index != -1) {
+                if (uiState.isGridView) {
+                    lazyGridState.animateScrollToItem(index)
+                } else {
+                    lazyListState.animateScrollToItem(index)
+                }
+                highlightedSongId = songId
+                highlightAlpha.snapTo(0f)
+                highlightAlpha.animateTo(
+                    targetValue = 0.5f,
+                    animationSpec = repeatable(
+                        iterations = 3,
+                        animation = tween(durationMillis = 300),
+                        repeatMode = RepeatMode.Reverse
+                    )
+                )
+                highlightAlpha.animateTo(0f)
+                highlightedSongId = null
+            }
+        }
+    }
 
     // Dialog and bottom sheet states
     var selectedSongForOptions by remember { mutableStateOf<Song?>(null) }
@@ -318,6 +358,7 @@ fun SongsScreen(
                 uiState.isGridView -> {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
+                        state = lazyGridState,
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -336,13 +377,16 @@ fun SongsScreen(
                                 showArtwork = uiState.showArtwork,
                                 isCurrentSong = isCurrentSong,
                                 isPlaying = isPlaying,
-                                onOptionsClick = { selectedSongForOptions = song }
+                                onOptionsClick = { selectedSongForOptions = song },
+                                isHighlighted = song.id == highlightedSongId,
+                                highlightAlpha = if (song.id == highlightedSongId) highlightAlpha.value else 0f
                             )
                         }
                     }
                 }
                 else -> {
                     LazyColumn(
+                        state = lazyListState,
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                         contentPadding = PaddingValues(
@@ -360,7 +404,9 @@ fun SongsScreen(
                                 showArtwork = uiState.showArtwork,
                                 isCurrentSong = isCurrentSong,
                                 isPlaying = isPlaying,
-                                onOptionsClick = { selectedSongForOptions = song }
+                                onOptionsClick = { selectedSongForOptions = song },
+                                isHighlighted = song.id == highlightedSongId,
+                                highlightAlpha = if (song.id == highlightedSongId) highlightAlpha.value else 0f
                             )
                         }
                     }
@@ -577,11 +623,37 @@ fun SongsScreen(
 
     if (showInfoDialogSong != null) {
         val song = showInfoDialogSong!!
-        SongInfoDialog(
+        SongInfoBottomSheet(
             song = song,
-            onEditTagsClick = { 
-                showInfoDialogSong = null
-                onNavigateToEditTags(song.id) 
+            onNavigateToAlbum = onNavigateToAlbum,
+            onNavigateToArtist = onNavigateToArtist,
+            onNavigateToLocation = { songId ->
+                val index = uiState.songs.indexOfFirst { it.id == songId }
+                if (index != -1) {
+                    scope.launch {
+                        if (uiState.isGridView) {
+                            lazyGridState.animateScrollToItem(index)
+                        } else {
+                            lazyListState.animateScrollToItem(index)
+                        }
+                        highlightedSongId = songId
+                        highlightAlpha.snapTo(0f)
+                        highlightAlpha.animateTo(
+                            targetValue = 0.5f,
+                            animationSpec = repeatable(
+                                iterations = 3,
+                                animation = tween(durationMillis = 300),
+                                repeatMode = RepeatMode.Reverse
+                            )
+                        )
+                        highlightAlpha.animateTo(0f)
+                        highlightedSongId = null
+                    }
+                }
+            },
+            onNavigateToEditTags = onNavigateToEditTags,
+            onClearHistory = { songId ->
+                viewModel.clearPlaybackHistory(songId)
             },
             onDismiss = { showInfoDialogSong = null }
         )
@@ -629,15 +701,23 @@ fun SongListItem(
     showArtwork: Boolean = true,
     isCurrentSong: Boolean = false,
     isPlaying: Boolean = false,
-    onOptionsClick: () -> Unit
+    onOptionsClick: () -> Unit,
+    isHighlighted: Boolean = false,
+    highlightAlpha: Float = 0f
 ) {
+    val containerColor = if (isHighlighted && highlightAlpha > 0f) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = highlightAlpha)
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
             .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
         Row(
             modifier = Modifier
@@ -713,15 +793,23 @@ fun SongGridItem(
     showArtwork: Boolean = true,
     isCurrentSong: Boolean = false,
     isPlaying: Boolean = false,
-    onOptionsClick: () -> Unit
+    onOptionsClick: () -> Unit,
+    isHighlighted: Boolean = false,
+    highlightAlpha: Float = 0f
 ) {
+    val containerColor = if (isHighlighted && highlightAlpha > 0f) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = highlightAlpha)
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
             .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
         Column(
             modifier = Modifier.padding(8.dp)
@@ -809,117 +897,6 @@ fun BottomSheetOption(
             text = title,
             style = MaterialTheme.typography.bodyLarge,
             color = tint
-        )
-    }
-}
-
-@Composable
-fun SongInfoDialog(
-    song: Song,
-    onEditTagsClick: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    val context = LocalContext.current
-    var metadata by remember { mutableStateOf<AudioMetadata?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    
-    val uri = remember(song.id) {
-        ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, song.id)
-    }
-
-    androidx.compose.runtime.LaunchedEffect(song.id) {
-        metadata = MediaInfoHelper.getAudioMetadata(context, uri)
-        isLoading = false
-    }
-
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            shape = MaterialTheme.shapes.extraLarge,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth()
-            ) {
-                Text(
-                    text = "Song Info",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                if (isLoading) {
-                    Box(modifier = Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                } else {
-                    metadata?.let { meta ->
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            InfoRow(label = "Title", value = song.title)
-                            InfoRow(label = "Artist", value = song.artist)
-                            InfoRow(label = "Album", value = song.album)
-                            InfoRow(label = "Format", value = meta.format)
-                            InfoRow(label = "Codec", value = meta.codec)
-                            InfoRow(label = "Duration", value = meta.duration.ifBlank { formatDuration(song.duration) })
-                            InfoRow(label = "Bit Rate", value = meta.bitRate)
-                            InfoRow(label = "Sampling Rate", value = meta.samplingRate)
-                            InfoRow(label = "Channels", value = meta.channels)
-                            InfoRow(label = "File Size", value = meta.fileSize)
-                            InfoRow(label = "Location", value = meta.location)
-                        }
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    androidx.compose.material3.TextButton(onClick = onDismiss) {
-                        Text("Close")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = {
-                        onEditTagsClick()
-                        onDismiss()
-                    }) {
-                        Text("Edit Tags")
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun InfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value.ifBlank { "Unknown" },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.End,
-            modifier = Modifier.weight(1f).padding(start = 16.dp)
         )
     }
 }

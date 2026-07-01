@@ -34,8 +34,11 @@ interface SongDao {
     @Query("UPDATE songs SET isFavorite = :isFavorite WHERE id = :id")
     suspend fun updateFavoriteStatus(id: Long, isFavorite: Boolean)
 
-    @Query("UPDATE songs SET playCount = playCount + 1, lastPlayed = :timestamp WHERE id = :id")
-    suspend fun incrementPlayCount(id: Long, timestamp: Long)
+    @Query("UPDATE songs SET playCount = playCount + 1, lastPlayed = :timestamp WHERE id = :songId")
+    suspend fun incrementPlayCount(songId: Long, timestamp: Long)
+
+    @Query("UPDATE songs SET playCount = 0, lastPlayed = 0 WHERE id = :songId")
+    suspend fun clearPlaybackHistory(songId: Long)
 
     @Query("SELECT albumId, album, artist, COUNT(*) as songCount FROM songs GROUP BY albumId ORDER BY album ASC")
     fun getAllAlbums(): Flow<List<AlbumEntity>>

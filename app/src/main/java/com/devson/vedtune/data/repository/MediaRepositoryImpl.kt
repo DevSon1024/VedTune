@@ -43,7 +43,11 @@ class MediaRepositoryImpl @Inject constructor(
     }
 
     override suspend fun incrementPlayCount(id: Long) {
-        songDao.incrementPlayCount(id, System.currentTimeMillis())
+        songDao.incrementPlayCount(songId = id, timestamp = System.currentTimeMillis())
+    }
+
+    override suspend fun clearPlaybackHistory(songId: Long) {
+        songDao.clearPlaybackHistory(songId)
     }
 
     override suspend fun synchronizeLibrary() {

@@ -9,6 +9,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -134,5 +135,15 @@ class MainViewModel @Inject constructor(
 
     private fun requestSync() {
         syncTrigger.tryEmit(Unit)
+    }
+
+    private val _navigateToLocationEvent = MutableSharedFlow<Long>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
+    )
+    val navigateToLocationEvent = _navigateToLocationEvent.asSharedFlow()
+
+    fun navigateToLocation(songId: Long) {
+        _navigateToLocationEvent.tryEmit(songId)
     }
 }

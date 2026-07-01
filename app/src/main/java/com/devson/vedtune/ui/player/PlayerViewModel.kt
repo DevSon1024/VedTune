@@ -105,14 +105,39 @@ class PlayerViewModel @Inject constructor(
 
     private var pendingDeleteSongId: Long? = null
 
+    private var lastTrackedSongId: Long? = null
+    private var incrementedForCurrentTrack = false
+
     init {
         viewModelScope.launch {
             currentSong.collect { song ->
                 if (song != null) {
                     _currentLyrics.value = null
                     loadLyrics(song.id)
+                    if (song.id != lastTrackedSongId) {
+                        lastTrackedSongId = song.id
+                        incrementedForCurrentTrack = false
+                    }
                 } else {
                     _currentLyrics.value = null
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            playbackPosition.collect { position ->
+                val song = currentSong.value ?: return@collect
+                val duration = playbackDuration.value
+                if (duration > 0) {
+                    val threshold = minOf(30000L, duration / 2)
+                    if (position >= threshold && song.id == lastTrackedSongId && !incrementedForCurrentTrack) {
+                        incrementedForCurrentTrack = true
+                        viewModelScope.launch(Dispatchers.IO) {
+                            repository.incrementPlayCount(song.id)
+                        }
+                    } else if (position < 2000L && incrementedForCurrentTrack) {
+                        incrementedForCurrentTrack = false
+                    }
                 }
             }
         }
@@ -329,6 +354,12 @@ class PlayerViewModel @Inject constructor(
                 e.printStackTrace()
                 _currentLyrics.value = ""
             }
+        }
+    }
+
+    fun clearPlaybackHistory(songId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.clearPlaybackHistory(songId)
         }
     }
 

@@ -150,6 +150,7 @@ fun HomeScreen(
                         onNavigateToAlbum = onNavigateToAlbum,
                         onNavigateToArtist = onNavigateToArtist,
                         onNavigateToEditTags = onNavigateToEditTags,
+                        navigateToLocationEvent = mainViewModel.navigateToLocationEvent,
                         contentPadding = innerPadding,
                         modifier = Modifier.fillMaxSize()
                     )

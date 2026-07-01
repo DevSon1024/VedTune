@@ -30,6 +30,30 @@ object DatabaseModule {
     fun provideAppDatabase(
         @ApplicationContext context: Context
     ): AppDatabase {
+        val migration3to4 = object : androidx.room.migration.Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                val cursor = db.query("PRAGMA table_info(songs)")
+                var hasPlayCount = false
+                var hasLastPlayed = false
+                while (cursor.moveToNext()) {
+                    val nameIndex = cursor.getColumnIndex("name")
+                    if (nameIndex != -1) {
+                        val name = cursor.getString(nameIndex)
+                        if (name == "playCount") hasPlayCount = true
+                        if (name == "lastPlayed") hasLastPlayed = true
+                    }
+                }
+                cursor.close()
+                
+                if (!hasPlayCount) {
+                    db.execSQL("ALTER TABLE songs ADD COLUMN playCount INTEGER NOT NULL DEFAULT 0")
+                }
+                if (!hasLastPlayed) {
+                    db.execSQL("ALTER TABLE songs ADD COLUMN lastPlayed INTEGER NOT NULL DEFAULT 0")
+                }
+            }
+        }
+
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
@@ -45,6 +69,7 @@ object DatabaseModule {
                 db.execSQL("INSERT OR IGNORE INTO playlists (id, name, createdAt) VALUES (${Playlist.FAVORITES_PLAYLIST_ID}, '${Playlist.FAVORITES_PLAYLIST_NAME}', ${System.currentTimeMillis()})")
             }
         })
+        .addMigrations(migration3to4)
         .fallbackToDestructiveMigration()
         .build()
     }

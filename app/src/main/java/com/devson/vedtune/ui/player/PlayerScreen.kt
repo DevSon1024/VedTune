@@ -104,7 +104,7 @@ import kotlinx.coroutines.flow.StateFlow
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.ui.components.AddToPlaylistDialog
 import com.devson.vedtune.ui.components.SongArtwork
-import com.devson.vedtune.ui.songs.SongInfoDialog
+import com.devson.vedtune.ui.songs.SongInfoBottomSheet
 import java.util.Locale
 
 // Unified sheet state — play queue removed
@@ -123,6 +123,7 @@ fun PlayerScreen(
     onNavigateToArtist: (String) -> Unit,
     onNavigateToAlbum: (Long) -> Unit,
     onNavigateToEditTags: (Long) -> Unit,
+    onNavigateToLocation: (Long) -> Unit,
     modifier: Modifier = Modifier,
     showArtwork: Boolean = true,
     showRemainingTime: Boolean = false
@@ -455,23 +456,24 @@ fun PlayerScreen(
         )
     }
 
-    // Song Info Dialog
+    // Song Info Bottom Sheet
     if (sheetState == PlayerSheetState.SongInfo && song != null) {
         val activeSong = song!!
-        SongInfoDialog(
+        SongInfoBottomSheet(
             song = activeSong,
-            onEditTagsClick = {
-                sheetState = PlayerSheetState.Hidden
-                onNavigateToEditTags(activeSong.id)
+            onNavigateToAlbum = onNavigateToAlbum,
+            onNavigateToArtist = onNavigateToArtist,
+            onNavigateToLocation = onNavigateToLocation,
+            onNavigateToEditTags = onNavigateToEditTags,
+            onClearHistory = { songId ->
+                viewModel.clearPlaybackHistory(songId)
             },
             onDismiss = { sheetState = PlayerSheetState.Hidden }
         )
     }
 }
 
-// ---------------------------------------------------------------------------
 // Stateless sub-composables
-// ---------------------------------------------------------------------------
 
 @Composable
 private fun PlayerHeader(
