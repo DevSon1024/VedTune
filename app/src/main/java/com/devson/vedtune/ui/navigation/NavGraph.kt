@@ -36,6 +36,7 @@ import com.devson.vedtune.ui.songs.EditTagsScreen
 import com.devson.vedtune.ui.songs.EditTagsViewModel
 import com.devson.vedtune.ui.lyrics.LyricsEditorScreen
 import com.devson.vedtune.ui.lyrics.LyricsEditorViewModel
+import com.devson.vedtune.ui.settings.LyricsConverterScreen
 
 sealed class Screen(val route: String) {
     data object Home : Screen("home")
@@ -64,6 +65,7 @@ sealed class Screen(val route: String) {
     data object LyricsEditor : Screen("lyrics_editor/{songId}") {
         fun createRoute(songId: Long) = "lyrics_editor/$songId"
     }
+    data object LyricsConverter : Screen("lyrics_converter")
 }
 
 @Composable
@@ -106,6 +108,9 @@ fun NavGraph(
                 },
                 onNavigateToEditTags = { songId ->
                     navController.navigateSafe(Screen.EditTags.createRoute(songId))
+                },
+                onNavigateToLyricsConverter = {
+                    navController.navigateSafe(Screen.LyricsConverter.route)
                 },
                 defaultStartScreen = defaultStartScreen,
                 mainViewModel = mainViewModel,
@@ -363,6 +368,25 @@ fun NavGraph(
             LyricsEditorScreen(
                 viewModel = viewModel,
                 onBackClick = { navController.popBackStackSafe() }
+            )
+        }
+        composable(
+            route = Screen.LyricsConverter.route,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(350)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(350)
+                )
+            }
+        ) {
+            LyricsConverterScreen(
+                onNavigateBack = { navController.popBackStackSafe() }
             )
         }
     }

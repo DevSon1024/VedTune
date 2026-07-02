@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -58,7 +59,8 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     onNavigateToAppearanceSettings: () -> Unit = {},
     onNavigateToPlaybackSettings: () -> Unit = {},
-    onNavigateToLibrarySettings: () -> Unit = {}
+    onNavigateToLibrarySettings: () -> Unit = {},
+    onNavigateToLyricsConverter: () -> Unit = {}
 ) {
     var queueClearedMessageVisible by remember { mutableStateOf(false) }
 
@@ -117,7 +119,19 @@ fun SettingsScreen(
                 )
             }
 
-            // CARD 4: Cache & Storage (inline — single destructive action)
+            // CARD 4: Tools & Utilities
+            SettingsCard(
+                title = "Tools & Utilities",
+                icon = Icons.Default.Build
+            ) {
+                SettingsNavigationRow(
+                    title = "Lyrics Converter",
+                    description = "Convert raw text lyrics to timed LRC format.",
+                    onClick = onNavigateToLyricsConverter
+                )
+            }
+
+            // CARD 5: Cache & Storage (inline — single destructive action)
             SettingsCard(
                 title = "Cache & Storage",
                 icon = Icons.Default.Delete

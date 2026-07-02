@@ -52,6 +52,7 @@ fun HomeScreen(
     onNavigateToPlaybackSettings: () -> Unit,
     onNavigateToLibrarySettings: () -> Unit,
     onNavigateToEditTags: (Long) -> Unit,
+    onNavigateToLyricsConverter: () -> Unit,
     defaultStartScreen: String,
     mainViewModel: MainViewModel,
     modifier: Modifier = Modifier
@@ -189,6 +190,7 @@ fun HomeScreen(
                         onNavigateToAppearanceSettings = onNavigateToAppearanceSettings,
                         onNavigateToPlaybackSettings = onNavigateToPlaybackSettings,
                         onNavigateToLibrarySettings = onNavigateToLibrarySettings,
+                        onNavigateToLyricsConverter = onNavigateToLyricsConverter,
                         contentPadding = innerPadding,
                         modifier = Modifier.fillMaxSize()
                     )
