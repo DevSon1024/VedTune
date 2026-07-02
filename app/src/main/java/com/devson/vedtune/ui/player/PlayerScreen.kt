@@ -64,6 +64,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -123,6 +124,7 @@ fun PlayerScreen(
     onNavigateToArtist: (String) -> Unit,
     onNavigateToAlbum: (Long) -> Unit,
     onNavigateToEditTags: (Long) -> Unit,
+    onNavigateToLyricsEditor: (Long) -> Unit,
     onNavigateToLocation: (Long) -> Unit,
     modifier: Modifier = Modifier,
     showArtwork: Boolean = true,
@@ -164,6 +166,12 @@ fun PlayerScreen(
     ) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
             viewModel.onDeletePermissionGranted()
+        }
+    }
+
+    LaunchedEffect(song?.id) {
+        song?.id?.let { songId ->
+            viewModel.loadLyrics(songId)
         }
     }
 
@@ -412,6 +420,10 @@ fun PlayerScreen(
                 onEditTags = {
                     sheetState = PlayerSheetState.Hidden
                     onNavigateToEditTags(activeSong.id)
+                },
+                onEditLyrics = {
+                    sheetState = PlayerSheetState.Hidden
+                    onNavigateToLyricsEditor(activeSong.id)
                 },
                 onShare = {
                     sheetState = PlayerSheetState.Hidden
@@ -933,6 +945,10 @@ private fun LyricsPanel(
         else -> Alignment.CenterHorizontally
     }
 
+    val currentLyricsText = lyricsText
+    val hasTimestamps = remember(currentLyricsText) {
+        !currentLyricsText.isNullOrBlank() && currentLyricsText.contains(Regex("\\[\\d+:\\d+"))
+    }
     var parsedLines by remember { mutableStateOf<List<LrcLine>>(emptyList()) }
 
     LaunchedEffect(lyricsText) {
@@ -1019,7 +1035,11 @@ private fun LyricsPanel(
                     )
                 }
 
-                parsedLines.isEmpty() -> {
+                hasTimestamps && parsedLines.isEmpty() -> {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+
+                !hasTimestamps -> {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -1331,6 +1351,7 @@ private fun OptionsSheetContent(
     song: Song,
     showArtwork: Boolean,
     onEditTags: () -> Unit,
+    onEditLyrics: () -> Unit,
     onShare: () -> Unit,
     onDeletePermanently: () -> Unit,
     onPlayerSettings: () -> Unit
@@ -1381,6 +1402,11 @@ private fun OptionsSheetContent(
             onClick = onEditTags
         )
         BottomSheetOption(
+            icon = Icons.Rounded.TextFormat,
+            title = "Edit Lyrics",
+            onClick = onEditLyrics
+        )
+        BottomSheetOption(
             icon = Icons.Rounded.Share,
             title = "Share Song",
             onClick = onShare
@@ -1399,9 +1425,7 @@ private fun OptionsSheetContent(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Shared helpers
-// ---------------------------------------------------------------------------
 
 @Composable
 fun BottomSheetOption(
@@ -1481,22 +1505,26 @@ private fun formatTime(ms: Long): String {
     return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
 }
 
-// ---------------------------------------------------------------------------
 // Synced lyrics helpers
-// ---------------------------------------------------------------------------
 
 data class LrcLine(val timestamp: Long, val text: String)
 
 fun parseLrc(lrcText: String): List<LrcLine> {
     val timeRegex = Regex("\\[(\\d+):(\\d+)(?:\\.(\\d+))?]")
     val parsedLines = mutableListOf<LrcLine>()
-    var hasTimestamps = false
 
     for (line in lrcText.lines()) {
-        val matches = timeRegex.findAll(line).toList()
+        val cleanLine = line.trim()
+        if (cleanLine.isEmpty()) continue
+
+        // Skip metadata tags like [ti:Title]
+        if (cleanLine.startsWith("[") && !cleanLine.startsWith("[0") && !cleanLine.startsWith("[1") && !cleanLine.startsWith("[2") && !cleanLine.startsWith("[3") && !cleanLine.startsWith("[4") && !cleanLine.startsWith("[5") && !cleanLine.startsWith("[6") && !cleanLine.startsWith("[7") && !cleanLine.startsWith("[8") && !cleanLine.startsWith("[9")) {
+            continue
+        }
+
+        val matches = timeRegex.findAll(cleanLine).toList()
         if (matches.isNotEmpty()) {
-            hasTimestamps = true
-            val text = line.replace(timeRegex, "").trim()
+            val text = cleanLine.replace(timeRegex, "").trim()
             for (match in matches) {
                 val min = match.groupValues[1].toLongOrNull() ?: 0L
                 val sec = match.groupValues[2].toLongOrNull() ?: 0L
@@ -1510,18 +1538,22 @@ fun parseLrc(lrcText: String): List<LrcLine> {
                 } else 0L
                 parsedLines.add(LrcLine((min * 60 * 1000) + (sec * 1000) + ms, text))
             }
+        } else {
+            // Unsynced line gets -1L
+            parsedLines.add(LrcLine(-1L, cleanLine))
         }
     }
-    return if (hasTimestamps) parsedLines.sortedBy { it.timestamp } else emptyList()
+    return parsedLines
 }
 
 fun getActiveLyricsLineIndex(lines: List<LrcLine>, currentPosition: Long): Int {
     if (lines.isEmpty()) return -1
-    val index = lines.binarySearch { it.timestamp.compareTo(currentPosition) }
-    return if (index >= 0) {
-        index
-    } else {
-        val insertionPoint = -index - 1
-        insertionPoint - 1
+    var activeIndex = -1
+    for (i in lines.indices) {
+        val timestamp = lines[i].timestamp
+        if (timestamp in 0L..currentPosition) {
+            activeIndex = i
+        }
     }
+    return activeIndex
 }

@@ -306,7 +306,7 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private fun loadLyrics(songId: Long) {
+    fun loadLyrics(songId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 // 1. Check app's internal custom lyrics directory

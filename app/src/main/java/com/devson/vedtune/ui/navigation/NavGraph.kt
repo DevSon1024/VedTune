@@ -34,6 +34,8 @@ import com.devson.vedtune.ui.playlists.PlaylistDetailsScreen
 import com.devson.vedtune.ui.playlists.PlaylistDetailsViewModel
 import com.devson.vedtune.ui.songs.EditTagsScreen
 import com.devson.vedtune.ui.songs.EditTagsViewModel
+import com.devson.vedtune.ui.lyrics.LyricsEditorScreen
+import com.devson.vedtune.ui.lyrics.LyricsEditorViewModel
 
 sealed class Screen(val route: String) {
     data object Home : Screen("home")
@@ -58,6 +60,9 @@ sealed class Screen(val route: String) {
     }
     data object EditTags : Screen("edit_tags/{songId}") {
         fun createRoute(songId: Long) = "edit_tags/$songId"
+    }
+    data object LyricsEditor : Screen("lyrics_editor/{songId}") {
+        fun createRoute(songId: Long) = "lyrics_editor/$songId"
     }
 }
 
@@ -248,6 +253,9 @@ fun NavGraph(
                 onNavigateToEditTags = { songId ->
                     navController.navigateSafe(Screen.EditTags.createRoute(songId))
                 },
+                onNavigateToLyricsEditor = { songId ->
+                    navController.navigateSafe(Screen.LyricsEditor.createRoute(songId))
+                },
                 onNavigateToLocation = { songId ->
                     navController.popBackStack()
                     mainViewModel.navigateToLocation(songId)
@@ -326,6 +334,30 @@ fun NavGraph(
         ) {
             val viewModel: EditTagsViewModel = hiltViewModel()
             EditTagsScreen(
+                viewModel = viewModel,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = Screen.LyricsEditor.route,
+            arguments = listOf(
+                navArgument("songId") { type = NavType.LongType }
+            ),
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(350)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(350)
+                )
+            }
+        ) {
+            val viewModel: LyricsEditorViewModel = hiltViewModel()
+            LyricsEditorScreen(
                 viewModel = viewModel,
                 onBackClick = { navController.popBackStack() }
             )

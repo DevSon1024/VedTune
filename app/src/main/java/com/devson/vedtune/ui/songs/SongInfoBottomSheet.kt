@@ -61,13 +61,16 @@ fun SongInfoBottomSheet(
     }
 
     var metadata by remember { mutableStateOf<ExtractedMetadata?>(null) }
+    var lyricsStatus by remember { mutableStateOf("No") }
     var isLoading by remember { mutableStateOf(true) }
     var showClearConfirm by remember { mutableStateOf(false) }
 
     LaunchedEffect(song.id) {
         isLoading = true
         withContext(Dispatchers.IO) {
-            metadata = extractor.extractMetadata(song.id)
+            val meta = extractor.extractMetadata(song.id)
+            metadata = meta
+            lyricsStatus = getLyricsStatus(context, song.id, meta?.filePath ?: "")
         }
         isLoading = false
     }
@@ -218,6 +221,7 @@ fun SongInfoBottomSheet(
                         InfoRowItem(label = "Composer", value = meta.composer)
                         InfoRowItem(label = "Genre", value = meta.genre)
                         InfoRowItem(label = "Lyricist", value = meta.lyricist)
+                        InfoRowItem(label = "Lyrics", value = lyricsStatus)
                         InfoRowItem(label = "Track Number", value = meta.trackNumber.ifEmpty { song.track.takeIf { it > 0 }?.toString() ?: "" })
                         InfoRowItem(label = "Disc Number", value = meta.discNumber)
                         InfoRowItem(label = "Year", value = meta.year.ifEmpty { song.year.takeIf { it > 0 }?.toString() ?: "" })
@@ -444,4 +448,47 @@ private fun truncateMiddle(name: String, maxLength: Int = 36): String {
     if (name.length <= maxLength) return name
     val half = (maxLength - 3) / 2
     return name.take(half) + "..." + name.takeLast(half)
+}
+
+private fun getLyricsStatus(context: android.content.Context, songId: Long, filePath: String): String {
+    val internalFile = File(context.filesDir, "custom_lyrics/$songId.lrc")
+    if (internalFile.exists() && internalFile.length() > 0) {
+        return "External (Imported)"
+    }
+
+    if (filePath.isNotEmpty()) {
+        try {
+            val audioFile = File(filePath)
+            val parentDir = audioFile.parentFile
+            if (parentDir != null && parentDir.exists()) {
+                val baseName = audioFile.nameWithoutExtension
+                val externalLrcFile = File(parentDir, "$baseName.lrc")
+                if (externalLrcFile.exists() && externalLrcFile.length() > 0) {
+                    return "External (LRC)"
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    if (filePath.isNotEmpty()) {
+        try {
+            val file = File(filePath)
+            if (file.exists()) {
+                val audioFile = org.jaudiotagger.audio.AudioFileIO.read(file)
+                val tag = audioFile.tag
+                if (tag != null) {
+                    val embeddedLyrics = tag.getFirst(org.jaudiotagger.tag.FieldKey.LYRICS)
+                    if (!embeddedLyrics.isNullOrBlank()) {
+                        return "Embedded"
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    return "No"
 }
