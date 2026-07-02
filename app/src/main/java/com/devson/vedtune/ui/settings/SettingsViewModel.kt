@@ -64,6 +64,9 @@ class SettingsViewModel @Inject constructor(
     val albumArtClickAction: StateFlow<AlbumArtClickAction> = settingsRepository.albumArtClickAction
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AlbumArtClickAction.SHOW_LYRICS)
 
+    val playerBackgroundBlurRadius: StateFlow<Float> = settingsRepository.playerBackgroundBlurRadius
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 40f)
+
     //  Folder filtering 
 
     val folderFilterMode: StateFlow<FolderFilterMode> = settingsRepository.folderFilterMode
@@ -134,6 +137,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setAlbumArtClickAction(action: AlbumArtClickAction) {
         viewModelScope.launch { settingsRepository.setAlbumArtClickAction(action) }
+    }
+
+    fun setPlayerBackgroundBlurRadius(radius: Float) {
+        viewModelScope.launch { settingsRepository.setPlayerBackgroundBlurRadius(radius) }
     }
 
     fun clearPlaybackQueue() {

@@ -20,6 +20,7 @@ interface SettingsRepository {
     val enableSwipeToSkip: Flow<Boolean>
     val keepScreenOnWithLyrics: Flow<Boolean>
     val albumArtClickAction: Flow<AlbumArtClickAction>
+    val playerBackgroundBlurRadius: Flow<Float>
 
     // Folder filtering
     val folderFilterMode: Flow<FolderFilterMode>
@@ -41,6 +42,7 @@ interface SettingsRepository {
     suspend fun setEnableSwipeToSkip(enable: Boolean)
     suspend fun setKeepScreenOnWithLyrics(keep: Boolean)
     suspend fun setAlbumArtClickAction(action: AlbumArtClickAction)
+    suspend fun setPlayerBackgroundBlurRadius(radius: Float)
     suspend fun clearPlaybackQueue()
 
     // Folder filtering setters

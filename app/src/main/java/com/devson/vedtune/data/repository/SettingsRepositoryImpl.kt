@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.devson.vedtune.data.local.dao.QueueDao
 import com.devson.vedtune.domain.model.AlbumArtClickAction
@@ -36,6 +37,7 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_ENABLE_SWIPE_TO_SKIP = booleanPreferencesKey("enable_swipe_to_skip")
         private val KEY_KEEP_SCREEN_ON_WITH_LYRICS = booleanPreferencesKey("keep_screen_on_with_lyrics")
         private val KEY_ALBUM_ART_CLICK_ACTION = stringPreferencesKey("album_art_click_action")
+        private val KEY_PLAYER_BACKGROUND_BLUR_RADIUS = floatPreferencesKey("player_background_blur_radius")
 
         // Folder filter
         private val KEY_FOLDER_FILTER_MODE = stringPreferencesKey("folder_filter_mode")
@@ -107,6 +109,10 @@ class SettingsRepositoryImpl @Inject constructor(
         runCatching {
             AlbumArtClickAction.valueOf(preferences[KEY_ALBUM_ART_CLICK_ACTION] ?: AlbumArtClickAction.SHOW_LYRICS.name)
         }.getOrDefault(AlbumArtClickAction.SHOW_LYRICS)
+    }
+
+    override val playerBackgroundBlurRadius: Flow<Float> = dataStore.data.map { preferences ->
+        preferences[KEY_PLAYER_BACKGROUND_BLUR_RADIUS] ?: 40f
     }
 
     //  Folder filtering flows 
@@ -187,6 +193,10 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setAlbumArtClickAction(action: AlbumArtClickAction) {
         dataStore.edit { it[KEY_ALBUM_ART_CLICK_ACTION] = action.name }
+    }
+
+    override suspend fun setPlayerBackgroundBlurRadius(radius: Float) {
+        dataStore.edit { it[KEY_PLAYER_BACKGROUND_BLUR_RADIUS] = radius.coerceIn(10f, 100f) }
     }
 
     override suspend fun clearPlaybackQueue() {

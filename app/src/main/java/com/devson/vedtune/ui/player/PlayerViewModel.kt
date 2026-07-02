@@ -64,6 +64,9 @@ class PlayerViewModel @Inject constructor(
     val albumArtClickAction: StateFlow<AlbumArtClickAction> = settingsRepository.albumArtClickAction
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AlbumArtClickAction.SHOW_LYRICS)
 
+    val playerBackgroundBlurRadius: StateFlow<Float> = settingsRepository.playerBackgroundBlurRadius
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 40f)
+
     val isPlaying: StateFlow<Boolean> = playbackConnection.isPlaying
 
     val currentSong: StateFlow<Song?> = playbackConnection.currentSongId

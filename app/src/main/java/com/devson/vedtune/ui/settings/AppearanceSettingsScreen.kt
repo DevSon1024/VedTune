@@ -33,9 +33,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Slider
 import com.devson.vedtune.domain.model.AlbumArtClickAction
 import com.devson.vedtune.domain.model.SeekBarStyle
 
@@ -51,6 +53,7 @@ fun AppearanceSettingsScreen(
     val seekbarStyle by viewModel.seekbarStyle.collectAsState()
     val keepScreenOnWithLyrics by viewModel.keepScreenOnWithLyrics.collectAsState()
     val albumArtClickAction by viewModel.albumArtClickAction.collectAsState()
+    val playerBackgroundBlurRadius by viewModel.playerBackgroundBlurRadius.collectAsState()
 
     Scaffold(
         topBar = {
@@ -138,6 +141,53 @@ fun AppearanceSettingsScreen(
                     currentAction = albumArtClickAction,
                     onActionSelected = { viewModel.setAlbumArtClickAction(it) }
                 )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+
+                var sliderValue by remember(playerBackgroundBlurRadius) { mutableStateOf(playerBackgroundBlurRadius) }
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Background Blur Intensity",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Adjust the blur radius of the player background.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Text(
+                            text = "${sliderValue.toInt()} dp",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    Slider(
+                        value = sliderValue,
+                        onValueChange = { sliderValue = it },
+                        onValueChangeFinished = {
+                            viewModel.setPlayerBackgroundBlurRadius(sliderValue)
+                        },
+                        valueRange = 10f..100f,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
 
             // CARD 2: Lyrics Settings

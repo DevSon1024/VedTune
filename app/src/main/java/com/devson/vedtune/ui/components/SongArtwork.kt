@@ -5,9 +5,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.foundation.layout.Box
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -18,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.size.Size
@@ -118,7 +117,8 @@ fun SongArtwork(
     showArtwork: Boolean = true,
     lastModified: Long = 0L,
     ignoreCustomArtwork: Boolean = false,
-    blurRadius: Int = 0
+    blurRadius: Int = 0,
+    isPlaying: Boolean = false
 ) {
     val context = LocalContext.current
     var isError by remember(albumId, lastModified, ignoreCustomArtwork) { mutableStateOf(false) }
@@ -139,10 +139,9 @@ fun SongArtwork(
             modifier = modifier,
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = "Music Placeholder",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            PlayingIndicator(
+                isPlaying = isPlaying,
+                modifier = Modifier.size(80.dp)
             )
         }
     } else {

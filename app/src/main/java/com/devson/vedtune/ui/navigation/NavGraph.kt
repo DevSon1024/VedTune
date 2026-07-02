@@ -130,7 +130,7 @@ fun NavGraph(
             val viewModel: SettingsViewModel = hiltViewModel()
             FolderSettingsScreen(
                 viewModel = viewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStackSafe() }
             )
         }
         composable(
@@ -151,7 +151,7 @@ fun NavGraph(
             val viewModel: SettingsViewModel = hiltViewModel()
             AppearanceSettingsScreen(
                 viewModel = viewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStackSafe() }
             )
         }
         composable(
@@ -172,7 +172,7 @@ fun NavGraph(
             val viewModel: SettingsViewModel = hiltViewModel()
             PlaybackSettingsScreen(
                 viewModel = viewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStackSafe() }
             )
         }
         composable(
@@ -193,7 +193,7 @@ fun NavGraph(
             val viewModel: SettingsViewModel = hiltViewModel()
             LibrarySettingsScreen(
                 viewModel = viewModel,
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { navController.popBackStackSafe() },
                 onNavigateToFolderSettings = {
                     navController.navigateSafe(Screen.FolderSettings.route)
                 }
@@ -221,7 +221,7 @@ fun NavGraph(
             ArtistDetailsScreen(
                 viewModel = viewModel,
                 mainViewModel = mainViewModel,
-                onBackClick = { navController.popBackStack() },
+                onBackClick = { navController.popBackStackSafe() },
                 onNavigateToPlayer = { navController.navigateSafe(Screen.Player.route) }
             )
         }
@@ -243,7 +243,7 @@ fun NavGraph(
             val viewModel: PlayerViewModel = hiltViewModel()
             PlayerScreen(
                 viewModel = viewModel,
-                onBackClick = { navController.popBackStack() },
+                onBackClick = { navController.popBackStackSafe() },
                 onNavigateToArtist = { artistName ->
                     navController.navigateSafe(Screen.ArtistDetails.createRoute(artistName))
                 },
@@ -257,7 +257,7 @@ fun NavGraph(
                     navController.navigateSafe(Screen.LyricsEditor.createRoute(songId))
                 },
                 onNavigateToLocation = { songId ->
-                    navController.popBackStack()
+                    navController.popBackStackSafe()
                     mainViewModel.navigateToLocation(songId)
                 }
             )
@@ -284,7 +284,7 @@ fun NavGraph(
             AlbumDetailsScreen(
                 viewModel = viewModel,
                 mainViewModel = mainViewModel,
-                onBackClick = { navController.popBackStack() },
+                onBackClick = { navController.popBackStackSafe() },
                 onNavigateToPlayer = { navController.navigateSafe(Screen.Player.route) }
             )
         }
@@ -310,7 +310,7 @@ fun NavGraph(
             PlaylistDetailsScreen(
                 viewModel = viewModel,
                 mainViewModel = mainViewModel,
-                onBackClick = { navController.popBackStack() },
+                onBackClick = { navController.popBackStackSafe() },
                 onNavigateToPlayer = { navController.navigateSafe(Screen.Player.route) }
             )
         }
@@ -335,7 +335,10 @@ fun NavGraph(
             val viewModel: EditTagsViewModel = hiltViewModel()
             EditTagsScreen(
                 viewModel = viewModel,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStackSafe() },
+                onNavigateToLyricsEditor = { songId ->
+                    navController.navigateSafe(Screen.LyricsEditor.createRoute(songId))
+                }
             )
         }
         composable(
@@ -359,7 +362,7 @@ fun NavGraph(
             val viewModel: LyricsEditorViewModel = hiltViewModel()
             LyricsEditorScreen(
                 viewModel = viewModel,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStackSafe() }
             )
         }
     }
@@ -369,5 +372,14 @@ fun NavController.navigateSafe(route: String) {
     val currentEntry = currentBackStackEntry
     if (currentEntry == null || currentEntry.lifecycle.currentState == Lifecycle.State.RESUMED) {
         navigate(route)
+    }
+}
+
+fun NavController.popBackStackSafe() {
+    val currentEntry = currentBackStackEntry
+    if (currentEntry != null && currentEntry.lifecycle.currentState == Lifecycle.State.RESUMED) {
+        if (previousBackStackEntry != null) {
+            popBackStack()
+        }
     }
 }

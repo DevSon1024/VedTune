@@ -53,7 +53,7 @@ class EditTagsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val songId: Long = checkNotNull(savedStateHandle["songId"])
+    val songId: Long = checkNotNull(savedStateHandle["songId"])
 
     var uiState by mutableStateOf<EditTagsUiState>(EditTagsUiState.Loading)
         private set

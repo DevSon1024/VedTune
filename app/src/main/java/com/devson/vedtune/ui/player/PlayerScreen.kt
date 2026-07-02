@@ -163,6 +163,7 @@ fun PlayerScreen(
     val enableSwipeToSkip by viewModel.enableSwipeToSkip.collectAsStateWithLifecycle()
     val keepScreenOnWithLyrics by viewModel.keepScreenOnWithLyrics.collectAsStateWithLifecycle()
     val albumArtClickAction by viewModel.albumArtClickAction.collectAsStateWithLifecycle()
+    val playerBackgroundBlurRadius by viewModel.playerBackgroundBlurRadius.collectAsStateWithLifecycle()
 
     var showSleepTimerDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
@@ -240,16 +241,18 @@ fun PlayerScreen(
                         albumId = albumId,
                         modifier = Modifier.fillMaxSize(),
                         showArtwork = showArtwork,
-                        blurRadius = 25
+                        blurRadius = playerBackgroundBlurRadius.toInt(),
+                        isPlaying = isPlaying
                     )
-                    val isDark = isSystemInDarkTheme()
+                    val background = MaterialTheme.colorScheme.background
+                    val isDark = (background.red + background.green + background.blue) / 3f < 0.5f
                     val overlayBrush = remember(isDark) {
                         Brush.verticalGradient(
                             colors = if (isDark) {
                                 listOf(
-                                    Color.Black.copy(alpha = 0.5f),
                                     Color.Black.copy(alpha = 0.7f),
-                                    Color.Black.copy(alpha = 0.85f)
+                                    Color.Black.copy(alpha = 0.85f),
+                                    Color.Black.copy(alpha = 0.95f)
                                 )
                             } else {
                                 listOf(
@@ -327,6 +330,7 @@ fun PlayerScreen(
                                 ArtworkCard(
                                     song = currentActiveSong,
                                     showArtwork = showArtwork,
+                                    isPlaying = isPlaying,
                                     artworkScale = artworkScale,
                                     enableSwipeToSkip = enableSwipeToSkip,
                                     albumArtClickAction = albumArtClickAction,
@@ -608,6 +612,7 @@ private fun PlayerHeader(
 private fun ArtworkCard(
     song: Song,
     showArtwork: Boolean,
+    isPlaying: Boolean,
     artworkScale: Float,
     enableSwipeToSkip: Boolean,
     albumArtClickAction: AlbumArtClickAction,
@@ -676,7 +681,8 @@ private fun ArtworkCard(
         SongArtwork(
             albumId = song.albumId,
             modifier = Modifier.fillMaxSize(),
-            showArtwork = showArtwork
+            showArtwork = showArtwork,
+            isPlaying = isPlaying
         )
     }
 }
