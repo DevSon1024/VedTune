@@ -451,6 +451,7 @@ fun SyncedTabContent(
                     },
                     valueRange = 0f..duration.coerceAtLeast(1L).toFloat(),
                     style = style,
+                    isPlaying = isPlaying,
                     modifier = Modifier.fillMaxWidth()
                 )
 

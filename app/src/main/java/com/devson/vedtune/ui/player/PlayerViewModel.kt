@@ -83,6 +83,7 @@ class PlayerViewModel @Inject constructor(
     val repeatMode: StateFlow<Int> = playbackConnection.repeatMode
     val shuffleModeEnabled: StateFlow<Boolean> = playbackConnection.shuffleModeEnabled
     val sleepTimerRemaining: StateFlow<Long> = playbackConnection.sleepTimerRemaining
+    val playlistQueue: StateFlow<List<Song>> = playbackConnection.playlistQueue
 
     val isFavorite: StateFlow<Boolean> = currentSong
         .flatMapLatest { song ->
@@ -224,6 +225,22 @@ class PlayerViewModel @Inject constructor(
 
     fun cancelSleepTimer() {
         playbackConnection.cancelSleepTimer()
+    }
+
+    fun playFromQueue(index: Int) {
+        playbackConnection.skipToQueueItem(index)
+    }
+
+    fun moveQueueItem(fromIndex: Int, toIndex: Int) {
+        playbackConnection.moveQueueItem(fromIndex, toIndex)
+    }
+
+    fun removeQueueItem(index: Int) {
+        playbackConnection.removeQueueItem(index)
+    }
+
+    fun clearQueue() {
+        playbackConnection.clearQueue()
     }
 
     fun toggleRemainingTime() {

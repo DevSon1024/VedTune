@@ -154,6 +154,7 @@ class PlaybackConnection @Inject constructor(
 
         override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
             _shuffleModeEnabled.value = shuffleModeEnabled
+            updateQueue()
             scope.launch {
                 dataStore.edit { preferences ->
                     preferences[KEY_SHUFFLE_MODE] = shuffleModeEnabled
@@ -672,10 +673,21 @@ class PlaybackConnection @Inject constructor(
     private fun updateQueue() {
         val controller = mediaController ?: return
         if (!controller.isConnected) return
-        val count = controller.mediaItemCount
-        val songIds = (0 until count).mapNotNull { index ->
-            controller.getMediaItemAt(index).mediaId?.toLongOrNull()
+        val timeline = controller.currentTimeline
+        if (timeline.isEmpty) {
+            _playlistQueue.value = emptyList()
+            return
         }
+        val window = androidx.media3.common.Timeline.Window()
+        val songIds = mutableListOf<Long>()
+        
+        var index = timeline.getFirstWindowIndex(controller.shuffleModeEnabled)
+        while (index != androidx.media3.common.C.INDEX_UNSET) {
+            timeline.getWindow(index, window)
+            window.mediaItem.mediaId?.toLongOrNull()?.let { songIds.add(it) }
+            index = timeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, controller.shuffleModeEnabled)
+        }
+        
         scope.launch(Dispatchers.IO) {
             try {
                 val songs = repository.getSongsByIds(songIds)
@@ -692,15 +704,56 @@ class PlaybackConnection @Inject constructor(
         scope.launch {
             try {
                 val controller = getController()
-                if (fromIndex in 0 until controller.mediaItemCount && toIndex in 0 until controller.mediaItemCount) {
-                    controller.moveMediaItem(fromIndex, toIndex)
-                    val updatedQueue = _playlistQueue.value.toMutableList()
-                    if (fromIndex < updatedQueue.size && toIndex < updatedQueue.size) {
-                        val item = updatedQueue.removeAt(fromIndex)
-                        updatedQueue.add(toIndex, item)
-                        _playlistQueue.value = updatedQueue
-                        repository.saveQueue(updatedQueue)
+                val currentQueue = _playlistQueue.value
+                if (fromIndex !in currentQueue.indices || toIndex !in currentQueue.indices) return@launch
+                
+                val fromSong = currentQueue[fromIndex]
+                val toSong = currentQueue[toIndex]
+                
+                var unshuffledFromIndex = -1
+                var unshuffledToIndex = -1
+                for (i in 0 until controller.mediaItemCount) {
+                    val mediaId = controller.getMediaItemAt(i).mediaId
+                    if (mediaId == fromSong.id.toString()) unshuffledFromIndex = i
+                    if (mediaId == toSong.id.toString()) unshuffledToIndex = i
+                }
+                
+                if (unshuffledFromIndex != -1 && unshuffledToIndex != -1) {
+                    controller.moveMediaItem(unshuffledFromIndex, unshuffledToIndex)
+                    val updatedQueue = currentQueue.toMutableList()
+                    val item = updatedQueue.removeAt(fromIndex)
+                    updatedQueue.add(toIndex, item)
+                    _playlistQueue.value = updatedQueue
+                    repository.saveQueue(updatedQueue)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun removeQueueItem(index: Int) {
+        scope.launch {
+            try {
+                val controller = getController()
+                val currentQueue = _playlistQueue.value
+                if (index !in currentQueue.indices) return@launch
+                
+                val targetSong = currentQueue[index]
+                var unshuffledIndex = -1
+                for (i in 0 until controller.mediaItemCount) {
+                    if (controller.getMediaItemAt(i).mediaId == targetSong.id.toString()) {
+                        unshuffledIndex = i
+                        break
                     }
+                }
+                
+                if (unshuffledIndex != -1) {
+                    controller.removeMediaItem(unshuffledIndex)
+                    val updatedQueue = currentQueue.toMutableList()
+                    updatedQueue.removeAt(index)
+                    _playlistQueue.value = updatedQueue
+                    repository.saveQueue(updatedQueue)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -712,8 +765,20 @@ class PlaybackConnection @Inject constructor(
         scope.launch {
             try {
                 val controller = getController()
-                if (index in 0 until controller.mediaItemCount) {
-                    controller.seekTo(index, 0L)
+                val currentQueue = _playlistQueue.value
+                if (index !in currentQueue.indices) return@launch
+                
+                val targetSong = currentQueue[index]
+                var unshuffledIndex = -1
+                for (i in 0 until controller.mediaItemCount) {
+                    if (controller.getMediaItemAt(i).mediaId == targetSong.id.toString()) {
+                        unshuffledIndex = i
+                        break
+                    }
+                }
+                
+                if (unshuffledIndex != -1) {
+                    controller.seekTo(unshuffledIndex, 0L)
                     controller.play()
                 }
             } catch (e: Exception) {
@@ -722,3 +787,4 @@ class PlaybackConnection @Inject constructor(
         }
     }
 }
+

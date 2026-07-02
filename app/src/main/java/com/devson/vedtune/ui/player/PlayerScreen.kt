@@ -63,6 +63,7 @@ import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.Settings
@@ -169,6 +170,7 @@ fun PlayerScreen(
     var showViewAlbumArtOverlay by remember { mutableStateOf(false) }
     var sheetState: PlayerSheetState by remember { mutableStateOf(PlayerSheetState.Hidden) }
     var showLyrics by remember { mutableStateOf(false) }
+    var showQueueSheet by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
 
@@ -290,7 +292,8 @@ fun PlayerScreen(
                 // Header (Back button, Title, sleeps in label)
                 PlayerHeader(
                     sleepTimerRemaining = sleepTimerRemaining,
-                    onBackClick = onBackClick
+                    onBackClick = onBackClick,
+                    onQueueClick = { showQueueSheet = true }
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -381,6 +384,7 @@ fun PlayerScreen(
                     duration = duration,
                     showRemainingTime = showRemainingTime,
                     style = seekbarStyle,
+                    isPlaying = isPlaying,
                     onSeek = { viewModel.seekTo(it) },
                     onToggleRemainingTime = { viewModel.toggleRemainingTime() }
                 )
@@ -541,6 +545,14 @@ fun PlayerScreen(
             }
         )
     }
+
+    // Queue Bottom Sheet
+    if (showQueueSheet) {
+        QueueBottomSheet(
+            viewModel = viewModel,
+            onDismiss = { showQueueSheet = false }
+        )
+    }
 }
 
 // Stateless sub-composables
@@ -548,7 +560,8 @@ fun PlayerScreen(
 @Composable
 private fun PlayerHeader(
     sleepTimerRemaining: Long,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onQueueClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -570,8 +583,13 @@ private fun PlayerHeader(
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
-        // Balanced spacing to keep title perfectly centered
-        Spacer(modifier = Modifier.width(48.dp))
+        IconButton(onClick = onQueueClick) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.QueueMusic,
+                contentDescription = "Playback Queue",
+                tint = MaterialTheme.colorScheme.onBackground
+            )
+        }
     }
 
     if (sleepTimerRemaining > 0) {
@@ -869,6 +887,7 @@ private fun SeekBar(
     duration: Long,
     showRemainingTime: Boolean,
     style: SeekBarStyle,
+    isPlaying: Boolean,
     onSeek: (Long) -> Unit,
     onToggleRemainingTime: () -> Unit
 ) {
@@ -895,6 +914,7 @@ private fun SeekBar(
             },
             valueRange = 0f..duration.coerceAtLeast(1L).toFloat(),
             style = style,
+            isPlaying = isPlaying,
             modifier = Modifier.fillMaxWidth()
         )
 

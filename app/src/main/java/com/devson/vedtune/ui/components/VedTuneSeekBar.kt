@@ -28,6 +28,7 @@ fun VedTuneSeekBar(
     onValueChangeFinished: (() -> Unit)?,
     valueRange: ClosedFloatingPointRange<Float>,
     style: SeekBarStyle,
+    isPlaying: Boolean,
     modifier: Modifier = Modifier
 ) {
     when (style) {
@@ -80,7 +81,9 @@ fun VedTuneSeekBar(
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp),
                     color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f)
+                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
+                    amplitude = { if (isPlaying) 0.15f else 0.0f },
+                    waveSpeed = if (isPlaying) 8.dp else 0.dp
                 )
 
                 Slider(
