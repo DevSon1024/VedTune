@@ -10,7 +10,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devson.vedtune.domain.model.Song
+import com.devson.vedtune.domain.model.SeekBarStyle
 import com.devson.vedtune.domain.repository.MediaRepository
+import com.devson.vedtune.domain.repository.SettingsRepository
 import com.devson.vedtune.player.PlaybackConnection
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -19,6 +21,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -47,9 +51,13 @@ sealed interface LyricsEditorUiEvent {
 class LyricsEditorViewModel @Inject constructor(
     private val repository: MediaRepository,
     private val playbackConnection: PlaybackConnection,
+    private val settingsRepository: SettingsRepository,
     @ApplicationContext private val context: Context,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    val seekbarStyle: StateFlow<SeekBarStyle> = settingsRepository.seekbarStyle
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SeekBarStyle.DEFAULT)
 
     private val songId: Long = checkNotNull(savedStateHandle["songId"])
 

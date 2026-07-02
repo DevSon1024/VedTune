@@ -3,6 +3,7 @@ package com.devson.vedtune.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devson.vedtune.domain.model.FolderFilterMode
+import com.devson.vedtune.domain.model.SeekBarStyle
 import com.devson.vedtune.domain.repository.SettingsRepository
 import com.devson.vedtune.player.PlaybackConnection
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -49,6 +50,9 @@ class SettingsViewModel @Inject constructor(
 
     val isGestureMiniPlayerEnabled: StateFlow<Boolean> = settingsRepository.isGestureMiniPlayerEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val seekbarStyle: StateFlow<SeekBarStyle> = settingsRepository.seekbarStyle
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SeekBarStyle.DEFAULT)
 
     //  Folder filtering 
 
@@ -104,6 +108,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setGestureMiniPlayerEnabled(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setGestureMiniPlayerEnabled(enabled) }
+    }
+
+    fun setSeekBarStyle(style: SeekBarStyle) {
+        viewModelScope.launch { settingsRepository.setSeekBarStyle(style) }
     }
 
     fun clearPlaybackQueue() {

@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import com.devson.vedtune.domain.model.SeekBarStyle
 import com.devson.vedtune.domain.repository.SettingsRepository
 
 import android.content.ContentUris
@@ -49,6 +50,9 @@ class PlayerViewModel @Inject constructor(
 
     val showRemainingTime: StateFlow<Boolean> = settingsRepository.showRemainingTime
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val seekbarStyle: StateFlow<SeekBarStyle> = settingsRepository.seekbarStyle
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SeekBarStyle.DEFAULT)
 
     val isPlaying: StateFlow<Boolean> = playbackConnection.isPlaying
 

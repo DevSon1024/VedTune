@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.devson.vedtune.data.local.dao.QueueDao
 import com.devson.vedtune.domain.model.FolderFilterMode
+import com.devson.vedtune.domain.model.SeekBarStyle
 import com.devson.vedtune.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -30,6 +31,7 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_AUDIO_FADE_IN_ENABLED = booleanPreferencesKey("audio_fade_in_enabled")
         private val KEY_DEFAULT_START_SCREEN = stringPreferencesKey("default_start_screen")
         private val KEY_IS_GESTURE_MINIPLAYER_ENABLED = booleanPreferencesKey("is_gesture_miniplayer_enabled")
+        private val KEY_SEEKBAR_STYLE = stringPreferencesKey("seekbar_style")
 
         // Folder filter
         private val KEY_FOLDER_FILTER_MODE = stringPreferencesKey("folder_filter_mode")
@@ -81,6 +83,12 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override val isGestureMiniPlayerEnabled: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[KEY_IS_GESTURE_MINIPLAYER_ENABLED] ?: false
+    }
+
+    override val seekbarStyle: Flow<SeekBarStyle> = dataStore.data.map { preferences ->
+        runCatching {
+            SeekBarStyle.valueOf(preferences[KEY_SEEKBAR_STYLE] ?: SeekBarStyle.DEFAULT.name)
+        }.getOrDefault(SeekBarStyle.DEFAULT)
     }
 
     //  Folder filtering flows 
@@ -145,6 +153,10 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setGestureMiniPlayerEnabled(enabled: Boolean) {
         dataStore.edit { it[KEY_IS_GESTURE_MINIPLAYER_ENABLED] = enabled }
+    }
+
+    override suspend fun setSeekBarStyle(style: SeekBarStyle) {
+        dataStore.edit { it[KEY_SEEKBAR_STYLE] = style.name }
     }
 
     override suspend fun clearPlaybackQueue() {

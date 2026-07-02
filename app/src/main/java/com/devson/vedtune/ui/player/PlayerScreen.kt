@@ -103,8 +103,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import kotlinx.coroutines.flow.StateFlow
 import com.devson.vedtune.domain.model.Song
+import com.devson.vedtune.domain.model.SeekBarStyle
 import com.devson.vedtune.ui.components.AddToPlaylistDialog
 import com.devson.vedtune.ui.components.SongArtwork
+import com.devson.vedtune.ui.components.VedTuneSeekBar
 import com.devson.vedtune.ui.songs.SongInfoBottomSheet
 import java.util.Locale
 
@@ -139,6 +141,7 @@ fun PlayerScreen(
     val isFav by viewModel.isFavorite.collectAsStateWithLifecycle()
     val showArtwork by viewModel.showAlbumArt.collectAsStateWithLifecycle()
     val showRemainingTime by viewModel.showRemainingTime.collectAsStateWithLifecycle()
+    val seekbarStyle by viewModel.seekbarStyle.collectAsStateWithLifecycle()
 
     val showForwardBackward by viewModel.showForwardBackward.collectAsStateWithLifecycle()
     val seekInterval by viewModel.seekInterval.collectAsStateWithLifecycle()
@@ -336,6 +339,7 @@ fun PlayerScreen(
                     positionState = viewModel.playbackPosition,
                     duration = duration,
                     showRemainingTime = showRemainingTime,
+                    style = seekbarStyle,
                     onSeek = { viewModel.seekTo(it) },
                     onToggleRemainingTime = { viewModel.toggleRemainingTime() }
                 )
@@ -756,6 +760,7 @@ private fun SeekBar(
     positionState: StateFlow<Long>,
     duration: Long,
     showRemainingTime: Boolean,
+    style: SeekBarStyle,
     onSeek: (Long) -> Unit,
     onToggleRemainingTime: () -> Unit
 ) {
@@ -770,7 +775,7 @@ private fun SeekBar(
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        Slider(
+        VedTuneSeekBar(
             value = sliderValue,
             onValueChange = { value ->
                 isDragging = true
@@ -781,6 +786,7 @@ private fun SeekBar(
                 onSeek(sliderValue.toLong())
             },
             valueRange = 0f..duration.coerceAtLeast(1L).toFloat(),
+            style = style,
             modifier = Modifier.fillMaxWidth()
         )
 

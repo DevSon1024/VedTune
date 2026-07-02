@@ -76,6 +76,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.devson.vedtune.domain.model.SeekBarStyle
+import com.devson.vedtune.ui.components.VedTuneSeekBar
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -91,6 +93,7 @@ fun LyricsEditorScreen(
     val parsedLines by viewModel.parsedLines.collectAsStateWithLifecycle()
     val activeTab by viewModel.activeTab.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val seekbarStyle by viewModel.seekbarStyle.collectAsStateWithLifecycle()
 
     var showDiscardDialog by remember { mutableStateOf(false) }
     var editingLineIndex by remember { mutableStateOf<Int?>(null) }
@@ -284,6 +287,7 @@ fun LyricsEditorScreen(
                             SyncedTabContent(
                                 parsedLines = parsedLines,
                                 viewModel = viewModel,
+                                style = seekbarStyle,
                                 onLineTextClick = { index -> editingLineIndex = index }
                             )
                         }
@@ -387,6 +391,7 @@ fun SimpleTabContent(
 fun SyncedTabContent(
     parsedLines: List<LrcLine>,
     viewModel: LyricsEditorViewModel,
+    style: SeekBarStyle,
     onLineTextClick: (Int) -> Unit
 ) {
     val currentPos by viewModel.currentPosition.collectAsStateWithLifecycle()
@@ -433,7 +438,7 @@ fun SyncedTabContent(
                     }
                 }
 
-                Slider(
+                VedTuneSeekBar(
                     value = sliderValue,
                     onValueChange = { value ->
                         isDragging = true
@@ -445,13 +450,8 @@ fun SyncedTabContent(
                         viewModel.seekTo(sliderValue.toLong())
                     },
                     valueRange = 0f..duration.coerceAtLeast(1L).toFloat(),
-                    modifier = Modifier.fillMaxWidth(),
-                    track = { sliderState ->
-                        SliderDefaults.Track(
-                            sliderState = sliderState,
-                            modifier = Modifier.height(4.dp)
-                        )
-                    }
+                    style = style,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Row(

@@ -164,15 +164,6 @@ Room is **NOT** the source of truth — it mirrors MediaStore.
 
 ---
 
-## 9. MediaInfo Rules
-
-- **Library:** `com.github.marlboro-advance:mediainfoAndroid:v1.0.0-fix`
-- Run **only on demand** (song details page, metadata editor).
-- **Never** run MediaInfo for every song during indexing.
-- Cache results when possible.
-
----
-
 ## 10. Navigation Rules
 
 - Use **Navigation Compose**.
@@ -194,7 +185,6 @@ Room is **NOT** the source of truth — it mirrors MediaStore.
 - Create fake/placeholder implementations or TODO-based architecture.
 - Ignore compiler errors, lint warnings, or nullability.
 - Load entire libraries into Compose state.
-- Perform MediaInfo extraction or blocking disk ops during app startup.
 
 **If an API is unknown:** STOP → explain uncertainty → request clarification → do not hallucinate.
 

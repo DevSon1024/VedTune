@@ -151,9 +151,6 @@ dependencies {
     // Image Loading
     implementation(libs.coil.compose)
 
-    // MediaInfo Android
-    implementation(libs.mediainfo.android)
-
     // jaudiotagger for ID3 tag editing
     implementation(libs.jaudiotagger)
 

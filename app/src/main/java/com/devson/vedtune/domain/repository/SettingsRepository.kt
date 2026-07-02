@@ -1,6 +1,7 @@
 package com.devson.vedtune.domain.repository
 
 import com.devson.vedtune.domain.model.FolderFilterMode
+import com.devson.vedtune.domain.model.SeekBarStyle
 import kotlinx.coroutines.flow.Flow
 
 interface SettingsRepository {
@@ -14,6 +15,7 @@ interface SettingsRepository {
     val audioFadeInEnabled: Flow<Boolean>
     val defaultStartScreen: Flow<String>
     val isGestureMiniPlayerEnabled: Flow<Boolean>
+    val seekbarStyle: Flow<SeekBarStyle>
 
     // Folder filtering
     val folderFilterMode: Flow<FolderFilterMode>
@@ -31,6 +33,7 @@ interface SettingsRepository {
     suspend fun setAudioFadeInEnabled(enabled: Boolean)
     suspend fun setDefaultStartScreen(screen: String)
     suspend fun setGestureMiniPlayerEnabled(enabled: Boolean)
+    suspend fun setSeekBarStyle(style: SeekBarStyle)
     suspend fun clearPlaybackQueue()
 
     // Folder filtering setters
