@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.devson.vedtune.data.local.dao.QueueDao
+import com.devson.vedtune.domain.model.AlbumArtClickAction
 import com.devson.vedtune.domain.model.FolderFilterMode
 import com.devson.vedtune.domain.model.SeekBarStyle
 import com.devson.vedtune.domain.repository.SettingsRepository
@@ -32,6 +33,9 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_DEFAULT_START_SCREEN = stringPreferencesKey("default_start_screen")
         private val KEY_IS_GESTURE_MINIPLAYER_ENABLED = booleanPreferencesKey("is_gesture_miniplayer_enabled")
         private val KEY_SEEKBAR_STYLE = stringPreferencesKey("seekbar_style")
+        private val KEY_ENABLE_SWIPE_TO_SKIP = booleanPreferencesKey("enable_swipe_to_skip")
+        private val KEY_KEEP_SCREEN_ON_WITH_LYRICS = booleanPreferencesKey("keep_screen_on_with_lyrics")
+        private val KEY_ALBUM_ART_CLICK_ACTION = stringPreferencesKey("album_art_click_action")
 
         // Folder filter
         private val KEY_FOLDER_FILTER_MODE = stringPreferencesKey("folder_filter_mode")
@@ -89,6 +93,20 @@ class SettingsRepositoryImpl @Inject constructor(
         runCatching {
             SeekBarStyle.valueOf(preferences[KEY_SEEKBAR_STYLE] ?: SeekBarStyle.DEFAULT.name)
         }.getOrDefault(SeekBarStyle.DEFAULT)
+    }
+
+    override val enableSwipeToSkip: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[KEY_ENABLE_SWIPE_TO_SKIP] ?: true
+    }
+
+    override val keepScreenOnWithLyrics: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[KEY_KEEP_SCREEN_ON_WITH_LYRICS] ?: false
+    }
+
+    override val albumArtClickAction: Flow<AlbumArtClickAction> = dataStore.data.map { preferences ->
+        runCatching {
+            AlbumArtClickAction.valueOf(preferences[KEY_ALBUM_ART_CLICK_ACTION] ?: AlbumArtClickAction.SHOW_LYRICS.name)
+        }.getOrDefault(AlbumArtClickAction.SHOW_LYRICS)
     }
 
     //  Folder filtering flows 
@@ -157,6 +175,18 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setSeekBarStyle(style: SeekBarStyle) {
         dataStore.edit { it[KEY_SEEKBAR_STYLE] = style.name }
+    }
+
+    override suspend fun setEnableSwipeToSkip(enable: Boolean) {
+        dataStore.edit { it[KEY_ENABLE_SWIPE_TO_SKIP] = enable }
+    }
+
+    override suspend fun setKeepScreenOnWithLyrics(keep: Boolean) {
+        dataStore.edit { it[KEY_KEEP_SCREEN_ON_WITH_LYRICS] = keep }
+    }
+
+    override suspend fun setAlbumArtClickAction(action: AlbumArtClickAction) {
+        dataStore.edit { it[KEY_ALBUM_ART_CLICK_ACTION] = action.name }
     }
 
     override suspend fun clearPlaybackQueue() {

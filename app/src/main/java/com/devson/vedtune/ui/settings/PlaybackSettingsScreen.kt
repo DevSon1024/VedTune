@@ -45,6 +45,7 @@ fun PlaybackSettingsScreen(
     val showRemainingTime by viewModel.showRemainingTime.collectAsState()
     val showMiniPlayerProgress by viewModel.showMiniPlayerProgress.collectAsState()
     val isGestureMiniPlayerEnabled by viewModel.isGestureMiniPlayerEnabled.collectAsState()
+    val enableSwipeToSkip by viewModel.enableSwipeToSkip.collectAsState()
     val defaultStartScreen by viewModel.defaultStartScreen.collectAsState()
     val context = LocalContext.current
 
@@ -141,6 +142,19 @@ fun PlaybackSettingsScreen(
                     description = "Control playback using gestures (swipe left/right to next/previous, double-tap to play/pause).",
                     checked = isGestureMiniPlayerEnabled,
                     onCheckedChange = { viewModel.setGestureMiniPlayerEnabled(it) },
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+
+                SettingSwitchRow(
+                    title = "Swipe to Skip Artwork",
+                    description = "Swipe left/right on player album artwork to skip songs.",
+                    checked = enableSwipeToSkip,
+                    onCheckedChange = { viewModel.setEnableSwipeToSkip(it) },
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
 

@@ -2,6 +2,7 @@ package com.devson.vedtune.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.devson.vedtune.domain.model.AlbumArtClickAction
 import com.devson.vedtune.domain.model.FolderFilterMode
 import com.devson.vedtune.domain.model.SeekBarStyle
 import com.devson.vedtune.domain.repository.SettingsRepository
@@ -53,6 +54,15 @@ class SettingsViewModel @Inject constructor(
 
     val seekbarStyle: StateFlow<SeekBarStyle> = settingsRepository.seekbarStyle
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SeekBarStyle.DEFAULT)
+
+    val enableSwipeToSkip: StateFlow<Boolean> = settingsRepository.enableSwipeToSkip
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val keepScreenOnWithLyrics: StateFlow<Boolean> = settingsRepository.keepScreenOnWithLyrics
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val albumArtClickAction: StateFlow<AlbumArtClickAction> = settingsRepository.albumArtClickAction
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AlbumArtClickAction.SHOW_LYRICS)
 
     //  Folder filtering 
 
@@ -112,6 +122,18 @@ class SettingsViewModel @Inject constructor(
 
     fun setSeekBarStyle(style: SeekBarStyle) {
         viewModelScope.launch { settingsRepository.setSeekBarStyle(style) }
+    }
+
+    fun setEnableSwipeToSkip(enable: Boolean) {
+        viewModelScope.launch { settingsRepository.setEnableSwipeToSkip(enable) }
+    }
+
+    fun setKeepScreenOnWithLyrics(keep: Boolean) {
+        viewModelScope.launch { settingsRepository.setKeepScreenOnWithLyrics(keep) }
+    }
+
+    fun setAlbumArtClickAction(action: AlbumArtClickAction) {
+        viewModelScope.launch { settingsRepository.setAlbumArtClickAction(action) }
     }
 
     fun clearPlaybackQueue() {

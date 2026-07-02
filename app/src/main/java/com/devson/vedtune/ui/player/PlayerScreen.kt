@@ -6,12 +6,25 @@ import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.input.pointer.pointerInput
+import com.devson.vedtune.domain.model.AlbumArtClickAction
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -146,9 +159,14 @@ fun PlayerScreen(
     val showForwardBackward by viewModel.showForwardBackward.collectAsStateWithLifecycle()
     val seekInterval by viewModel.seekInterval.collectAsStateWithLifecycle()
 
+    val enableSwipeToSkip by viewModel.enableSwipeToSkip.collectAsStateWithLifecycle()
+    val keepScreenOnWithLyrics by viewModel.keepScreenOnWithLyrics.collectAsStateWithLifecycle()
+    val albumArtClickAction by viewModel.albumArtClickAction.collectAsStateWithLifecycle()
+
     var showSleepTimerDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showPlayerSettingsDialog by remember { mutableStateOf(false) }
+    var showViewAlbumArtOverlay by remember { mutableStateOf(false) }
     var sheetState: PlayerSheetState by remember { mutableStateOf(PlayerSheetState.Hidden) }
     var showLyrics by remember { mutableStateOf(false) }
 
@@ -188,6 +206,22 @@ fun PlayerScreen(
                     val request = IntentSenderRequest.Builder(event.intentSender).build()
                     intentSenderLauncher.launch(request)
                 }
+            }
+        }
+    }
+
+    // Keep Screen On logic for Lyrics
+    if (showLyrics && keepScreenOnWithLyrics) {
+        androidx.compose.runtime.DisposableEffect(context) {
+            var ctx = context
+            while (ctx is android.content.ContextWrapper) {
+                if (ctx is android.app.Activity) break
+                ctx = ctx.baseContext
+            }
+            val activity = ctx as? android.app.Activity
+            activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            onDispose {
+                activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
         }
     }
@@ -283,14 +317,21 @@ fun PlayerScreen(
                                 LyricsPanel(
                                     viewModel = viewModel,
                                     activeSong = currentActiveSong,
-                                    onToggleLyrics = { showLyrics = false }
+                                    onToggleLyrics = { showLyrics = false },
+                                    onEditLyricsClick = { onNavigateToLyricsEditor(currentActiveSong.id) }
                                 )
                             } else {
                                 ArtworkCard(
                                     song = currentActiveSong,
                                     showArtwork = showArtwork,
                                     artworkScale = artworkScale,
-                                    onToggleLyrics = { showLyrics = true }
+                                    enableSwipeToSkip = enableSwipeToSkip,
+                                    albumArtClickAction = albumArtClickAction,
+                                    onToggleLyrics = { showLyrics = true },
+                                    onPlayPause = { viewModel.togglePlayPause() },
+                                    onViewAlbumArt = { showViewAlbumArtOverlay = true },
+                                    onSwipeNext = { viewModel.skipToNext() },
+                                    onSwipePrevious = { viewModel.skipToPrevious() }
                                 )
                             }
                         }
@@ -487,6 +528,19 @@ fun PlayerScreen(
             onDismiss = { sheetState = PlayerSheetState.Hidden }
         )
     }
+
+    // Full Screen Album Art Overlay
+    if (showViewAlbumArtOverlay && song != null) {
+        val activeSong = song!!
+        ViewAlbumArtOverlay(
+            albumId = activeSong.albumId,
+            showArtwork = showArtwork,
+            onDismiss = { showViewAlbumArtOverlay = false },
+            onSaveToGallery = {
+                viewModel.saveAlbumArtToGallery(activeSong.albumId)
+            }
+        )
+    }
 }
 
 // Stateless sub-composables
@@ -537,15 +591,69 @@ private fun ArtworkCard(
     song: Song,
     showArtwork: Boolean,
     artworkScale: Float,
-    onToggleLyrics: () -> Unit
+    enableSwipeToSkip: Boolean,
+    albumArtClickAction: AlbumArtClickAction,
+    onToggleLyrics: () -> Unit,
+    onPlayPause: () -> Unit,
+    onViewAlbumArt: () -> Unit,
+    onSwipeNext: () -> Unit,
+    onSwipePrevious: () -> Unit
 ) {
+    var swipeOffset by remember { mutableStateOf(0f) }
+    val dragOffset by animateFloatAsState(
+        targetValue = swipeOffset,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "SwipeOffsetAnim"
+    )
+
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val swipeThreshold = with(density) { 100.dp.toPx() }
+
+    val swipeModifier = if (enableSwipeToSkip) {
+        Modifier.pointerInput(Unit) {
+            detectHorizontalDragGestures(
+                onDragEnd = {
+                    if (swipeOffset > swipeThreshold) {
+                        onSwipePrevious()
+                    } else if (swipeOffset < -swipeThreshold) {
+                        onSwipeNext()
+                    }
+                    swipeOffset = 0f
+                },
+                onDragCancel = {
+                    swipeOffset = 0f
+                },
+                onHorizontalDrag = { change, dragAmount ->
+                    change.consume()
+                    swipeOffset += dragAmount
+                }
+            )
+        }
+    } else {
+        Modifier
+    }
+
+    val clickModifier = when (albumArtClickAction) {
+        AlbumArtClickAction.DO_NOTHING -> Modifier
+        AlbumArtClickAction.SHOW_LYRICS -> Modifier.clickable { onToggleLyrics() }
+        AlbumArtClickAction.PLAY_PAUSE -> Modifier.clickable { onPlayPause() }
+        AlbumArtClickAction.VIEW_ALBUM_ART -> Modifier.clickable { onViewAlbumArt() }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth(0.9f)
             .aspectRatio(1f)
             .scale(artworkScale)
+            .graphicsLayer {
+                translationX = dragOffset
+            }
             .clip(MaterialTheme.shapes.extraLarge)
-            .clickable { onToggleLyrics() }
+            .then(swipeModifier)
+            .then(clickModifier)
     ) {
         SongArtwork(
             albumId = song.albumId,
@@ -800,7 +908,9 @@ private fun SeekBar(
                 text = formatTime(sliderValue.toLong()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                modifier = Modifier.clickable { onToggleRemainingTime() }
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable { onToggleRemainingTime() }
             )
             val endLabel = if (showRemainingTime) {
                 "-${formatTime((duration - sliderValue.toLong()).coerceAtLeast(0L))}"
@@ -811,7 +921,9 @@ private fun SeekBar(
                 text = endLabel,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                modifier = Modifier.clickable { onToggleRemainingTime() }
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable { onToggleRemainingTime() }
             )
         }
     }
@@ -863,19 +975,43 @@ private fun PlaybackControls(
             Spacer(modifier = Modifier.width(16.dp))
         }
 
+        val interactionSource = remember { MutableInteractionSource() }
+        val isPressed by interactionSource.collectIsPressedAsState()
+        val scale by animateFloatAsState(
+            targetValue = if (isPressed) 0.90f else 1f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            ),
+            label = "PlayPauseBounce"
+        )
+
         IconButton(
             onClick = onPlayPauseClick,
+            interactionSource = interactionSource,
             modifier = Modifier
                 .size(72.dp)
-                .clip(MaterialTheme.shapes.extraLarge)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                }
+                .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer)
         ) {
-            Icon(
-                imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                contentDescription = if (isPlaying) "Pause" else "Play",
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            AnimatedContent(
+                targetState = isPlaying,
+                transitionSpec = {
+                    (scaleIn() + fadeIn()).togetherWith(scaleOut() + fadeOut())
+                },
+                label = "PlayPauseIconTransition"
+            ) { playing ->
+                Icon(
+                    imageVector = if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                    contentDescription = if (playing) "Pause" else "Play",
+                    modifier = Modifier.size(40.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
         }
 
         if (showForwardBackward) {
@@ -913,7 +1049,8 @@ private fun PlaybackControls(
 private fun LyricsPanel(
     viewModel: PlayerViewModel,
     activeSong: Song,
-    onToggleLyrics: () -> Unit
+    onToggleLyrics: () -> Unit,
+    onEditLyricsClick: () -> Unit
 ) {
     val lyricsText by viewModel.currentLyrics.collectAsStateWithLifecycle()
     val fontSizeState by viewModel.lyricsFontSize.collectAsStateWithLifecycle()
@@ -975,6 +1112,35 @@ private fun LyricsPanel(
             .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f))
             .clickable { onToggleLyrics() }
     ) {
+        // Floating Edit Lyrics bar (top left)
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(8.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                    shape = MaterialTheme.shapes.medium
+                )
+                .clip(MaterialTheme.shapes.medium)
+                .clickable { onEditLyricsClick() }
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Edit,
+                contentDescription = "Edit Lyrics",
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "Edit Lyrics",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
         // Floating options bar
         Row(
             modifier = Modifier
@@ -1562,4 +1728,66 @@ fun getActiveLyricsLineIndex(lines: List<LrcLine>, currentPosition: Long): Int {
         }
     }
     return activeIndex
+}
+
+@Composable
+private fun ViewAlbumArtOverlay(
+    albumId: Long,
+    showArtwork: Boolean,
+    onDismiss: () -> Unit,
+    onSaveToGallery: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.9f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .aspectRatio(1f)
+                    .clip(MaterialTheme.shapes.extraLarge)
+                    .clickable(enabled = false) {}
+            ) {
+                SongArtwork(
+                    albumId = albumId,
+                    modifier = Modifier.fillMaxSize(),
+                    showArtwork = showArtwork
+                )
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .clickable { onSaveToGallery() }
+                    .padding(horizontal = 24.dp, vertical = 12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Save,
+                    contentDescription = "Save to Gallery",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    text = "Save to Gallery",
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
 }

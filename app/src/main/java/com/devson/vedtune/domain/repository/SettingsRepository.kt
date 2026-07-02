@@ -1,5 +1,6 @@
 package com.devson.vedtune.domain.repository
 
+import com.devson.vedtune.domain.model.AlbumArtClickAction
 import com.devson.vedtune.domain.model.FolderFilterMode
 import com.devson.vedtune.domain.model.SeekBarStyle
 import kotlinx.coroutines.flow.Flow
@@ -16,6 +17,9 @@ interface SettingsRepository {
     val defaultStartScreen: Flow<String>
     val isGestureMiniPlayerEnabled: Flow<Boolean>
     val seekbarStyle: Flow<SeekBarStyle>
+    val enableSwipeToSkip: Flow<Boolean>
+    val keepScreenOnWithLyrics: Flow<Boolean>
+    val albumArtClickAction: Flow<AlbumArtClickAction>
 
     // Folder filtering
     val folderFilterMode: Flow<FolderFilterMode>
@@ -34,6 +38,9 @@ interface SettingsRepository {
     suspend fun setDefaultStartScreen(screen: String)
     suspend fun setGestureMiniPlayerEnabled(enabled: Boolean)
     suspend fun setSeekBarStyle(style: SeekBarStyle)
+    suspend fun setEnableSwipeToSkip(enable: Boolean)
+    suspend fun setKeepScreenOnWithLyrics(keep: Boolean)
+    suspend fun setAlbumArtClickAction(action: AlbumArtClickAction)
     suspend fun clearPlaybackQueue()
 
     // Folder filtering setters

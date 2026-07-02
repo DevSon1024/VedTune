@@ -24,12 +24,19 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.devson.vedtune.domain.model.AlbumArtClickAction
 import com.devson.vedtune.domain.model.SeekBarStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,6 +49,8 @@ fun AppearanceSettingsScreen(
     val dynamicColorsEnabled by viewModel.dynamicColorsEnabled.collectAsState()
     val showAlbumArt by viewModel.showAlbumArt.collectAsState()
     val seekbarStyle by viewModel.seekbarStyle.collectAsState()
+    val keepScreenOnWithLyrics by viewModel.keepScreenOnWithLyrics.collectAsState()
+    val albumArtClickAction by viewModel.albumArtClickAction.collectAsState()
 
     Scaffold(
         topBar = {
@@ -119,6 +128,30 @@ fun AppearanceSettingsScreen(
                     currentStyle = seekbarStyle,
                     onStyleSelected = { viewModel.setSeekBarStyle(it) }
                 )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+
+                AlbumArtClickActionSelector(
+                    currentAction = albumArtClickAction,
+                    onActionSelected = { viewModel.setAlbumArtClickAction(it) }
+                )
+            }
+
+            // CARD 2: Lyrics Settings
+            SettingsCard(
+                title = "Lyrics Settings",
+                icon = Icons.Default.Palette
+            ) {
+                SettingSwitchRow(
+                    title = "Keep Screen On",
+                    description = "Prevent the screen from sleeping while lyrics are visible.",
+                    checked = keepScreenOnWithLyrics,
+                    onCheckedChange = { viewModel.setKeepScreenOnWithLyrics(it) },
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -165,6 +198,62 @@ fun SeekBarStyleSelector(
                     ) {
                         Text(text = label)
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AlbumArtClickActionSelector(
+    currentAction: AlbumArtClickAction,
+    onActionSelected: (AlbumArtClickAction) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "Album Art Click Action",
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Box(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            val label = when (currentAction) {
+                AlbumArtClickAction.DO_NOTHING -> "Do Nothing"
+                AlbumArtClickAction.SHOW_LYRICS -> "Show Lyrics"
+                AlbumArtClickAction.VIEW_ALBUM_ART -> "View Album Art"
+                AlbumArtClickAction.PLAY_PAUSE -> "Play/Pause"
+            }
+            OutlinedButton(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = label)
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.fillMaxWidth(0.9f)
+            ) {
+                AlbumArtClickAction.entries.forEach { action ->
+                    val actionLabel = when (action) {
+                        AlbumArtClickAction.DO_NOTHING -> "Do Nothing"
+                        AlbumArtClickAction.SHOW_LYRICS -> "Show Lyrics"
+                        AlbumArtClickAction.VIEW_ALBUM_ART -> "View Album Art"
+                        AlbumArtClickAction.PLAY_PAUSE -> "Play/Pause"
+                    }
+                    DropdownMenuItem(
+                        text = { Text(actionLabel) },
+                        onClick = {
+                            onActionSelected(action)
+                            expanded = false
+                        }
+                    )
                 }
             }
         }

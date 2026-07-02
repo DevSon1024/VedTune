@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import com.devson.vedtune.domain.model.AlbumArtClickAction
 import com.devson.vedtune.domain.model.SeekBarStyle
 import com.devson.vedtune.domain.repository.SettingsRepository
 
@@ -53,6 +54,15 @@ class PlayerViewModel @Inject constructor(
 
     val seekbarStyle: StateFlow<SeekBarStyle> = settingsRepository.seekbarStyle
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SeekBarStyle.DEFAULT)
+
+    val enableSwipeToSkip: StateFlow<Boolean> = settingsRepository.enableSwipeToSkip
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val keepScreenOnWithLyrics: StateFlow<Boolean> = settingsRepository.keepScreenOnWithLyrics
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val albumArtClickAction: StateFlow<AlbumArtClickAction> = settingsRepository.albumArtClickAction
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AlbumArtClickAction.SHOW_LYRICS)
 
     val isPlaying: StateFlow<Boolean> = playbackConnection.isPlaying
 
@@ -379,5 +389,81 @@ class PlayerViewModel @Inject constructor(
             }
         }
         return null
+    }
+
+    fun saveAlbumArtToGallery(albumId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val customArtworkFile = File(context.filesDir, "custom_artwork/$albumId.jpg")
+                val sourceUri = if (customArtworkFile.exists()) {
+                    android.net.Uri.fromFile(customArtworkFile)
+                } else {
+                    ContentUris.withAppendedId(
+                        android.net.Uri.parse("content://media/external/audio/albumart"),
+                        albumId
+                    )
+                }
+
+                val inputStream = try {
+                    context.contentResolver.openInputStream(sourceUri)
+                } catch (e: Exception) {
+                    null
+                }
+
+                if (inputStream == null) {
+                    _uiEvent.emit(PlayerUiEvent.ShowToast("No artwork found to save"))
+                    return@launch
+                }
+
+                val filename = "AlbumArt_$albumId.jpg"
+                val contentValues = android.content.ContentValues().apply {
+                    put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                    put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, "Pictures/VedTune")
+                        put(android.provider.MediaStore.MediaColumns.IS_PENDING, 1)
+                    } else {
+                        val directory = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_PICTURES)
+                        val vedTuneDir = File(directory, "VedTune")
+                        if (!vedTuneDir.exists()) {
+                            vedTuneDir.mkdirs()
+                        }
+                        val destFile = File(vedTuneDir, filename)
+                        put(android.provider.MediaStore.MediaColumns.DATA, destFile.absolutePath)
+                    }
+                }
+
+                val imageUri = context.contentResolver.insert(
+                    android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    contentValues
+                )
+
+                if (imageUri == null) {
+                    _uiEvent.emit(PlayerUiEvent.ShowToast("Failed to create gallery entry"))
+                    inputStream.close()
+                    return@launch
+                }
+
+                val outputStream = context.contentResolver.openOutputStream(imageUri)
+                if (outputStream != null) {
+                    inputStream.use { input ->
+                        outputStream.use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        contentValues.clear()
+                        contentValues.put(android.provider.MediaStore.MediaColumns.IS_PENDING, 0)
+                        context.contentResolver.update(imageUri, contentValues, null, null)
+                    }
+                    _uiEvent.emit(PlayerUiEvent.ShowToast("Artwork saved to Pictures/VedTune"))
+                } else {
+                    _uiEvent.emit(PlayerUiEvent.ShowToast("Failed to open output stream"))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _uiEvent.emit(PlayerUiEvent.ShowToast("Failed to save artwork: ${e.message}"))
+            }
+        }
     }
 }
