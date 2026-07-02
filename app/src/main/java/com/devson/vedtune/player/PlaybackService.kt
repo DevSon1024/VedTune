@@ -75,7 +75,7 @@ class PlaybackService : MediaSessionService() {
         exoPlayer.addListener(playerListener)
 
         val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val pendingIntent = PendingIntent.getActivity(
             this,
@@ -203,31 +203,20 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        super.onTaskRemoved(rootIntent)
-        
-        // 1. Pause playback so audio doesn't continue in the background
-        exoPlayer.pause()
-        
-        // 2. Explicitly release the MediaSession to instantly kill the System UI ghost notification
-        mediaSession?.run {
-            release()
-        }
-        mediaSession = null
-        
-        // 3. Remove foreground status and stop the service
+        val player = mediaSession?.player
+        player?.pause()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+        super.onTaskRemoved(rootIntent)
     }
 
     override fun onDestroy() {
         exoPlayer.removeListener(playerListener)
         mediaSession?.run {
+            player.release()
             release()
         }
         mediaSession = null
-        // Note: Do NOT call exoPlayer.release() here. Since ExoPlayer is provided 
-        // via Hilt injection, its lifecycle outlives this service. Releasing it 
-        // will cause a crash if the user re-opens the app while the process is alive.
         super.onDestroy()
     }
 }

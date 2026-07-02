@@ -223,6 +223,7 @@ class PlaybackConnection @Inject constructor(
                 val controller = future.get()
                 mediaController = controller
                 controller.addListener(playerListener)
+                // Force a manual refresh of playback state immediately on connection
                 updateState()
                 startPositionTracker()
             } catch (e: Exception) {
@@ -245,6 +246,8 @@ class PlaybackConnection @Inject constructor(
                     val newController = future.get()
                     mediaController = newController
                     newController.addListener(playerListener)
+                    // Force a manual refresh of playback state immediately on connection
+                    updateState()
                     if (continuation.isActive) {
                         continuation.resume(newController)
                     }
