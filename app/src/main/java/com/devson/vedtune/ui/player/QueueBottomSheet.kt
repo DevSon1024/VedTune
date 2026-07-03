@@ -11,18 +11,26 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
+import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.ui.components.SongArtwork
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,6 +43,48 @@ fun QueueBottomSheet(
     val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
     val lazyListState = rememberLazyListState()
+
+    var localQueue by remember { mutableStateOf<List<Song>>(emptyList()) }
+    var isDragging by remember { mutableStateOf(false) }
+    var isWaitingForSync by remember { mutableStateOf(false) }
+
+    LaunchedEffect(playlistQueue) {
+        if (playlistQueue.isEmpty()) {
+            localQueue = emptyList()
+            isDragging = false
+            isWaitingForSync = false
+        } else {
+            if (!isDragging) {
+                localQueue = playlistQueue
+            } else if (isWaitingForSync) {
+                if (playlistQueue.size == localQueue.size && playlistQueue == localQueue) {
+                    isDragging = false
+                    isWaitingForSync = false
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(isWaitingForSync) {
+        if (isWaitingForSync) {
+            kotlinx.coroutines.delay(1000)
+            if (isWaitingForSync) {
+                isDragging = false
+                isWaitingForSync = false
+                localQueue = playlistQueue
+            }
+        }
+    }
+
+    var dragStartIndex by remember { mutableStateOf<Int?>(null) }
+    val haptics = LocalHapticFeedback.current
+
+    val reorderableLazyListState = rememberReorderableLazyListState(lazyListState) { from, to ->
+        localQueue = localQueue.toMutableList().apply {
+            add(to.index, removeAt(from.index))
+        }
+        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -70,7 +120,7 @@ fun QueueBottomSheet(
                     )
                 }
                 
-                if (playlistQueue.isNotEmpty()) {
+                if (localQueue.isNotEmpty()) {
                     TextButton(onClick = { viewModel.clearQueue() }) {
                         Text(
                             text = "Clear Queue",
@@ -81,7 +131,7 @@ fun QueueBottomSheet(
                 }
             }
 
-            if (playlistQueue.isEmpty()) {
+            if (localQueue.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -101,16 +151,56 @@ fun QueueBottomSheet(
                         .fillMaxWidth()
                         .weight(1f)
                 ) {
-                    itemsIndexed(playlistQueue, key = { _, song -> song.id }) { index, song ->
-                        QueueItemRow(
-                            song = song,
-                            isNowPlaying = song.id == currentSong?.id,
-                            isPlaying = isPlaying,
-                            onPlay = { viewModel.playFromQueue(index) },
-                            modifier = Modifier
-                                .padding(vertical = 4.dp, horizontal = 16.dp)
-                                .animateItem()
-                        )
+                    itemsIndexed(localQueue, key = { _, song -> song.id }) { index, song ->
+                        ReorderableItem(
+                            state = reorderableLazyListState,
+                            key = song.id
+                        ) { isItemDragging ->
+                            val scale by animateFloatAsState(
+                                targetValue = if (isItemDragging) 1.03f else 1f,
+                                label = "dragScale"
+                            )
+                            val elevation by animateDpAsState(
+                                targetValue = if (isItemDragging) 8.dp else 0.dp,
+                                label = "dragElevation"
+                            )
+
+                            val dragHandleModifier = Modifier
+                                .draggableHandle(
+                                    onDragStarted = {
+                                        isDragging = true
+                                        dragStartIndex = index
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    },
+                                    onDragStopped = {
+                                        val start = dragStartIndex
+                                        dragStartIndex = null
+                                        if (start != null && start != index) {
+                                            isWaitingForSync = true
+                                            viewModel.moveQueueItem(start, index)
+                                        } else {
+                                            isDragging = false
+                                        }
+                                    }
+                                )
+                                .padding(16.dp)
+
+                            QueueItemRow(
+                                song = song,
+                                isNowPlaying = song.id == currentSong?.id,
+                                isPlaying = isPlaying,
+                                onPlay = { viewModel.playFromQueue(index) },
+                                dragHandleModifier = dragHandleModifier,
+                                isDragging = isItemDragging,
+                                elevation = elevation,
+                                modifier = Modifier
+                                    .padding(vertical = 4.dp, horizontal = 16.dp)
+                                    .graphicsLayer {
+                                        scaleX = scale
+                                        scaleY = scale
+                                    }
+                            )
+                        }
                     }
                 }
             }
@@ -124,16 +214,24 @@ fun QueueItemRow(
     isNowPlaying: Boolean,
     isPlaying: Boolean,
     onPlay: () -> Unit,
+    dragHandleModifier: Modifier,
+    isDragging: Boolean = false,
+    elevation: Dp = 0.dp,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (isNowPlaying) {
+            containerColor = if (isDragging) {
+                MaterialTheme.colorScheme.surfaceContainerHighest
+            } else if (isNowPlaying) {
                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
             } else {
                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
             }
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = elevation
         ),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -191,6 +289,15 @@ fun QueueItemRow(
                     overflow = TextOverflow.Ellipsis
                 )
             }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Icon(
+                imageVector = Icons.Rounded.DragHandle,
+                contentDescription = "Reorder",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                modifier = dragHandleModifier
+            )
         }
     }
 }

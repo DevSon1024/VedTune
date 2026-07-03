@@ -28,8 +28,8 @@ android {
         applicationId = "com.devson.vedtune"
         minSdk = 26
         targetSdk = 36
-        versionCode = 102
-        versionName = "1.0.2"
+        versionCode = 103
+        versionName = "1.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -139,6 +139,9 @@ dependencies {
 
     // Navigation Compose
     implementation(libs.androidx.navigation.compose)
+
+    //reorderable
+    implementation(libs.reorderable)
 
     // Preferences DataStore
     implementation(libs.androidx.datastore.preferences)
