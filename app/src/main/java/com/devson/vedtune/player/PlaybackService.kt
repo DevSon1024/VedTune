@@ -192,7 +192,7 @@ class PlaybackService : MediaSessionService() {
                 }
                 
                 exoPlayer.repeatMode = savedRepeatMode
-                exoPlayer.shuffleModeEnabled = savedShuffleMode
+                exoPlayer.shuffleModeEnabled = false
                 exoPlayer.prepare()
             }
         }

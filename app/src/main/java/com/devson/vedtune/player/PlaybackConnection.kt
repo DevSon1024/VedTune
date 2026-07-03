@@ -49,6 +49,7 @@ class PlaybackConnection @Inject constructor(
     private var consecutiveErrors = 0
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var mediaController: MediaController? = null
+    private var originalQueue: List<Song> = emptyList()
 
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
@@ -213,6 +214,13 @@ class PlaybackConnection @Inject constructor(
 
     init {
         initializeController()
+        scope.launch(Dispatchers.IO) {
+            try {
+                originalQueue = repository.getQueue()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     private fun initializeController() {
@@ -269,7 +277,11 @@ class PlaybackConnection @Inject constructor(
         _playbackPosition.value = controller.currentPosition
         _playbackDuration.value = controller.duration.coerceAtLeast(0L)
         _repeatMode.value = controller.repeatMode
-        _shuffleModeEnabled.value = controller.shuffleModeEnabled
+        scope.launch {
+            val preferences = dataStore.data.first()
+            val savedShuffleMode = preferences[KEY_SHUFFLE_MODE] ?: false
+            _shuffleModeEnabled.value = savedShuffleMode
+        }
         updateQueue()
     }
 
@@ -306,7 +318,17 @@ class PlaybackConnection @Inject constructor(
         scope.launch {
             try {
                 val controller = getController()
-                val mediaItems = playlist.map { s ->
+                originalQueue = playlist
+                
+                val finalPlaylist = if (_shuffleModeEnabled.value) {
+                    val clicked = song
+                    val remaining = playlist.filter { it.id != song.id }.shuffled()
+                    listOf(clicked) + remaining
+                } else {
+                    playlist
+                }
+                
+                val mediaItems = finalPlaylist.map { s ->
                     MediaItem.Builder()
                         .setMediaId(s.id.toString())
                         .setUri(ContentUris.withAppendedId(
@@ -324,14 +346,15 @@ class PlaybackConnection @Inject constructor(
                         .build()
                 }
                 controller.setMediaItems(mediaItems)
-                val index = playlist.indexOfFirst { it.id == song.id }
+                
+                val index = if (_shuffleModeEnabled.value) 0 else finalPlaylist.indexOfFirst { it.id == song.id }
                 if (index != -1) {
                     controller.seekTo(index, 0L)
                 }
                 controller.prepare()
                 playWithFadeIn()
-
-                repository.saveQueue(playlist)
+                
+                repository.saveQueue(finalPlaylist)
                 dataStore.edit { preferences ->
                     preferences[KEY_CURRENT_SON_ID] = song.id
                     preferences[KEY_PLAYBACK_POSITION] = 0L
@@ -394,6 +417,21 @@ class PlaybackConnection @Inject constructor(
                 }
                 currentQueue.add(insertIndex.coerceIn(0, currentQueue.size), song)
                 repository.saveQueue(currentQueue)
+
+                // Update originalQueue in parallel
+                val updatedOriginal = originalQueue.toMutableList()
+                val idxInOrig = updatedOriginal.indexOfFirst { it.id == song.id }
+                if (idxInOrig != -1) {
+                    updatedOriginal.removeAt(idxInOrig)
+                }
+                val insertIdxInOrig = if (currentItemIndex != -1) {
+                    val index = updatedOriginal.indexOfFirst { it.id == currentSongId.value }
+                    if (index != -1) index + 1 else 0
+                } else {
+                    0
+                }
+                updatedOriginal.add(insertIdxInOrig.coerceIn(0, updatedOriginal.size), song)
+                originalQueue = updatedOriginal
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -404,6 +442,12 @@ class PlaybackConnection @Inject constructor(
         scope.launch {
             try {
                 val controller = getController()
+                originalQueue = playlist
+                _shuffleModeEnabled.value = true
+                dataStore.edit { preferences ->
+                    preferences[KEY_SHUFFLE_MODE] = true
+                }
+                
                 val remaining = playlist.filter { it.id != song.id }.shuffled()
                 val fullList = listOf(song) + remaining
                 
@@ -446,6 +490,7 @@ class PlaybackConnection @Inject constructor(
                 _currentSongId.value = null
                 _playbackPosition.value = 0L
                 _playbackDuration.value = 0L
+                originalQueue = emptyList()
                 repository.saveQueue(emptyList())
                 dataStore.edit { preferences ->
                     preferences.remove(KEY_CURRENT_SON_ID)
@@ -633,10 +678,80 @@ class PlaybackConnection @Inject constructor(
         scope.launch {
             try {
                 val controller = getController()
-                controller.shuffleModeEnabled = enabled
-                _shuffleModeEnabled.value = enabled
-                dataStore.edit { preferences ->
-                    preferences[KEY_SHUFFLE_MODE] = enabled
+                val currentSongIdVal = _currentSongId.value
+                
+                if (enabled) {
+                    _shuffleModeEnabled.value = true
+                    dataStore.edit { preferences ->
+                        preferences[KEY_SHUFFLE_MODE] = true
+                    }
+                    
+                    if (originalQueue.isEmpty()) {
+                        originalQueue = _playlistQueue.value
+                    }
+                    val currentSong = originalQueue.firstOrNull { it.id == currentSongIdVal }
+                    
+                    if (currentSong != null) {
+                        val remaining = originalQueue.filter { it.id != currentSong.id }
+                        val shuffledRest = remaining.shuffled()
+                        val finalPlaylist = listOf(currentSong) + shuffledRest
+                        
+                        val currentPosition = controller.currentPosition
+                        
+                        val mediaItems = finalPlaylist.map { s ->
+                            MediaItem.Builder()
+                                .setMediaId(s.id.toString())
+                                .setUri(ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, s.id))
+                                .setMediaMetadata(
+                                    MediaMetadata.Builder()
+                                        .setTitle(s.title)
+                                        .setArtist(s.artist)
+                                        .setAlbumTitle(s.album)
+                                        .setArtworkUri(Uri.parse("content://media/external/audio/albumart/${s.albumId}"))
+                                        .build()
+                                )
+                                .build()
+                        }
+                        
+                        controller.setMediaItems(mediaItems)
+                        controller.seekTo(0, currentPosition)
+                        
+                        _playlistQueue.value = finalPlaylist
+                        repository.saveQueue(finalPlaylist)
+                    }
+                } else {
+                    _shuffleModeEnabled.value = false
+                    dataStore.edit { preferences ->
+                        preferences[KEY_SHUFFLE_MODE] = false
+                    }
+                    
+                    if (originalQueue.isNotEmpty()) {
+                        val currentPosition = controller.currentPosition
+                        val originalIndex = originalQueue.indexOfFirst { it.id == currentSongIdVal }
+                        
+                        val mediaItems = originalQueue.map { s ->
+                            MediaItem.Builder()
+                                .setMediaId(s.id.toString())
+                                .setUri(ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, s.id))
+                                .setMediaMetadata(
+                                    MediaMetadata.Builder()
+                                        .setTitle(s.title)
+                                        .setArtist(s.artist)
+                                        .setAlbumTitle(s.album)
+                                        .setArtworkUri(Uri.parse("content://media/external/audio/albumart/${s.albumId}"))
+                                        .build()
+                                )
+                                .build()
+                        }
+                        
+                        controller.setMediaItems(mediaItems)
+                        if (originalIndex != -1) {
+                            controller.seekTo(originalIndex, currentPosition)
+                        }
+                        
+                        _playlistQueue.value = originalQueue
+                        repository.saveQueue(originalQueue)
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -681,11 +796,11 @@ class PlaybackConnection @Inject constructor(
         val window = androidx.media3.common.Timeline.Window()
         val songIds = mutableListOf<Long>()
         
-        var index = timeline.getFirstWindowIndex(controller.shuffleModeEnabled)
+        var index = timeline.getFirstWindowIndex(false)
         while (index != androidx.media3.common.C.INDEX_UNSET) {
             timeline.getWindow(index, window)
             window.mediaItem.mediaId?.toLongOrNull()?.let { songIds.add(it) }
-            index = timeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, controller.shuffleModeEnabled)
+            index = timeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, false)
         }
         
         scope.launch(Dispatchers.IO) {
@@ -725,6 +840,15 @@ class PlaybackConnection @Inject constructor(
                     updatedQueue.add(toIndex, item)
                     _playlistQueue.value = updatedQueue
                     repository.saveQueue(updatedQueue)
+                    
+                    val updatedOriginal = originalQueue.toMutableList()
+                    val fromOriginalIndex = updatedOriginal.indexOfFirst { it.id == fromSong.id }
+                    val toOriginalIndex = updatedOriginal.indexOfFirst { it.id == toSong.id }
+                    if (fromOriginalIndex != -1 && toOriginalIndex != -1) {
+                        val originalItem = updatedOriginal.removeAt(fromOriginalIndex)
+                        updatedOriginal.add(toOriginalIndex, originalItem)
+                        originalQueue = updatedOriginal
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -754,6 +878,8 @@ class PlaybackConnection @Inject constructor(
                     updatedQueue.removeAt(index)
                     _playlistQueue.value = updatedQueue
                     repository.saveQueue(updatedQueue)
+                    
+                    originalQueue = originalQueue.filter { it.id != targetSong.id }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -761,24 +887,19 @@ class PlaybackConnection @Inject constructor(
         }
     }
 
-    fun skipToQueueItem(index: Int) {
+    fun playQueueItemById(songId: Long) {
         scope.launch {
             try {
                 val controller = getController()
-                val currentQueue = _playlistQueue.value
-                if (index !in currentQueue.indices) return@launch
-                
-                val targetSong = currentQueue[index]
-                var unshuffledIndex = -1
+                var targetIndex = -1
                 for (i in 0 until controller.mediaItemCount) {
-                    if (controller.getMediaItemAt(i).mediaId == targetSong.id.toString()) {
-                        unshuffledIndex = i
+                    if (controller.getMediaItemAt(i).mediaId == songId.toString()) {
+                        targetIndex = i
                         break
                     }
                 }
-                
-                if (unshuffledIndex != -1) {
-                    controller.seekTo(unshuffledIndex, 0L)
+                if (targetIndex != -1) {
+                    controller.seekTo(targetIndex, 0L)
                     controller.play()
                 }
             } catch (e: Exception) {

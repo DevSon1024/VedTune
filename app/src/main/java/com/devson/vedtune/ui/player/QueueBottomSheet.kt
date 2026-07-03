@@ -189,7 +189,7 @@ fun QueueBottomSheet(
                                 song = song,
                                 isNowPlaying = song.id == currentSong?.id,
                                 isPlaying = isPlaying,
-                                onPlay = { viewModel.playFromQueue(index) },
+                                onPlay = { viewModel.playQueueItemById(song.id) },
                                 dragHandleModifier = dragHandleModifier,
                                 isDragging = isItemDragging,
                                 elevation = elevation,

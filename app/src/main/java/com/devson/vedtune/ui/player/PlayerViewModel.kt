@@ -230,8 +230,8 @@ class PlayerViewModel @Inject constructor(
         playbackConnection.cancelSleepTimer()
     }
 
-    fun playFromQueue(index: Int) {
-        playbackConnection.skipToQueueItem(index)
+    fun playQueueItemById(songId: Long) {
+        playbackConnection.playQueueItemById(songId)
     }
 
     fun moveQueueItem(fromIndex: Int, toIndex: Int) {
