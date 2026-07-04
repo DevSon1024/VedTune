@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.FastForward
@@ -103,6 +104,15 @@ fun LyricsEditorScreen(
     ) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
             viewModel.onWritePermissionGranted()
+        }
+    }
+
+    val importLyricsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val uri = result.data?.data
+            uri?.let { viewModel.importLyricsFromUri(it) }
         }
     }
 
@@ -281,7 +291,19 @@ fun LyricsEditorScreen(
                                 rawLyrics = rawLyrics,
                                 songTitle = song?.title ?: "",
                                 songArtist = song?.artist ?: "",
-                                onRawLyricsChange = { viewModel.setRawLyrics(it) }
+                                onRawLyricsChange = { viewModel.setRawLyrics(it) },
+                                onImportClick = {
+                                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                                        addCategory(Intent.CATEGORY_OPENABLE)
+                                        type = "*/*"
+                                        val initialUri = android.provider.DocumentsContract.buildDocumentUri(
+                                            "com.android.externalstorage.documents",
+                                            "primary:Documents/VedTune/Lyrics"
+                                        )
+                                        putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI, initialUri)
+                                    }
+                                    importLyricsLauncher.launch(intent)
+                                }
                             )
                         } else {
                             SyncedTabContent(
@@ -303,12 +325,11 @@ fun SimpleTabContent(
     rawLyrics: String,
     songTitle: String,
     songArtist: String,
-    onRawLyricsChange: (String) -> Unit
+    onRawLyricsChange: (String) -> Unit,
+    onImportClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val clipboardManager = remember(context) {
-        context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-    }
+    val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
 
     Column(
         modifier = Modifier
@@ -350,15 +371,31 @@ fun SimpleTabContent(
                 Text("Search")
             }
 
-            Row {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Import
+                OutlinedIconButton(
+                    onClick = onImportClick,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.FileOpen,
+                        contentDescription = "Import"
+                    )
+                }
+
+                // Copy All
                 OutlinedIconButton(
                     onClick = {
-                        val clip = android.content.ClipData.newPlainText("raw lyrics", rawLyrics)
-                        clipboardManager.setPrimaryClip(clip)
-                        Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                        if (rawLyrics.isNotEmpty()) {
+                            clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(rawLyrics))
+                            Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "No lyrics to copy", Toast.LENGTH_SHORT).show()
+                        }
                     },
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.padding(end = 8.dp)
+                    shape = RoundedCornerShape(8.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.ContentCopy,
@@ -366,13 +403,17 @@ fun SimpleTabContent(
                     )
                 }
 
+                // Paste
                 OutlinedIconButton(
                     onClick = {
-                        val clipData = clipboardManager.primaryClip
-                        val clipText = if (clipData != null && clipData.itemCount > 0) {
-                            clipData.getItemAt(0).text?.toString() ?: ""
-                        } else ""
-                        onRawLyricsChange(rawLyrics + clipText)
+                        val clipText = clipboardManager.getText()?.text
+                        if (!clipText.isNullOrEmpty()) {
+                            val updatedLyrics = if (rawLyrics.isEmpty()) clipText else "$rawLyrics\n$clipText"
+                            onRawLyricsChange(updatedLyrics)
+                            Toast.makeText(context, "Lyrics pasted", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "Clipboard is empty", Toast.LENGTH_SHORT).show()
+                        }
                     },
                     shape = RoundedCornerShape(8.dp)
                 ) {

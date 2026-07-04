@@ -34,7 +34,94 @@ class LyricsConverterViewModel : ViewModel() {
     private val _selectedFileName = MutableStateFlow<String?>(null)
     val selectedFileName: StateFlow<String?> = _selectedFileName.asStateFlow()
 
+    private val _history = MutableStateFlow<List<File>>(emptyList())
+    val history: StateFlow<List<File>> = _history.asStateFlow()
+
+    private val _previewFileContent = MutableStateFlow<String?>(null)
+    val previewFileContent: StateFlow<String?> = _previewFileContent.asStateFlow()
+
+    private val _previewFileName = MutableStateFlow<String?>(null)
+    val previewFileName: StateFlow<String?> = _previewFileName.asStateFlow()
+
     private var selectedUri: Uri? = null
+
+    fun refreshHistory(context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val dir = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
+                "VedTune/Lyrics"
+            )
+            val filesList = mutableListOf<File>()
+
+            // 1. Try Scoped Storage / MediaStore query for API 29+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val projection = arrayOf(MediaStore.Files.FileColumns.DATA)
+                val selection = "${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE ?"
+                val selectionArgs = arrayOf("Documents/VedTune/Lyrics%")
+                try {
+                    context.contentResolver.query(
+                        MediaStore.Files.getContentUri("external"),
+                        projection,
+                        selection,
+                        selectionArgs,
+                        null
+                    )?.use { cursor ->
+                        val dataIndex = cursor.getColumnIndex(MediaStore.Files.FileColumns.DATA)
+                        if (dataIndex != -1) {
+                            while (cursor.moveToNext()) {
+                                val path = cursor.getString(dataIndex)
+                                if (path != null && path.endsWith(".lrc", ignoreCase = true)) {
+                                    val file = File(path)
+                                    if (file.exists()) {
+                                        filesList.add(file)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            // 2. Fallback to scanning directory directly
+            if (filesList.isEmpty()) {
+                try {
+                    if (dir.exists() && dir.isDirectory) {
+                        val files = dir.listFiles { file -> file.isFile && file.name.endsWith(".lrc", ignoreCase = true) }
+                        if (files != null) {
+                            filesList.addAll(files)
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            // Sort by last modified date descending
+            filesList.sortByDescending { it.lastModified() }
+            _history.value = filesList
+        }
+    }
+
+    fun showFilePreview(file: File) {
+        viewModelScope.launch {
+            val content = withContext(Dispatchers.IO) {
+                runCatching { file.readText() }.getOrNull()
+            }
+            if (content != null) {
+                _previewFileName.value = file.name
+                _previewFileContent.value = content
+            } else {
+                _uiState.value = LyricsConverterUiState.Error("Could not read file content")
+            }
+        }
+    }
+
+    fun dismissPreview() {
+        _previewFileContent.value = null
+        _previewFileName.value = null
+    }
 
     fun onFileSelected(context: Context, uri: Uri) {
         selectedUri = uri
@@ -124,7 +211,7 @@ class LyricsConverterViewModel : ViewModel() {
 
         val values = ContentValues().apply {
             put(MediaStore.Files.FileColumns.DISPLAY_NAME, fileName)
-            put(MediaStore.Files.FileColumns.MIME_TYPE, "text/plain")
+            put(MediaStore.Files.FileColumns.MIME_TYPE, "application/octet-stream")
             put(MediaStore.Files.FileColumns.RELATIVE_PATH, relativePath)
             put(MediaStore.Files.FileColumns.IS_PENDING, 1)
         }

@@ -150,6 +150,27 @@ class LyricsEditorViewModel @Inject constructor(
         _rawLyrics.value = text
     }
 
+    fun importLyricsFromUri(uri: Uri) {
+        viewModelScope.launch {
+            _uiState.value = LyricsEditorUiState.Loading
+            try {
+                val content = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                        inputStream.bufferedReader().readText()
+                    } ?: throw IOException("Could not open file input stream")
+                }
+                _rawLyrics.value = content
+                _parsedLines.value = parseRawLyricsToLines(content)
+                _uiState.value = LyricsEditorUiState.Idle
+                _uiEvent.emit(LyricsEditorUiEvent.ShowToast("Lyrics imported successfully"))
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _uiState.value = LyricsEditorUiState.Idle
+                _uiEvent.emit(LyricsEditorUiEvent.ShowToast("Failed to read lyrics file: ${e.message}"))
+            }
+        }
+    }
+
     fun setActiveTab(tab: Int) {
         if (_activeTab.value == tab) return
         if (tab == 1) {

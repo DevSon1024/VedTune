@@ -1089,10 +1089,13 @@ private fun LyricsPanel(
     var showCopyDialog by remember { mutableStateOf(false) }
 
     val lrcPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        if (uri != null) {
-            viewModel.importLrcFile(context, uri)
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val uri = result.data?.data
+            if (uri != null) {
+                viewModel.importLrcFile(context, uri)
+            }
         }
     }
 
@@ -1204,7 +1207,18 @@ private fun LyricsPanel(
                 )
             }
             IconButton(
-                onClick = { lrcPickerLauncher.launch("*/*") },
+                onClick = {
+                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "*/*"
+                        val initialUri = android.provider.DocumentsContract.buildDocumentUri(
+                            "com.android.externalstorage.documents",
+                            "primary:Documents/VedTune/Lyrics"
+                        )
+                        putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI, initialUri)
+                    }
+                    lrcPickerLauncher.launch(intent)
+                },
                 modifier = Modifier.size(32.dp)
             ) {
                 Icon(
