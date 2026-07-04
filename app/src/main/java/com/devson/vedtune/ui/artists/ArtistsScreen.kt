@@ -72,14 +72,18 @@ fun ArtistsScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
                     top = 8.dp,
                     bottom = contentPadding.calculateBottomPadding() + 16.dp
                 )
             ) {
                 items(
                     items = artists,
-                    key = { it.name }
+                    key = { it.name },
+                    contentType = { "artist_list_item" }
                 ) { artist ->
                     ArtistListItem(
                         artist = artist,
@@ -97,20 +101,18 @@ fun ArtistListItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(horizontal = 24.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val firstLetter = remember(artist.name) {
-                if (artist.name.isNotBlank()) artist.name.take(1).uppercase() else "?"
-            }
+    val firstLetter = remember(artist.name) {
+        if (artist.name.isNotBlank()) artist.name.take(1).uppercase() else "?"
+    }
+    com.devson.vedtune.ui.components.VedTuneListItem(
+        primaryText = artist.name,
+        secondaryText = "${if (artist.songCount == 1) "1 song" else "${artist.songCount} songs"} • ${if (artist.albumCount == 1) "1 album" else "${artist.albumCount} albums"}",
+        onClick = onClick,
+        modifier = modifier,
+        leadingContent = {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(56.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
@@ -122,31 +124,6 @@ fun ArtistListItem(
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = artist.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                
-                val songsText = if (artist.songCount == 1) "1 song" else "${artist.songCount} songs"
-                val albumsText = if (artist.albumCount == 1) "1 album" else "${artist.albumCount} albums"
-                Text(
-                    text = "$songsText • $albumsText",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
-        HorizontalDivider(
-            modifier = Modifier.padding(horizontal = 24.dp),
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-        )
-    }
+    )
 }

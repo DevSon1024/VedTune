@@ -90,14 +90,18 @@ fun PlaylistsScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
                         top = 8.dp,
                         bottom = contentPadding.calculateBottomPadding() + 88.dp // Space for FAB + bottom player/navbar
                     )
                 ) {
                     items(
                         items = playlists,
-                        key = { it.id }
+                        key = { it.id },
+                        contentType = { "playlist_list_item" }
                     ) { playlist ->
                         PlaylistItemRow(
                             playlist = playlist,
@@ -141,22 +145,15 @@ fun PlaylistItemRow(
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    com.devson.vedtune.ui.components.VedTuneListItem(
+        primaryText = playlist.name,
+        secondaryText = if (playlist.songCount == 1) "1 song" else "${playlist.songCount} songs",
+        onClick = onClick,
+        modifier = modifier,
+        leadingContent = {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(56.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.secondaryContainer),
                 contentAlignment = Alignment.Center
@@ -167,25 +164,8 @@ fun PlaylistItemRow(
                     tint = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = playlist.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = if (playlist.songCount == 1) "1 song" else "${playlist.songCount} songs",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
+        },
+        trailingContent = {
             Box {
                 IconButton(onClick = { showMenu = true }) {
                     Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
@@ -204,7 +184,7 @@ fun PlaylistItemRow(
                 }
             }
         }
-    }
+    )
 }
 
 @Composable

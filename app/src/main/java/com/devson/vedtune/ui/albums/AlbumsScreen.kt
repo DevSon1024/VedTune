@@ -83,7 +83,8 @@ fun AlbumsScreen(
             ) {
                 items(
                     items = albums,
-                    key = { it.id }
+                    key = { it.id },
+                    contentType = { "album_grid_item" }
                 ) { album ->
                     AlbumGridItem(
                         album = album,
@@ -103,41 +104,16 @@ fun AlbumGridItem(
     modifier: Modifier = Modifier,
     showArtwork: Boolean = true
 ) {
-    Card(
+    com.devson.vedtune.ui.components.VedTuneGridCard(
+        primaryText = album.title,
+        secondaryText = "${album.artist} • ${album.songCount} ${if (album.songCount == 1) "song" else "songs"}",
+        onClick = onClick,
         modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            SongArtwork(
-                albumId = album.id,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .clip(MaterialTheme.shapes.medium),
-                showArtwork = showArtwork
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(
-                text = album.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            
-            Text(
-                text = "${album.artist} • ${album.songCount} ${if (album.songCount == 1) "song" else "songs"}",
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        SongArtwork(
+            albumId = album.id,
+            modifier = Modifier.fillMaxSize(),
+            showArtwork = showArtwork
+        )
     }
 }

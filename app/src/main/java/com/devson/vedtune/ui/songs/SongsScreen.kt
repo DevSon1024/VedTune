@@ -45,6 +45,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -369,18 +370,57 @@ fun SongsScreen(
                             bottom = contentPadding.calculateBottomPadding() + 16.dp
                         )
                     ) {
-                        items(uiState.songs, key = { it.id }) { song ->
+                        items(
+                            items = uiState.songs,
+                            key = { it.id },
+                            contentType = { "song_grid_item" }
+                        ) { song ->
                             val isCurrentSong = song.id == currentSongId
-                            SongGridItem(
-                                song = song,
+                            val containerColor = if (song.id == highlightedSongId && highlightAlpha.value > 0f) {
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = highlightAlpha.value)
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                            }
+                            com.devson.vedtune.ui.components.VedTuneGridCard(
+                                primaryText = song.title,
+                                secondaryText = song.artist,
                                 onClick = { viewModel.playSong(song) },
-                                showArtwork = uiState.showArtwork,
-                                isCurrentSong = isCurrentSong,
-                                isPlaying = isPlaying,
-                                onOptionsClick = { selectedSongForOptions = song },
-                                isHighlighted = song.id == highlightedSongId,
-                                highlightAlpha = if (song.id == highlightedSongId) highlightAlpha.value else 0f
-                            )
+                                containerColor = containerColor,
+                                modifier = Modifier,
+                                trailingContent = {
+                                    IconButton(onClick = { selectedSongForOptions = song }) {
+                                        Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
+                                    }
+                                }
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    SongArtwork(
+                                        albumId = song.albumId,
+                                        lastModified = song.dateModified,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                                        showArtwork = uiState.showArtwork
+                                    )
+                                    if (isCurrentSong) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(Color.Black.copy(alpha = 0.4f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            PlayingIndicator(
+                                                isPlaying = isPlaying,
+                                                modifier = Modifier.size(32.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -396,17 +436,66 @@ fun SongsScreen(
                             bottom = contentPadding.calculateBottomPadding() + 16.dp
                         )
                     ) {
-                        items(uiState.songs, key = { it.id }) { song ->
+                        items(
+                            items = uiState.songs,
+                            key = { it.id },
+                            contentType = { "song_list_item" }
+                        ) { song ->
                             val isCurrentSong = song.id == currentSongId
-                            SongListItem(
-                                song = song,
+                            val containerColor = if (song.id == highlightedSongId && highlightAlpha.value > 0f) {
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = highlightAlpha.value)
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            }
+                            com.devson.vedtune.ui.components.VedTuneListItem(
+                                primaryText = song.title,
+                                secondaryText = song.artist,
                                 onClick = { viewModel.playSong(song) },
-                                showArtwork = uiState.showArtwork,
-                                isCurrentSong = isCurrentSong,
-                                isPlaying = isPlaying,
-                                onOptionsClick = { selectedSongForOptions = song },
-                                isHighlighted = song.id == highlightedSongId,
-                                highlightAlpha = if (song.id == highlightedSongId) highlightAlpha.value else 0f
+                                containerColor = containerColor,
+                                leadingContent = {
+                                    Box(
+                                        modifier = Modifier.size(56.dp)
+                                    ) {
+                                        SongArtwork(
+                                            albumId = song.albumId,
+                                            lastModified = song.dateModified,
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                                            showArtwork = uiState.showArtwork
+                                        )
+                                        if (isCurrentSong) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(Color.Black.copy(alpha = 0.4f)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                PlayingIndicator(
+                                                    isPlaying = isPlaying,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                },
+                                trailingContent = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = formatDuration(song.duration),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        IconButton(onClick = { selectedSongForOptions = song }) {
+                                            Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
+                                        }
+                                    }
+                                }
                             )
                         }
                     }
@@ -694,183 +783,7 @@ fun SongsScreen(
     }
 }
 
-@Composable
-fun SongListItem(
-    song: Song,
-    onClick: () -> Unit,
-    showArtwork: Boolean = true,
-    isCurrentSong: Boolean = false,
-    isPlaying: Boolean = false,
-    onOptionsClick: () -> Unit,
-    isHighlighted: Boolean = false,
-    highlightAlpha: Float = 0f
-) {
-    val containerColor = if (isHighlighted && highlightAlpha > 0f) {
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = highlightAlpha)
-    } else {
-        MaterialTheme.colorScheme.surface
-    }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = containerColor)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier.size(56.dp)
-            ) {
-                SongArtwork(
-                    albumId = song.albumId,
-                    lastModified = song.dateModified,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(MaterialTheme.shapes.small)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    showArtwork = showArtwork
-                )
-                if (isCurrentSong) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(MaterialTheme.shapes.small)
-                            .background(Color.Black.copy(alpha = 0.4f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        PlayingIndicator(
-                            isPlaying = isPlaying,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = song.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1
-                )
-                Text(
-                    text = song.artist,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
-                )
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Text(
-                text = formatDuration(song.duration),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            IconButton(onClick = onOptionsClick) {
-                Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
-            }
-        }
-    }
-}
-
-@Composable
-fun SongGridItem(
-    song: Song,
-    onClick: () -> Unit,
-    showArtwork: Boolean = true,
-    isCurrentSong: Boolean = false,
-    isPlaying: Boolean = false,
-    onOptionsClick: () -> Unit,
-    isHighlighted: Boolean = false,
-    highlightAlpha: Float = 0f
-) {
-    val containerColor = if (isHighlighted && highlightAlpha > 0f) {
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = highlightAlpha)
-    } else {
-        MaterialTheme.colorScheme.surface
-    }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = containerColor)
-    ) {
-        Column(
-            modifier = Modifier.padding(8.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-            ) {
-                SongArtwork(
-                    albumId = song.albumId,
-                    lastModified = song.dateModified,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(MaterialTheme.shapes.medium)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    showArtwork = showArtwork
-                )
-                if (isCurrentSong) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(MaterialTheme.shapes.medium)
-                            .background(Color.Black.copy(alpha = 0.4f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        PlayingIndicator(
-                            isPlaying = isPlaying,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = song.title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        maxLines = 1
-                    )
-                    Text(
-                        text = song.artist,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
-                    )
-                }
-                IconButton(onClick = onOptionsClick) {
-                    Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun BottomSheetOption(
