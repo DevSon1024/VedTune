@@ -43,6 +43,7 @@ fun vedtuneTheme(
     themeMode: String = "SYSTEM",
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
+    isAmoledDark: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val darkTheme = when (themeMode) {
@@ -50,7 +51,7 @@ fun vedtuneTheme(
         "DARK" -> true
         else -> isSystemInDarkTheme()
     }
-    val colorScheme = when {
+    var colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -58,6 +59,14 @@ fun vedtuneTheme(
 
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
+    }
+
+    if (darkTheme && isAmoledDark) {
+        colorScheme = colorScheme.copy(
+            background = androidx.compose.ui.graphics.Color.Black,
+            surface = androidx.compose.ui.graphics.Color.Black,
+            surfaceVariant = androidx.compose.ui.graphics.Color(0xFF121212)
+        )
     }
 
     val view = LocalView.current

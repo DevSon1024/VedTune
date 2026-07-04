@@ -38,6 +38,9 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_KEEP_SCREEN_ON_WITH_LYRICS = booleanPreferencesKey("keep_screen_on_with_lyrics")
         private val KEY_ALBUM_ART_CLICK_ACTION = stringPreferencesKey("album_art_click_action")
         private val KEY_PLAYER_BACKGROUND_BLUR_RADIUS = floatPreferencesKey("player_background_blur_radius")
+        private val KEY_IS_AMOLED_DARK = booleanPreferencesKey("amoled_dark_mode")
+        private val KEY_ALBUM_ART_QUALITY = stringPreferencesKey("album_art_quality")
+        private val KEY_FORCE_SQUARE_ARTWORK = booleanPreferencesKey("force_square_artwork")
 
         // Folder filter
         private val KEY_FOLDER_FILTER_MODE = stringPreferencesKey("folder_filter_mode")
@@ -113,6 +116,22 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override val playerBackgroundBlurRadius: Flow<Float> = dataStore.data.map { preferences ->
         preferences[KEY_PLAYER_BACKGROUND_BLUR_RADIUS] ?: 40f
+    }
+
+    override val isAmoledDark: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[KEY_IS_AMOLED_DARK] ?: false
+    }
+
+    override val albumArtQuality: Flow<com.devson.vedtune.domain.model.AlbumArtQuality> = dataStore.data.map { preferences ->
+        runCatching {
+            com.devson.vedtune.domain.model.AlbumArtQuality.valueOf(
+                preferences[KEY_ALBUM_ART_QUALITY] ?: com.devson.vedtune.domain.model.AlbumArtQuality.BALANCED.name
+            )
+        }.getOrDefault(com.devson.vedtune.domain.model.AlbumArtQuality.BALANCED)
+    }
+
+    override val forceSquareArtwork: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[KEY_FORCE_SQUARE_ARTWORK] ?: true
     }
 
     //  Folder filtering flows 
@@ -197,6 +216,18 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setPlayerBackgroundBlurRadius(radius: Float) {
         dataStore.edit { it[KEY_PLAYER_BACKGROUND_BLUR_RADIUS] = radius.coerceIn(10f, 100f) }
+    }
+
+    override suspend fun setAmoledDark(enabled: Boolean) {
+        dataStore.edit { it[KEY_IS_AMOLED_DARK] = enabled }
+    }
+
+    override suspend fun setAlbumArtQuality(quality: com.devson.vedtune.domain.model.AlbumArtQuality) {
+        dataStore.edit { it[KEY_ALBUM_ART_QUALITY] = quality.name }
+    }
+
+    override suspend fun setForceSquareArtwork(enabled: Boolean) {
+        dataStore.edit { it[KEY_FORCE_SQUARE_ARTWORK] = enabled }
     }
 
     override suspend fun clearPlaybackQueue() {

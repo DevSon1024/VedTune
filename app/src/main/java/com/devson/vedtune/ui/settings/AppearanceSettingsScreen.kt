@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Slider
 import com.devson.vedtune.domain.model.AlbumArtClickAction
+import com.devson.vedtune.domain.model.AlbumArtQuality
 import com.devson.vedtune.domain.model.SeekBarStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,6 +55,14 @@ fun AppearanceSettingsScreen(
     val keepScreenOnWithLyrics by viewModel.keepScreenOnWithLyrics.collectAsState()
     val albumArtClickAction by viewModel.albumArtClickAction.collectAsState()
     val playerBackgroundBlurRadius by viewModel.playerBackgroundBlurRadius.collectAsState()
+
+    // New settings flows
+    val isAmoledDark by viewModel.isAmoledDark.collectAsState()
+    val albumArtQuality by viewModel.albumArtQuality.collectAsState()
+    val forceSquareArtwork by viewModel.forceSquareArtwork.collectAsState()
+
+    val systemInDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val showAmoledToggle = themeMode == "DARK" || (themeMode == "SYSTEM" && systemInDark)
 
     Scaffold(
         topBar = {
@@ -85,123 +94,189 @@ fun AppearanceSettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(innerPadding)
                 .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            SettingsCard(
-                title = "Appearance & Theme",
-                icon = Icons.Default.Palette
-            ) {
-                ThemeModeSelector(
-                    currentMode = themeMode,
-                    onModeSelected = { viewModel.setThemeMode(it) }
+            // SECTION 1: Theme Settings
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Theme",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 4.dp)
                 )
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                SettingSwitchRow(
-                    title = "Dynamic Material You Colors",
-                    description = "Match theme colors with device wallpaper (Android 12+).",
-                    checked = dynamicColorsEnabled,
-                    onCheckedChange = { viewModel.setDynamicColorsEnabled(it) },
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                SettingSwitchRow(
-                    title = "Show Album Artwork",
-                    description = "Display cover art inside player screens and lists.",
-                    checked = showAlbumArt,
-                    onCheckedChange = { viewModel.setShowAlbumArt(it) },
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                SeekBarStyleSelector(
-                    currentStyle = seekbarStyle,
-                    onStyleSelected = { viewModel.setSeekBarStyle(it) }
-                )
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                AlbumArtClickActionSelector(
-                    currentAction = albumArtClickAction,
-                    onActionSelected = { viewModel.setAlbumArtClickAction(it) }
-                )
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                var sliderValue by remember(playerBackgroundBlurRadius) { mutableStateOf(playerBackgroundBlurRadius) }
-
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                SettingsCard(
+                    title = "Theme Options",
+                    icon = Icons.Default.Palette
                 ) {
-                    Row(
+                    ThemeModeSelector(
+                        currentMode = themeMode,
+                        onModeSelected = { viewModel.setThemeMode(it) }
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    SettingSwitchRow(
+                        title = "Dynamic Material You Colors",
+                        description = "Match theme colors with device wallpaper (Android 12+).",
+                        checked = dynamicColorsEnabled,
+                        onCheckedChange = { viewModel.setDynamicColorsEnabled(it) },
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+
+                    if (showAmoledToggle) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 12.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+
+                        SettingSwitchRow(
+                            title = "AMOLED Dark Mode",
+                            description = "Use absolute black backgrounds for dark themes.",
+                            checked = isAmoledDark,
+                            onCheckedChange = { viewModel.setAmoledDark(it) },
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            // SECTION 2: Album Art Settings
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Album Art",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+                SettingsCard(
+                    title = "Artwork Customization",
+                    icon = Icons.Default.Palette
+                ) {
+                    SettingSwitchRow(
+                        title = "Show Album Artwork",
+                        description = "Display cover art inside player screens and lists.",
+                        checked = showAlbumArt,
+                        onCheckedChange = { viewModel.setShowAlbumArt(it) },
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    AlbumArtClickActionSelector(
+                        currentAction = albumArtClickAction,
+                        onActionSelected = { viewModel.setAlbumArtClickAction(it) }
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    var sliderValue by remember(playerBackgroundBlurRadius) { mutableStateOf(playerBackgroundBlurRadius) }
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Background Blur Intensity",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Adjust the blur radius of the player background.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                             Text(
-                                text = "Background Blur Intensity",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Adjust the blur radius of the player background.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = "${sliderValue.toInt()} dp",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
-                        Text(
-                            text = "${sliderValue.toInt()} dp",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+
+                        Slider(
+                            value = sliderValue,
+                            onValueChange = { sliderValue = it },
+                            onValueChangeFinished = {
+                                viewModel.setPlayerBackgroundBlurRadius(sliderValue)
+                            },
+                            valueRange = 10f..100f,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
 
-                    Slider(
-                        value = sliderValue,
-                        onValueChange = { sliderValue = it },
-                        onValueChangeFinished = {
-                            viewModel.setPlayerBackgroundBlurRadius(sliderValue)
-                        },
-                        valueRange = 10f..100f,
-                        modifier = Modifier.fillMaxWidth()
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    AlbumArtQualitySelector(
+                        currentQuality = albumArtQuality,
+                        onQualitySelected = { viewModel.setAlbumArtQuality(it) }
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    SettingSwitchRow(
+                        title = "Force Square Artwork",
+                        description = "Crop artwork to square. Disabling this shows the original portrait/landscape aspect ratio.",
+                        checked = forceSquareArtwork,
+                        onCheckedChange = { viewModel.setForceSquareArtwork(it) },
+                        modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
             }
 
-            // CARD 2: Lyrics Settings
-            SettingsCard(
-                title = "Lyrics Settings",
-                icon = Icons.Default.Palette
-            ) {
-                SettingSwitchRow(
-                    title = "Keep Screen On",
-                    description = "Prevent the screen from sleeping while lyrics are visible.",
-                    checked = keepScreenOnWithLyrics,
-                    onCheckedChange = { viewModel.setKeepScreenOnWithLyrics(it) },
-                    modifier = Modifier.padding(vertical = 4.dp)
+            // SECTION 3: Seekbar & Other Settings
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Controls & Seekbar",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 4.dp)
                 )
+                SettingsCard(
+                    title = "Seekbar & Lyrics Options",
+                    icon = Icons.Default.Palette
+                ) {
+                    SeekBarStyleSelector(
+                        currentStyle = seekbarStyle,
+                        onStyleSelected = { viewModel.setSeekBarStyle(it) }
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    SettingSwitchRow(
+                        title = "Keep Screen On",
+                        description = "Prevent the screen from sleeping while lyrics are visible.",
+                        checked = keepScreenOnWithLyrics,
+                        onCheckedChange = { viewModel.setKeepScreenOnWithLyrics(it) },
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -304,6 +379,62 @@ fun AlbumArtClickActionSelector(
                             expanded = false
                         }
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AlbumArtQualitySelector(
+    currentQuality: AlbumArtQuality,
+    onQualitySelected: (AlbumArtQuality) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = "Album Art Quality",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = when (currentQuality) {
+                    AlbumArtQuality.SAVE_SPACE -> "Save Space: Reduces memory usage and loading times."
+                    AlbumArtQuality.BALANCED -> "Balanced: Good trade-off between detail and performance."
+                    AlbumArtQuality.HIGH_QUALITY -> "High Quality: Uses higher resolution images for clearer artwork."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            for (quality in AlbumArtQuality.entries) {
+                val label = when (quality) {
+                    AlbumArtQuality.SAVE_SPACE -> "Save Space"
+                    AlbumArtQuality.BALANCED -> "Balanced"
+                    AlbumArtQuality.HIGH_QUALITY -> "High Quality"
+                }
+                val isSelected = currentQuality == quality
+                if (isSelected) {
+                    FilledTonalButton(
+                        onClick = { onQualitySelected(quality) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(text = label)
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { onQualitySelected(quality) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(text = label)
+                    }
                 }
             }
         }

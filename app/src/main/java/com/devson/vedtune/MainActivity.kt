@@ -62,8 +62,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by viewModel.themeMode.collectAsState()
             val dynamicColorsEnabled by viewModel.dynamicColorsEnabled.collectAsState()
+            val isAmoledDark by viewModel.isAmoledDark.collectAsState()
 
-            vedtuneTheme(themeMode = themeMode, dynamicColor = dynamicColorsEnabled) {
+            vedtuneTheme(
+                themeMode = themeMode,
+                dynamicColor = dynamicColorsEnabled,
+                isAmoledDark = isAmoledDark
+            ) {
                 val navController = rememberNavController()
 
                 Scaffold(

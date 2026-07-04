@@ -21,6 +21,9 @@ interface SettingsRepository {
     val keepScreenOnWithLyrics: Flow<Boolean>
     val albumArtClickAction: Flow<AlbumArtClickAction>
     val playerBackgroundBlurRadius: Flow<Float>
+    val isAmoledDark: Flow<Boolean>
+    val albumArtQuality: Flow<com.devson.vedtune.domain.model.AlbumArtQuality>
+    val forceSquareArtwork: Flow<Boolean>
 
     // Folder filtering
     val folderFilterMode: Flow<FolderFilterMode>
@@ -43,6 +46,9 @@ interface SettingsRepository {
     suspend fun setKeepScreenOnWithLyrics(keep: Boolean)
     suspend fun setAlbumArtClickAction(action: AlbumArtClickAction)
     suspend fun setPlayerBackgroundBlurRadius(radius: Float)
+    suspend fun setAmoledDark(enabled: Boolean)
+    suspend fun setAlbumArtQuality(quality: com.devson.vedtune.domain.model.AlbumArtQuality)
+    suspend fun setForceSquareArtwork(enabled: Boolean)
     suspend fun clearPlaybackQueue()
 
     // Folder filtering setters

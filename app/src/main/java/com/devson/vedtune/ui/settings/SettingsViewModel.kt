@@ -67,6 +67,15 @@ class SettingsViewModel @Inject constructor(
     val playerBackgroundBlurRadius: StateFlow<Float> = settingsRepository.playerBackgroundBlurRadius
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 40f)
 
+    val isAmoledDark: StateFlow<Boolean> = settingsRepository.isAmoledDark
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val albumArtQuality: StateFlow<com.devson.vedtune.domain.model.AlbumArtQuality> = settingsRepository.albumArtQuality
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.devson.vedtune.domain.model.AlbumArtQuality.BALANCED)
+
+    val forceSquareArtwork: StateFlow<Boolean> = settingsRepository.forceSquareArtwork
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     //  Folder filtering 
 
     val folderFilterMode: StateFlow<FolderFilterMode> = settingsRepository.folderFilterMode
@@ -141,6 +150,18 @@ class SettingsViewModel @Inject constructor(
 
     fun setPlayerBackgroundBlurRadius(radius: Float) {
         viewModelScope.launch { settingsRepository.setPlayerBackgroundBlurRadius(radius) }
+    }
+
+    fun setAmoledDark(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setAmoledDark(enabled) }
+    }
+
+    fun setAlbumArtQuality(quality: com.devson.vedtune.domain.model.AlbumArtQuality) {
+        viewModelScope.launch { settingsRepository.setAlbumArtQuality(quality) }
+    }
+
+    fun setForceSquareArtwork(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setForceSquareArtwork(enabled) }
     }
 
     fun clearPlaybackQueue() {

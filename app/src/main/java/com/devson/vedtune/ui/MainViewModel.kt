@@ -85,6 +85,9 @@ class MainViewModel @Inject constructor(
     val dynamicColorsEnabled: StateFlow<Boolean> = settingsRepository.dynamicColorsEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    val isAmoledDark: StateFlow<Boolean> = settingsRepository.isAmoledDark
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     val autoSyncOnStartup: StateFlow<Boolean> = settingsRepository.autoSyncOnStartup
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 

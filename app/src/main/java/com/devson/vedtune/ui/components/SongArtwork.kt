@@ -22,6 +22,11 @@ import coil.request.ImageRequest
 import coil.size.Size
 import coil.transform.Transformation
 import java.io.File
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
+import androidx.compose.runtime.collectAsState
 
 object ArtworkCache {
     private val lock = Any()
@@ -110,6 +115,12 @@ class BlurTransformation(
     }
 }
 
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface SongArtworkEntryPoint {
+    fun settingsRepository(): com.devson.vedtune.domain.repository.SettingsRepository
+}
+
 @Composable
 fun SongArtwork(
     albumId: Long,
@@ -122,6 +133,16 @@ fun SongArtwork(
 ) {
     val context = LocalContext.current
     var isError by remember(albumId, lastModified, ignoreCustomArtwork) { mutableStateOf(false) }
+
+    val settingsRepository = remember(context) {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            SongArtworkEntryPoint::class.java
+        ).settingsRepository()
+    }
+
+    val forceSquare by settingsRepository.forceSquareArtwork.collectAsState(initial = true)
+    val quality by settingsRepository.albumArtQuality.collectAsState(initial = com.devson.vedtune.domain.model.AlbumArtQuality.BALANCED)
 
     val artworkData = remember(albumId, lastModified, ignoreCustomArtwork) {
         if (!ignoreCustomArtwork && ArtworkCache.hasCustomArtwork(context, albumId)) {
@@ -145,11 +166,24 @@ fun SongArtwork(
             )
         }
     } else {
-        val model = remember(artworkData, blurRadius, lastModified) {
+        val model = remember(artworkData, blurRadius, lastModified, quality) {
             val builder = ImageRequest.Builder(context)
                 .data(artworkData)
-                .memoryCacheKey("artwork_${albumId}_${lastModified}_blur_${blurRadius}")
+                .memoryCacheKey("artwork_${albumId}_${lastModified}_blur_${blurRadius}_quality_${quality.name}")
                 .crossfade(true)
+            
+            when (quality) {
+                com.devson.vedtune.domain.model.AlbumArtQuality.SAVE_SPACE -> {
+                    builder.size(150, 150)
+                }
+                com.devson.vedtune.domain.model.AlbumArtQuality.BALANCED -> {
+                    builder.size(400, 400)
+                }
+                com.devson.vedtune.domain.model.AlbumArtQuality.HIGH_QUALITY -> {
+                    // Full resolution / no restriction
+                }
+            }
+
             if (blurRadius > 0) {
                 builder.transformations(BlurTransformation(context, blurRadius.toFloat()))
             }
@@ -160,7 +194,7 @@ fun SongArtwork(
             model = model,
             contentDescription = "Album Artwork",
             modifier = modifier,
-            contentScale = ContentScale.Crop,
+            contentScale = if (forceSquare) ContentScale.Crop else ContentScale.Fit,
             onError = { isError = true },
             onSuccess = { isError = false }
         )
