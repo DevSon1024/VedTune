@@ -10,9 +10,11 @@ import com.devson.vedtune.domain.repository.SettingsRepository
 import com.devson.vedtune.data.repository.SettingsRepositoryImpl
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import android.content.Context
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -56,9 +58,10 @@ object AppModule {
         songDao: SongDao,
         queueDao: QueueDao,
         playlistDao: PlaylistDao,
-        syncEngine: MediaSyncEngine
+        syncEngine: MediaSyncEngine,
+        @ApplicationContext context: Context
     ): MediaRepository {
-        return MediaRepositoryImpl(songDao, queueDao, playlistDao, syncEngine)
+        return MediaRepositoryImpl(songDao, queueDao, playlistDao, syncEngine, context)
     }
 
     @Provides

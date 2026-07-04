@@ -52,6 +52,12 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE artist = :artist ORDER BY album ASC, title ASC")
     fun getSongsByArtist(artist: String): Flow<List<SongEntity>>
 
+    @Query("SELECT DISTINCT artist FROM songs WHERE artist IS NOT NULL AND artist != '' ORDER BY artist ASC")
+    suspend fun getUniqueArtists(): List<String>
+
+    @Query("SELECT DISTINCT album FROM songs WHERE album IS NOT NULL AND album != '' ORDER BY album ASC")
+    suspend fun getUniqueAlbums(): List<String>
+
     @Transaction
     suspend fun syncMediaStore(
         toInsert: List<SongEntity>,

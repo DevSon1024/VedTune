@@ -17,6 +17,9 @@ import com.devson.vedtune.data.local.dao.PlaylistDao
 import com.devson.vedtune.data.local.entity.PlaylistEntity
 import com.devson.vedtune.data.local.entity.PlaylistSongCrossRef
 import com.devson.vedtune.domain.model.Playlist
+import android.content.Context
+import android.provider.MediaStore
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,7 +28,8 @@ class MediaRepositoryImpl @Inject constructor(
     private val songDao: SongDao,
     private val queueDao: QueueDao,
     private val playlistDao: PlaylistDao,
-    private val syncEngine: MediaSyncEngine
+    private val syncEngine: MediaSyncEngine,
+    @ApplicationContext private val context: Context
 ) : MediaRepository {
 
     override fun getAllSongs(): Flow<List<Song>> {
@@ -161,5 +165,61 @@ class MediaRepositoryImpl @Inject constructor(
 
     override suspend fun getSongsByIds(ids: List<Long>): List<Song> {
         return songDao.getSongsByIds(ids).map { it.toSong() }
+    }
+
+    override suspend fun getUniqueArtists(): List<String> {
+        return songDao.getUniqueArtists()
+    }
+
+    override suspend fun getUniqueAlbums(): List<String> {
+        return songDao.getUniqueAlbums()
+    }
+
+    override suspend fun getUniqueComposers(): List<String> {
+        val composers = mutableSetOf<String>()
+        val projection = arrayOf(MediaStore.Audio.Media.COMPOSER)
+        try {
+            context.contentResolver.query(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                "${MediaStore.Audio.Media.COMPOSER} IS NOT NULL AND ${MediaStore.Audio.Media.COMPOSER} != ''",
+                null,
+                null
+            )?.use { cursor ->
+                val col = cursor.getColumnIndex(MediaStore.Audio.Media.COMPOSER)
+                if (col != -1) {
+                    while (cursor.moveToNext()) {
+                        cursor.getString(col)?.let { composers.add(it) }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return composers.toList().sorted()
+    }
+
+    override suspend fun getUniqueGenres(): List<String> {
+        val genres = mutableSetOf<String>()
+        val projection = arrayOf(MediaStore.Audio.Genres.NAME)
+        try {
+            context.contentResolver.query(
+                MediaStore.Audio.Genres.EXTERNAL_CONTENT_URI,
+                projection,
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                val col = cursor.getColumnIndex(MediaStore.Audio.Genres.NAME)
+                if (col != -1) {
+                    while (cursor.moveToNext()) {
+                        cursor.getString(col)?.let { genres.add(it) }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return genres.toList().sorted()
     }
 }

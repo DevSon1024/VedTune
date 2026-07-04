@@ -25,6 +25,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jaudiotagger.audio.AudioFileIO
@@ -66,6 +69,18 @@ class EditTagsViewModel @Inject constructor(
     private val _uiEvent = MutableSharedFlow<EditTagsUiEvent>()
     val uiEvent: SharedFlow<EditTagsUiEvent> = _uiEvent.asSharedFlow()
 
+    private val _artistSuggestions = MutableStateFlow<List<String>>(emptyList())
+    val artistSuggestions: StateFlow<List<String>> = _artistSuggestions.asStateFlow()
+
+    private val _albumSuggestions = MutableStateFlow<List<String>>(emptyList())
+    val albumSuggestions: StateFlow<List<String>> = _albumSuggestions.asStateFlow()
+
+    private val _composerSuggestions = MutableStateFlow<List<String>>(emptyList())
+    val composerSuggestions: StateFlow<List<String>> = _composerSuggestions.asStateFlow()
+
+    private val _genreSuggestions = MutableStateFlow<List<String>>(emptyList())
+    val genreSuggestions: StateFlow<List<String>> = _genreSuggestions.asStateFlow()
+
     // Expose flows from PlaybackConnection for sync tool
     val isPlaying = playbackConnection.isPlaying
     val playbackPosition = playbackConnection.playbackPosition
@@ -92,6 +107,26 @@ class EditTagsViewModel @Inject constructor(
         shouldRemoveArtwork = false
     }
 
+    // Initial states for change tracking
+    private var initialTitle = ""
+    private var initialArtist = ""
+    private var initialAlbum = ""
+    private var initialAlbumArtist = ""
+    private var initialComposer = ""
+    private var initialGenre = ""
+    private var initialLyricist = ""
+    private var initialRecordLabel = ""
+    private var initialCopyright = ""
+    private var initialLanguage = ""
+    private var initialMood = ""
+    private var initialYear = ""
+    private var initialComment = ""
+    private var initialTrack = ""
+    private var initialDiscNo = ""
+    private var initialLyrics = ""
+    private var initialCustomArtworkUri: Uri? = null
+    private var initialShouldRemoveArtwork = false
+
     var title by mutableStateOf("")
     var artist by mutableStateOf("")
     var album by mutableStateOf("")
@@ -111,6 +146,20 @@ class EditTagsViewModel @Inject constructor(
 
     init {
         loadSongAndTags()
+        loadSuggestions()
+    }
+
+    private fun loadSuggestions() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                _artistSuggestions.value = repository.getUniqueArtists()
+                _albumSuggestions.value = repository.getUniqueAlbums()
+                _composerSuggestions.value = repository.getUniqueComposers()
+                _genreSuggestions.value = repository.getUniqueGenres()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     private fun loadSongAndTags() {
@@ -179,6 +228,25 @@ class EditTagsViewModel @Inject constructor(
                 }
 
                 if (loadSuccess) {
+                    initialTitle = title
+                    initialArtist = artist
+                    initialAlbum = album
+                    initialAlbumArtist = albumArtist
+                    initialComposer = composer
+                    initialGenre = genre
+                    initialLyricist = lyricist
+                    initialRecordLabel = recordLabel
+                    initialCopyright = copyright
+                    initialLanguage = language
+                    initialMood = mood
+                    initialYear = year
+                    initialComment = comment
+                    initialTrack = track
+                    initialDiscNo = discNo
+                    initialLyrics = lyrics.text
+                    initialCustomArtworkUri = customArtworkUri
+                    initialShouldRemoveArtwork = shouldRemoveArtwork
+
                     uiState = EditTagsUiState.Success
                 } else {
                     uiState = EditTagsUiState.Error("Failed to read audio tags from file. Make sure the file is not corrupted.")
@@ -187,6 +255,27 @@ class EditTagsViewModel @Inject constructor(
                 uiState = EditTagsUiState.Error(e.message ?: "Failed to load audio tags.")
             }
         }
+    }
+
+    fun hasUnsavedChanges(): Boolean {
+        return title != initialTitle ||
+               artist != initialArtist ||
+               album != initialAlbum ||
+               albumArtist != initialAlbumArtist ||
+               composer != initialComposer ||
+               genre != initialGenre ||
+               lyricist != initialLyricist ||
+               recordLabel != initialRecordLabel ||
+               copyright != initialCopyright ||
+               language != initialLanguage ||
+               mood != initialMood ||
+               year != initialYear ||
+               comment != initialComment ||
+               track != initialTrack ||
+               discNo != initialDiscNo ||
+               lyrics.text != initialLyrics ||
+               customArtworkUri != initialCustomArtworkUri ||
+               shouldRemoveArtwork != initialShouldRemoveArtwork
     }
 
     private fun getFilePathFromUri(context: Context, songId: Long): String? {

@@ -1,7 +1,10 @@
 package com.devson.vedtune.ui.songs
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -46,12 +49,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.util.Locale
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,6 +79,20 @@ fun EditTagsScreen(
 ) {
     val context = LocalContext.current
     val uiState = viewModel.uiState
+
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val handleBack = {
+        if (viewModel.hasUnsavedChanges()) {
+            showDiscardDialog = true
+        } else {
+            onBackClick()
+        }
+    }
+
+    BackHandler(enabled = true) {
+        handleBack()
+    }
     
     val isPlaying by viewModel.isPlaying.collectAsState()
     val playbackPosition by viewModel.playbackPosition.collectAsState()
@@ -105,7 +136,7 @@ fun EditTagsScreen(
             TopAppBar(
                 title = { Text("Tag & Lyrics Editor") },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = handleBack) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -256,17 +287,21 @@ fun EditTagsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    OutlinedTextField(
+                    val artistSuggestions by viewModel.artistSuggestions.collectAsState()
+                    AutoCompleteTextField(
                         value = viewModel.artist,
                         onValueChange = { viewModel.artist = it },
-                        label = { Text("Artist") },
+                        label = "Artist",
+                        suggestions = artistSuggestions,
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    OutlinedTextField(
+                    val albumSuggestions by viewModel.albumSuggestions.collectAsState()
+                    AutoCompleteTextField(
                         value = viewModel.album,
                         onValueChange = { viewModel.album = it },
-                        label = { Text("Album") },
+                        label = "Album",
+                        suggestions = albumSuggestions,
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -277,17 +312,21 @@ fun EditTagsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    OutlinedTextField(
+                    val composerSuggestions by viewModel.composerSuggestions.collectAsState()
+                    AutoCompleteTextField(
                         value = viewModel.composer,
                         onValueChange = { viewModel.composer = it },
-                        label = { Text("Composer") },
+                        label = "Composer",
+                        suggestions = composerSuggestions,
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    OutlinedTextField(
+                    val genreSuggestions by viewModel.genreSuggestions.collectAsState()
+                    AutoCompleteTextField(
                         value = viewModel.genre,
                         onValueChange = { viewModel.genre = it },
-                        label = { Text("Genre") },
+                        label = "Genre",
+                        suggestions = genreSuggestions,
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -295,34 +334,6 @@ fun EditTagsScreen(
                         value = viewModel.lyricist,
                         onValueChange = { viewModel.lyricist = it },
                         label = { Text("Lyricist") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    OutlinedTextField(
-                        value = viewModel.recordLabel,
-                        onValueChange = { viewModel.recordLabel = it },
-                        label = { Text("Record Label") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    OutlinedTextField(
-                        value = viewModel.copyright,
-                        onValueChange = { viewModel.copyright = it },
-                        label = { Text("Copyright") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    OutlinedTextField(
-                        value = viewModel.language,
-                        onValueChange = { viewModel.language = it },
-                        label = { Text("Language") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    OutlinedTextField(
-                        value = viewModel.mood,
-                        onValueChange = { viewModel.mood = it },
-                        label = { Text("Mood") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -356,6 +367,75 @@ fun EditTagsScreen(
                             label = { Text("Disc Number") },
                             modifier = Modifier.weight(1f)
                         )
+                    }
+
+                    var isAdvancedExpanded by remember {
+                        mutableStateOf(
+                            viewModel.recordLabel.isNotEmpty() ||
+                            viewModel.copyright.isNotEmpty() ||
+                            viewModel.language.isNotEmpty() ||
+                            viewModel.mood.isNotEmpty()
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isAdvancedExpanded = !isAdvancedExpanded }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Advanced Tags",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            imageVector = if (isAdvancedExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (isAdvancedExpanded) "Collapse" else "Expand",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = isAdvancedExpanded,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = viewModel.recordLabel,
+                                onValueChange = { viewModel.recordLabel = it },
+                                label = { Text("Record Label") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+                                value = viewModel.copyright,
+                                onValueChange = { viewModel.copyright = it },
+                                label = { Text("Copyright") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+                                value = viewModel.language,
+                                onValueChange = { viewModel.language = it },
+                                label = { Text("Language") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+                                value = viewModel.mood,
+                                onValueChange = { viewModel.mood = it },
+                                label = { Text("Mood") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -420,6 +500,43 @@ fun EditTagsScreen(
             }
         }
     }
+
+    if (showDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiscardDialog = false },
+            title = { Text("Unsaved Changes") },
+            text = { Text("You have unsaved changes. Do you want to save them before exiting?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDiscardDialog = false
+                        viewModel.onSaveClick()
+                    }
+                ) {
+                    Text("Save Changes & close")
+                }
+            },
+            dismissButton = {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TextButton(
+                        onClick = {
+                            showDiscardDialog = false
+                            onBackClick()
+                        }
+                    ) {
+                        Text("Close")
+                    }
+                    TextButton(
+                        onClick = { showDiscardDialog = false }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        )
+    }
 }
 
 private fun formatPlaybackTime(ms: Long): String {
@@ -427,4 +544,57 @@ private fun formatPlaybackTime(ms: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return String.format(Locale.US, "%02d:%02d", minutes, seconds)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AutoCompleteTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    suggestions: List<String>,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val filteredSuggestions = remember(value, suggestions) {
+        if (value.isBlank()) {
+            emptyList<String>()
+        } else {
+            suggestions.filter { it.contains(value, ignoreCase = true) && it != value }.take(5)
+        }
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded && filteredSuggestions.isNotEmpty(),
+        onExpandedChange = { expanded = it },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = {
+                onValueChange(it)
+                expanded = true
+            },
+            label = { Text(label) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryEditable, enabled = true),
+            singleLine = true
+        )
+        ExposedDropdownMenu(
+            expanded = expanded && filteredSuggestions.isNotEmpty(),
+            onDismissRequest = { expanded = false }
+        ) {
+            for (suggestion in filteredSuggestions) {
+                DropdownMenuItem(
+                    text = { Text(suggestion) },
+                    onClick = {
+                        onValueChange(suggestion)
+                        expanded = false
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                )
+            }
+        }
+    }
 }

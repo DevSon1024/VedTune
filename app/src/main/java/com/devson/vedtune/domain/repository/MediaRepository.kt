@@ -29,4 +29,8 @@ interface MediaRepository {
     suspend fun updateSong(song: Song)
     fun isSongInPlaylist(playlistId: Long, songId: Long): Flow<Boolean>
     suspend fun getSongsByIds(ids: List<Long>): List<Song>
+    suspend fun getUniqueArtists(): List<String>
+    suspend fun getUniqueAlbums(): List<String>
+    suspend fun getUniqueComposers(): List<String>
+    suspend fun getUniqueGenres(): List<String>
 }
