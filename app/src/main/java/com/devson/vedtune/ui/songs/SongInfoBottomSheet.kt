@@ -94,7 +94,9 @@ fun SongInfoBottomSheet(
             val meta = metadata ?: ExtractedMetadata(
                 composer = "", genre = "", lyricist = "", trackNumber = "", discNumber = "",
                 comment = "", year = "", bitrate = "", sampleRate = "", bitsPerSample = "",
-                format = "", encodingType = "", channels = "", fileSizeMb = 0.0, filePath = ""
+                format = "", encodingType = "", channels = "", fileSizeMb = 0.0, filePath = "",
+                recordLabel = "", copyright = "", language = "", mood = "", vbrIndicator = "",
+                replayGain = "", audioHash = ""
             )
 
             val fileName = remember(meta.filePath) {
@@ -221,6 +223,10 @@ fun SongInfoBottomSheet(
                         InfoRowItem(label = "Composer", value = meta.composer)
                         InfoRowItem(label = "Genre", value = meta.genre)
                         InfoRowItem(label = "Lyricist", value = meta.lyricist)
+                        InfoRowItem(label = "Record Label", value = meta.recordLabel)
+                        InfoRowItem(label = "Copyright", value = meta.copyright)
+                        InfoRowItem(label = "Language", value = meta.language)
+                        InfoRowItem(label = "Mood", value = meta.mood)
                         InfoRowItem(label = "Lyrics", value = lyricsStatus)
                         InfoRowItem(label = "Track Number", value = meta.trackNumber.ifEmpty { song.track.takeIf { it > 0 }?.toString() ?: "" })
                         InfoRowItem(label = "Disc Number", value = meta.discNumber)
@@ -251,7 +257,12 @@ fun SongInfoBottomSheet(
                             Column(modifier = Modifier.weight(1f)) {
                                 TechSpecItem(label = "Duration", value = formatDuration(song.duration))
                                 TechSpecItem(label = "Format", value = meta.format.uppercase())
-                                TechSpecItem(label = "Bitrate", value = if (meta.bitrate.isNotEmpty()) "${meta.bitrate} kbps" else "")
+                                val bitrateVal = remember(meta.bitrate, meta.vbrIndicator) {
+                                    if (meta.bitrate.isNotEmpty()) {
+                                        if (meta.vbrIndicator.isNotEmpty()) "${meta.bitrate} kbps ${meta.vbrIndicator}" else "${meta.bitrate} kbps"
+                                    } else ""
+                                }
+                                TechSpecItem(label = "Bitrate", value = bitrateVal)
                                 TechSpecItem(label = "Channels", value = meta.channels)
                             }
                             Column(modifier = Modifier.weight(1f)) {
@@ -261,6 +272,8 @@ fun SongInfoBottomSheet(
                                 TechSpecItem(label = "Bits Per Sample", value = if (meta.bitsPerSample.isNotEmpty() && meta.bitsPerSample != "0") "${meta.bitsPerSample} bit" else "")
                             }
                         }
+                        TechSpecItem(label = "ReplayGain", value = meta.replayGain)
+                        TechSpecItem(label = "Audio MD5", value = meta.audioHash)
                     }
                 }
 

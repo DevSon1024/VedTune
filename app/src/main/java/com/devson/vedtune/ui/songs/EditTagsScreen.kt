@@ -299,6 +299,34 @@ fun EditTagsScreen(
                     )
 
                     OutlinedTextField(
+                        value = viewModel.recordLabel,
+                        onValueChange = { viewModel.recordLabel = it },
+                        label = { Text("Record Label") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = viewModel.copyright,
+                        onValueChange = { viewModel.copyright = it },
+                        label = { Text("Copyright") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = viewModel.language,
+                        onValueChange = { viewModel.language = it },
+                        label = { Text("Language") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = viewModel.mood,
+                        onValueChange = { viewModel.mood = it },
+                        label = { Text("Mood") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
                         value = viewModel.year,
                         onValueChange = { viewModel.year = it },
                         label = { Text("Year") },

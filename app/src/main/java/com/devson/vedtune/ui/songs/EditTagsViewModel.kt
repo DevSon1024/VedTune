@@ -29,6 +29,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.tag.FieldKey
+import org.jaudiotagger.tag.id3.AbstractID3v2Tag
+import org.jaudiotagger.tag.id3.framebody.AbstractFrameBodyTextInfo
+import org.jaudiotagger.tag.vorbiscomment.VorbisCommentTag
+import org.jaudiotagger.tag.mp4.Mp4Tag
+import org.jaudiotagger.tag.mp4.Mp4FieldKey
 import java.io.File
 import java.util.Locale
 import javax.inject.Inject
@@ -94,6 +99,10 @@ class EditTagsViewModel @Inject constructor(
     var composer by mutableStateOf("")
     var genre by mutableStateOf("")
     var lyricist by mutableStateOf("")
+    var recordLabel by mutableStateOf("")
+    var copyright by mutableStateOf("")
+    var language by mutableStateOf("")
+    var mood by mutableStateOf("")
     var year by mutableStateOf("")
     var comment by mutableStateOf("")
     var track by mutableStateOf("")
@@ -151,6 +160,10 @@ class EditTagsViewModel @Inject constructor(
                             composer = tag.getFirst(FieldKey.COMPOSER) ?: ""
                             genre = tag.getFirst(FieldKey.GENRE) ?: ""
                             lyricist = tag.getFirst(FieldKey.LYRICIST) ?: ""
+                            recordLabel = tag.getFirst(FieldKey.RECORD_LABEL) ?: ""
+                            copyright = tag.getFirst("COPYRIGHT").ifEmpty { tag.getFirst("TCOP") }.ifEmpty { tag.getFirst("cprt") }
+                            language = tag.getFirst(FieldKey.LANGUAGE) ?: ""
+                            mood = tag.getFirst(FieldKey.MOOD) ?: ""
                             comment = tag.getFirst(FieldKey.COMMENT) ?: ""
                             discNo = tag.getFirst(FieldKey.DISC_NO) ?: ""
                             val fileLyrics = tag.getFirst(FieldKey.LYRICS) ?: ""
@@ -288,6 +301,10 @@ class EditTagsViewModel @Inject constructor(
             tag.setField(FieldKey.COMPOSER, composer)
             tag.setField(FieldKey.GENRE, genre)
             tag.setField(FieldKey.LYRICIST, lyricist)
+            tag.setField(FieldKey.RECORD_LABEL, recordLabel)
+            writeCopyrightSafe(tag, copyright)
+            tag.setField(FieldKey.LANGUAGE, language)
+            tag.setField(FieldKey.MOOD, mood)
             tag.setField(FieldKey.YEAR, year)
             tag.setField(FieldKey.COMMENT, comment)
             tag.setField(FieldKey.TRACK, track)
@@ -335,6 +352,41 @@ class EditTagsViewModel @Inject constructor(
             if (tempFile.exists()) {
                 tempFile.delete()
             }
+        }
+    }
+
+    private fun writeCopyrightSafe(tag: org.jaudiotagger.tag.Tag, value: String) {
+        try {
+            if (value.isBlank()) {
+                tag.deleteField("COPYRIGHT")
+                tag.deleteField("TCOP")
+                tag.deleteField("cprt")
+                return
+            }
+            when (tag) {
+                is AbstractID3v2Tag -> {
+                    val frame = tag.createFrame("TCOP")
+                    (frame.body as? AbstractFrameBodyTextInfo)?.setText(value)
+                    tag.setField(frame)
+                }
+                is VorbisCommentTag -> {
+                    val field = tag.createField("COPYRIGHT", value)
+                    tag.setField(field)
+                }
+                is Mp4Tag -> {
+                    val field = tag.createField(Mp4FieldKey.COPYRIGHT, value)
+                    tag.setField(field)
+                }
+                else -> {
+                    try {
+                        tag.deleteField("COPYRIGHT")
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 }
