@@ -28,6 +28,7 @@ import com.devson.vedtune.ui.artists.ArtistDetailsViewModel
 import com.devson.vedtune.ui.settings.SettingsViewModel
 import com.devson.vedtune.ui.settings.FolderSettingsScreen
 import com.devson.vedtune.ui.settings.AppearanceSettingsScreen
+import com.devson.vedtune.ui.settings.PlayerInterfaceSettingScreen
 import com.devson.vedtune.ui.settings.PlaybackSettingsScreen
 import com.devson.vedtune.ui.settings.LibrarySettingsScreen
 import com.devson.vedtune.ui.playlists.PlaylistDetailsScreen
@@ -47,6 +48,7 @@ sealed class Screen(val route: String) {
     data object Settings : Screen("settings")
     data object FolderSettings : Screen("folder_settings")
     data object AppearanceSettings : Screen("appearance_settings")
+    data object PlayerInterfaceSettings : Screen("player_interface_settings")
     data object PlaybackSettings : Screen("playback_settings")
     data object LibrarySettings : Screen("library_settings")
     data object Player : Screen("player")
@@ -99,6 +101,9 @@ fun NavGraph(
                 },
                 onNavigateToAppearanceSettings = {
                     navController.navigateSafe(Screen.AppearanceSettings.route)
+                },
+                onNavigateToPlayerInterfaceSettings = {
+                    navController.navigateSafe(Screen.PlayerInterfaceSettings.route)
                 },
                 onNavigateToPlaybackSettings = {
                     navController.navigateSafe(Screen.PlaybackSettings.route)
@@ -155,6 +160,27 @@ fun NavGraph(
         ) {
             val viewModel: SettingsViewModel = hiltViewModel()
             AppearanceSettingsScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStackSafe() }
+            )
+        }
+        composable(
+            route = Screen.PlayerInterfaceSettings.route,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(350)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(350)
+                )
+            }
+        ) {
+            val viewModel: SettingsViewModel = hiltViewModel()
+            PlayerInterfaceSettingScreen(
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStackSafe() }
             )

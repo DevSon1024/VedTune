@@ -49,6 +49,7 @@ fun HomeScreen(
     onNavigateToPlaylist: (Long) -> Unit,
     onNavigateToFolderSettings: () -> Unit,
     onNavigateToAppearanceSettings: () -> Unit,
+    onNavigateToPlayerInterfaceSettings: () -> Unit,
     onNavigateToPlaybackSettings: () -> Unit,
     onNavigateToLibrarySettings: () -> Unit,
     onNavigateToEditTags: (Long) -> Unit,
@@ -188,6 +189,7 @@ fun HomeScreen(
                     SettingsScreen(
                         viewModel = viewModel,
                         onNavigateToAppearanceSettings = onNavigateToAppearanceSettings,
+                        onNavigateToPlayerInterfaceSettings = onNavigateToPlayerInterfaceSettings,
                         onNavigateToPlaybackSettings = onNavigateToPlaybackSettings,
                         onNavigateToLibrarySettings = onNavigateToLibrarySettings,
                         onNavigateToLyricsConverter = onNavigateToLyricsConverter,

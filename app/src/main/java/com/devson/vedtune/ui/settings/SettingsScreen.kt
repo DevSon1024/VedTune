@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -58,6 +59,7 @@ fun SettingsScreen(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     onNavigateToAppearanceSettings: () -> Unit = {},
+    onNavigateToPlayerInterfaceSettings: () -> Unit = {},
     onNavigateToPlaybackSettings: () -> Unit = {},
     onNavigateToLibrarySettings: () -> Unit = {},
     onNavigateToLyricsConverter: () -> Unit = {}
@@ -92,6 +94,18 @@ fun SettingsScreen(
                     title = "Appearance & Theme",
                     description = "Theme mode, dynamic colors, album artwork display.",
                     onClick = onNavigateToAppearanceSettings
+                )
+            }
+
+            // CARD 2: Player Interface
+            SettingsCard(
+                title = "Player Interface",
+                icon = Icons.Default.Tune
+            ) {
+                SettingsNavigationRow(
+                    title = "Player Interface",
+                    description = "Seekbar styles, controls visibility, player gestures.",
+                    onClick = onNavigateToPlayerInterfaceSettings
                 )
             }
 

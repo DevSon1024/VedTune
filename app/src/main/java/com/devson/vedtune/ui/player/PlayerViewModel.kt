@@ -67,6 +67,15 @@ class PlayerViewModel @Inject constructor(
     val playerBackgroundBlurRadius: StateFlow<Float> = settingsRepository.playerBackgroundBlurRadius
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 40f)
 
+    val showLyricsButton: StateFlow<Boolean> = settingsRepository.showLyricsButton
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val showSleepTimerButton: StateFlow<Boolean> = settingsRepository.showSleepTimerButton
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val showShuffleRepeatButtons: StateFlow<Boolean> = settingsRepository.showShuffleRepeatButtons
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     val isPlaying: StateFlow<Boolean> = playbackConnection.isPlaying
 
     val currentSong: StateFlow<Song?> = playbackConnection.currentSongId

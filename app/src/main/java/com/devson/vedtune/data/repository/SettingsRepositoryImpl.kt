@@ -41,6 +41,9 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_IS_AMOLED_DARK = booleanPreferencesKey("amoled_dark_mode")
         private val KEY_ALBUM_ART_QUALITY = stringPreferencesKey("album_art_quality")
         private val KEY_FORCE_SQUARE_ARTWORK = booleanPreferencesKey("force_square_artwork")
+        private val KEY_SHOW_LYRICS_BUTTON = booleanPreferencesKey("show_lyrics_button")
+        private val KEY_SHOW_SLEEP_TIMER_BUTTON = booleanPreferencesKey("show_sleep_timer_button")
+        private val KEY_SHOW_SHUFFLE_REPEAT_BUTTONS = booleanPreferencesKey("show_shuffle_repeat_buttons")
 
         // Folder filter
         private val KEY_FOLDER_FILTER_MODE = stringPreferencesKey("folder_filter_mode")
@@ -132,6 +135,18 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override val forceSquareArtwork: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[KEY_FORCE_SQUARE_ARTWORK] ?: true
+    }
+
+    override val showLyricsButton: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[KEY_SHOW_LYRICS_BUTTON] ?: false
+    }
+
+    override val showSleepTimerButton: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[KEY_SHOW_SLEEP_TIMER_BUTTON] ?: true
+    }
+
+    override val showShuffleRepeatButtons: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[KEY_SHOW_SHUFFLE_REPEAT_BUTTONS] ?: true
     }
 
     //  Folder filtering flows 
@@ -228,6 +243,18 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setForceSquareArtwork(enabled: Boolean) {
         dataStore.edit { it[KEY_FORCE_SQUARE_ARTWORK] = enabled }
+    }
+
+    override suspend fun setShowLyricsButton(show: Boolean) {
+        dataStore.edit { it[KEY_SHOW_LYRICS_BUTTON] = show }
+    }
+
+    override suspend fun setShowSleepTimerButton(show: Boolean) {
+        dataStore.edit { it[KEY_SHOW_SLEEP_TIMER_BUTTON] = show }
+    }
+
+    override suspend fun setShowShuffleRepeatButtons(show: Boolean) {
+        dataStore.edit { it[KEY_SHOW_SHUFFLE_REPEAT_BUTTONS] = show }
     }
 
     override suspend fun clearPlaybackQueue() {

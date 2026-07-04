@@ -42,10 +42,6 @@ fun PlaybackSettingsScreen(
 ) {
     val autoplayOnStartup by viewModel.autoplayOnStartup.collectAsState()
     val audioFadeInEnabled by viewModel.audioFadeInEnabled.collectAsState()
-    val showRemainingTime by viewModel.showRemainingTime.collectAsState()
-    val showMiniPlayerProgress by viewModel.showMiniPlayerProgress.collectAsState()
-    val isGestureMiniPlayerEnabled by viewModel.isGestureMiniPlayerEnabled.collectAsState()
-    val enableSwipeToSkip by viewModel.enableSwipeToSkip.collectAsState()
     val defaultStartScreen by viewModel.defaultStartScreen.collectAsState()
     val context = LocalContext.current
 
@@ -106,57 +102,7 @@ fun PlaybackSettingsScreen(
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
 
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
 
-                SettingSwitchRow(
-                    title = "Show Remaining Time",
-                    description = "Show negative countdown remaining time instead of duration.",
-                    checked = showRemainingTime,
-                    onCheckedChange = { viewModel.setShowRemainingTime(it) },
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                SettingSwitchRow(
-                    title = "Show Mini Player Progress",
-                    description = "Display the thin progress line along the top of the mini player card.",
-                    checked = showMiniPlayerProgress,
-                    onCheckedChange = { viewModel.setShowMiniPlayerProgress(it) },
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                SettingSwitchRow(
-                    title = "Gesture-Based Mini Player",
-                    description = "Control playback using gestures (swipe left/right to next/previous, double-tap to play/pause).",
-                    checked = isGestureMiniPlayerEnabled,
-                    onCheckedChange = { viewModel.setGestureMiniPlayerEnabled(it) },
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                SettingSwitchRow(
-                    title = "Swipe to Skip Artwork",
-                    description = "Swipe left/right on player album artwork to skip songs.",
-                    checked = enableSwipeToSkip,
-                    onCheckedChange = { viewModel.setEnableSwipeToSkip(it) },
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
 
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 12.dp),

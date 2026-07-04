@@ -72,6 +72,7 @@ import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.TextFormat
+import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.UploadFile
 import androidx.compose.material3.AlertDialog
@@ -156,6 +157,10 @@ fun PlayerScreen(
     val showArtwork by viewModel.showAlbumArt.collectAsStateWithLifecycle()
     val showRemainingTime by viewModel.showRemainingTime.collectAsStateWithLifecycle()
     val seekbarStyle by viewModel.seekbarStyle.collectAsStateWithLifecycle()
+    
+    val showLyricsButton by viewModel.showLyricsButton.collectAsStateWithLifecycle()
+    val showSleepTimerButton by viewModel.showSleepTimerButton.collectAsStateWithLifecycle()
+    val showShuffleRepeatButtons by viewModel.showShuffleRepeatButtons.collectAsStateWithLifecycle()
 
     val showForwardBackward by viewModel.showForwardBackward.collectAsStateWithLifecycle()
     val seekInterval by viewModel.seekInterval.collectAsStateWithLifecycle()
@@ -364,6 +369,9 @@ fun PlayerScreen(
                     sleepTimerRemaining = sleepTimerRemaining,
                     shuffleModeEnabled = shuffleModeEnabled,
                     repeatMode = repeatMode,
+                    showLyricsButton = showLyricsButton,
+                    showSleepTimerButton = showSleepTimerButton,
+                    showShuffleRepeatButtons = showShuffleRepeatButtons,
                     onSleepTimerClick = { showSleepTimerDialog = true },
                     onFavClick = { viewModel.toggleFavorite() },
                     onPlaylistClick = { sheetState = PlayerSheetState.AddToPlaylist },
@@ -377,7 +385,8 @@ fun PlayerScreen(
                             else -> Player.REPEAT_MODE_OFF
                         }
                         viewModel.setRepeatMode(nextMode)
-                    }
+                    },
+                    onToggleLyrics = { showLyrics = !showLyrics }
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -775,13 +784,17 @@ private fun ActionControlsStrip(
     sleepTimerRemaining: Long,
     shuffleModeEnabled: Boolean,
     repeatMode: Int,
+    showLyricsButton: Boolean,
+    showSleepTimerButton: Boolean,
+    showShuffleRepeatButtons: Boolean,
     onSleepTimerClick: () -> Unit,
     onFavClick: () -> Unit,
     onPlaylistClick: () -> Unit,
     onInfoClick: () -> Unit,
     onOptionsClick: () -> Unit,
     onShuffleClick: () -> Unit,
-    onRepeatClick: () -> Unit
+    onRepeatClick: () -> Unit,
+    onToggleLyrics: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -793,17 +806,32 @@ private fun ActionControlsStrip(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(
-                onClick = onSleepTimerClick,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Timer,
-                    contentDescription = "Sleep Timer",
-                    tint = if (sleepTimerRemaining > 0) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-                    modifier = Modifier.size(20.dp)
-                )
+            if (showSleepTimerButton) {
+                IconButton(
+                    onClick = onSleepTimerClick,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Timer,
+                        contentDescription = "Sleep Timer",
+                        tint = if (sleepTimerRemaining > 0) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            if (showLyricsButton) {
+                IconButton(
+                    onClick = onToggleLyrics,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Description,
+                        contentDescription = "Lyrics",
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
             IconButton(
                 onClick = onFavClick,
@@ -854,34 +882,36 @@ private fun ActionControlsStrip(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = onShuffleClick,
-                modifier = Modifier.size(36.dp)
+        if (showShuffleRepeatButtons) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.Shuffle,
-                    contentDescription = "Shuffle",
-                    tint = if (shuffleModeEnabled) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            IconButton(
-                onClick = onRepeatClick,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    imageVector = if (repeatMode == Player.REPEAT_MODE_ONE) Icons.Rounded.RepeatOne
-                    else Icons.Rounded.Repeat,
-                    contentDescription = "Repeat",
-                    tint = if (repeatMode != Player.REPEAT_MODE_OFF) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    modifier = Modifier.size(20.dp)
-                )
+                IconButton(
+                    onClick = onShuffleClick,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Shuffle,
+                        contentDescription = "Shuffle",
+                        tint = if (shuffleModeEnabled) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                IconButton(
+                    onClick = onRepeatClick,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = if (repeatMode == Player.REPEAT_MODE_ONE) Icons.Rounded.RepeatOne
+                        else Icons.Rounded.Repeat,
+                        contentDescription = "Repeat",
+                        tint = if (repeatMode != Player.REPEAT_MODE_OFF) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }

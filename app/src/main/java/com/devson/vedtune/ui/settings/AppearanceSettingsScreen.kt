@@ -1,5 +1,6 @@
 package com.devson.vedtune.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,25 +9,28 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,10 +41,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.Slider
 import com.devson.vedtune.domain.model.AlbumArtClickAction
 import com.devson.vedtune.domain.model.AlbumArtQuality
-import com.devson.vedtune.domain.model.SeekBarStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,7 +53,6 @@ fun AppearanceSettingsScreen(
     val themeMode by viewModel.themeMode.collectAsState()
     val dynamicColorsEnabled by viewModel.dynamicColorsEnabled.collectAsState()
     val showAlbumArt by viewModel.showAlbumArt.collectAsState()
-    val seekbarStyle by viewModel.seekbarStyle.collectAsState()
     val keepScreenOnWithLyrics by viewModel.keepScreenOnWithLyrics.collectAsState()
     val albumArtClickAction by viewModel.albumArtClickAction.collectAsState()
     val playerBackgroundBlurRadius by viewModel.playerBackgroundBlurRadius.collectAsState()
@@ -63,6 +64,9 @@ fun AppearanceSettingsScreen(
 
     val systemInDark = androidx.compose.foundation.isSystemInDarkTheme()
     val showAmoledToggle = themeMode == "DARK" || (themeMode == "SYSTEM" && systemInDark)
+
+    var showThemeDialog by remember { mutableStateOf(false) }
+    var showClickActionDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -109,9 +113,14 @@ fun AppearanceSettingsScreen(
                     title = "Theme Options",
                     icon = Icons.Default.Palette
                 ) {
-                    ThemeModeSelector(
-                        currentMode = themeMode,
-                        onModeSelected = { viewModel.setThemeMode(it) }
+                    SettingsNavigationRow(
+                        title = "Theme Mode",
+                        description = when (themeMode) {
+                            "LIGHT" -> "Light Theme"
+                            "DARK" -> "Dark Theme"
+                            else -> "System Default"
+                        },
+                        onClick = { showThemeDialog = true }
                     )
 
                     HorizontalDivider(
@@ -170,9 +179,15 @@ fun AppearanceSettingsScreen(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
 
-                    AlbumArtClickActionSelector(
-                        currentAction = albumArtClickAction,
-                        onActionSelected = { viewModel.setAlbumArtClickAction(it) }
+                    SettingsNavigationRow(
+                        title = "Album Art Click Action",
+                        description = when (albumArtClickAction) {
+                            AlbumArtClickAction.DO_NOTHING -> "Do Nothing"
+                            AlbumArtClickAction.SHOW_LYRICS -> "Show Lyrics"
+                            AlbumArtClickAction.VIEW_ALBUM_ART -> "View Album Art"
+                            AlbumArtClickAction.PLAY_PAUSE -> "Play/Pause"
+                        },
+                        onClick = { showClickActionDialog = true }
                     )
 
                     HorizontalDivider(
@@ -246,29 +261,19 @@ fun AppearanceSettingsScreen(
                 }
             }
 
-            // SECTION 3: Seekbar & Other Settings
+            // SECTION 3: Lyrics
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Controls & Seekbar",
+                    text = "Lyrics Settings",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 4.dp)
                 )
                 SettingsCard(
-                    title = "Seekbar & Lyrics Options",
+                    title = "Lyrics Preferences",
                     icon = Icons.Default.Palette
                 ) {
-                    SeekBarStyleSelector(
-                        currentStyle = seekbarStyle,
-                        onStyleSelected = { viewModel.setSeekBarStyle(it) }
-                    )
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-
                     SettingSwitchRow(
                         title = "Keep Screen On",
                         description = "Prevent the screen from sleeping while lyrics are visible.",
@@ -282,109 +287,147 @@ fun AppearanceSettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
-}
 
-@Composable
-fun SeekBarStyleSelector(
-    currentStyle: SeekBarStyle,
-    onStyleSelected: (SeekBarStyle) -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = "Seekbar Style",
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold
+    if (showThemeDialog) {
+        ThemeSelectionDialog(
+            currentMode = themeMode,
+            onDismiss = { showThemeDialog = false },
+            onSelectMode = { viewModel.setThemeMode(it) }
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            for (style in SeekBarStyle.entries) {
-                val label = when (style) {
-                    SeekBarStyle.DEFAULT -> "Default"
-                    SeekBarStyle.SLIM -> "Slim"
-                    SeekBarStyle.WAVY -> "Wavy"
-                }
-                val isSelected = currentStyle == style
-                if (isSelected) {
-                    FilledTonalButton(
-                        onClick = { onStyleSelected(style) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(text = label)
-                    }
-                } else {
-                    OutlinedButton(
-                        onClick = { onStyleSelected(style) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(text = label)
-                    }
-                }
-            }
-        }
+    }
+
+    if (showClickActionDialog) {
+        ClickActionSelectionDialog(
+            currentAction = albumArtClickAction,
+            onDismiss = { showClickActionDialog = false },
+            onSelectAction = { viewModel.setAlbumArtClickAction(it) }
+        )
     }
 }
 
 @Composable
-fun AlbumArtClickActionSelector(
-    currentAction: AlbumArtClickAction,
-    onActionSelected: (AlbumArtClickAction) -> Unit
+fun ThemeSelectionDialog(
+    currentMode: String,
+    onDismiss: () -> Unit,
+    onSelectMode: (String) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = "Album Art Click Action",
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold
-        )
-        Box(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            val label = when (currentAction) {
-                AlbumArtClickAction.DO_NOTHING -> "Do Nothing"
-                AlbumArtClickAction.SHOW_LYRICS -> "Show Lyrics"
-                AlbumArtClickAction.VIEW_ALBUM_ART -> "View Album Art"
-                AlbumArtClickAction.PLAY_PAUSE -> "Play/Pause"
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
             }
-            OutlinedButton(
-                onClick = { expanded = true },
+        },
+        title = {
+            Text(
+                text = "Theme Mode",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = label)
+                listOf(
+                    "SYSTEM" to "System Default",
+                    "LIGHT" to "Light",
+                    "DARK" to "Dark"
+                ).forEach { (mode, label) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onSelectMode(mode)
+                                onDismiss()
+                            }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = currentMode == mode,
+                            onClick = {
+                                onSelectMode(mode)
+                                onDismiss()
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
             }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.fillMaxWidth(0.9f)
+        }
+    )
+}
+
+@Composable
+fun ClickActionSelectionDialog(
+    currentAction: AlbumArtClickAction,
+    onDismiss: () -> Unit,
+    onSelectAction: (AlbumArtClickAction) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        title = {
+            Text(
+                text = "Album Art Click Action",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 AlbumArtClickAction.entries.forEach { action ->
-                    val actionLabel = when (action) {
+                    val label = when (action) {
                         AlbumArtClickAction.DO_NOTHING -> "Do Nothing"
                         AlbumArtClickAction.SHOW_LYRICS -> "Show Lyrics"
                         AlbumArtClickAction.VIEW_ALBUM_ART -> "View Album Art"
                         AlbumArtClickAction.PLAY_PAUSE -> "Play/Pause"
                     }
-                    DropdownMenuItem(
-                        text = { Text(actionLabel) },
-                        onClick = {
-                            onActionSelected(action)
-                            expanded = false
-                        }
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onSelectAction(action)
+                                onDismiss()
+                            }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = currentAction == action,
+                            onClick = {
+                                onSelectAction(action)
+                                onDismiss()
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
                 }
             }
         }
-    }
+    )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlbumArtQualitySelector(
     currentQuality: AlbumArtQuality,
@@ -410,31 +453,24 @@ fun AlbumArtQualitySelector(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            for (quality in AlbumArtQuality.entries) {
+            AlbumArtQuality.entries.forEachIndexed { index, quality ->
                 val label = when (quality) {
                     AlbumArtQuality.SAVE_SPACE -> "Save Space"
                     AlbumArtQuality.BALANCED -> "Balanced"
                     AlbumArtQuality.HIGH_QUALITY -> "High Quality"
                 }
-                val isSelected = currentQuality == quality
-                if (isSelected) {
-                    FilledTonalButton(
-                        onClick = { onQualitySelected(quality) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(text = label)
-                    }
-                } else {
-                    OutlinedButton(
-                        onClick = { onQualitySelected(quality) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(text = label)
-                    }
+                SegmentedButton(
+                    selected = currentQuality == quality,
+                    onClick = { onQualitySelected(quality) },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = AlbumArtQuality.entries.size
+                    )
+                ) {
+                    Text(text = label)
                 }
             }
         }

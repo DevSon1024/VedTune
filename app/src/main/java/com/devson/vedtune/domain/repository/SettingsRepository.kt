@@ -24,6 +24,9 @@ interface SettingsRepository {
     val isAmoledDark: Flow<Boolean>
     val albumArtQuality: Flow<com.devson.vedtune.domain.model.AlbumArtQuality>
     val forceSquareArtwork: Flow<Boolean>
+    val showLyricsButton: Flow<Boolean>
+    val showSleepTimerButton: Flow<Boolean>
+    val showShuffleRepeatButtons: Flow<Boolean>
 
     // Folder filtering
     val folderFilterMode: Flow<FolderFilterMode>
@@ -49,6 +52,9 @@ interface SettingsRepository {
     suspend fun setAmoledDark(enabled: Boolean)
     suspend fun setAlbumArtQuality(quality: com.devson.vedtune.domain.model.AlbumArtQuality)
     suspend fun setForceSquareArtwork(enabled: Boolean)
+    suspend fun setShowLyricsButton(show: Boolean)
+    suspend fun setShowSleepTimerButton(show: Boolean)
+    suspend fun setShowShuffleRepeatButtons(show: Boolean)
     suspend fun clearPlaybackQueue()
 
     // Folder filtering setters

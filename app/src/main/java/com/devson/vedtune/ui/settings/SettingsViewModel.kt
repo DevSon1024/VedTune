@@ -76,6 +76,15 @@ class SettingsViewModel @Inject constructor(
     val forceSquareArtwork: StateFlow<Boolean> = settingsRepository.forceSquareArtwork
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    val showLyricsButton: StateFlow<Boolean> = settingsRepository.showLyricsButton
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val showSleepTimerButton: StateFlow<Boolean> = settingsRepository.showSleepTimerButton
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val showShuffleRepeatButtons: StateFlow<Boolean> = settingsRepository.showShuffleRepeatButtons
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     //  Folder filtering 
 
     val folderFilterMode: StateFlow<FolderFilterMode> = settingsRepository.folderFilterMode
@@ -162,6 +171,18 @@ class SettingsViewModel @Inject constructor(
 
     fun setForceSquareArtwork(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setForceSquareArtwork(enabled) }
+    }
+
+    fun setShowLyricsButton(show: Boolean) {
+        viewModelScope.launch { settingsRepository.setShowLyricsButton(show) }
+    }
+
+    fun setShowSleepTimerButton(show: Boolean) {
+        viewModelScope.launch { settingsRepository.setShowSleepTimerButton(show) }
+    }
+
+    fun setShowShuffleRepeatButtons(show: Boolean) {
+        viewModelScope.launch { settingsRepository.setShowShuffleRepeatButtons(show) }
     }
 
     fun clearPlaybackQueue() {
