@@ -190,40 +190,68 @@ class EditTagsViewModel @Inject constructor(
                 val customFile = File(context.filesDir, "custom_artwork/${songData.albumId}.jpg")
                 hasExistingCustomArtwork = customFile.exists()
 
-                // Read advanced tags via jaudiotagger from a temp file to bypass Scoped Storage file access limits
+                // Read advanced tags via jaudiotagger: try direct read first, fallback to dynamically-named temp file
                 val loadSuccess = withContext(Dispatchers.IO) {
                     var tempFile: File? = null
-                    try {
-                        tempFile = File(context.cacheDir, "temp_tag_load_${songId}.mp3")
-                        val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, songId)
-                        context.contentResolver.openInputStream(uri)?.use { input ->
-                            tempFile.outputStream().use { output ->
-                                input.copyTo(output)
-                            }
-                        } ?: throw java.io.IOException("Failed to open input stream for original audio file.")
+                    var isTempUsed = false
+                    var audioFile: org.jaudiotagger.audio.AudioFile? = null
 
-                        val audioFile = AudioFileIO.read(tempFile)
-                        val tag = audioFile.tag
-                        if (tag != null) {
-                            albumArtist = tag.getFirst(FieldKey.ALBUM_ARTIST) ?: ""
-                            composer = tag.getFirst(FieldKey.COMPOSER) ?: ""
-                            genre = tag.getFirst(FieldKey.GENRE) ?: ""
-                            lyricist = tag.getFirst(FieldKey.LYRICIST) ?: ""
-                            recordLabel = tag.getFirst(FieldKey.RECORD_LABEL) ?: ""
-                            copyright = tag.getFirst("COPYRIGHT").ifEmpty { tag.getFirst("TCOP") }.ifEmpty { tag.getFirst("cprt") }
-                            language = tag.getFirst(FieldKey.LANGUAGE) ?: ""
-                            mood = tag.getFirst(FieldKey.MOOD) ?: ""
-                            comment = tag.getFirst(FieldKey.COMMENT) ?: ""
-                            discNo = tag.getFirst(FieldKey.DISC_NO) ?: ""
-                            val fileLyrics = tag.getFirst(FieldKey.LYRICS) ?: ""
-                            lyrics = TextFieldValue(fileLyrics)
+                    if (path.isNotEmpty()) {
+                        val actualFile = File(path)
+                        try {
+                            audioFile = AudioFileIO.read(actualFile)
+                        } catch (e: Exception) {
+                            // Fallback to temp file
+                            try {
+                                val ext = actualFile.extension.ifEmpty { "mp3" }
+                                tempFile = File(context.cacheDir, "temp_tag_load_${songId}.$ext")
+                                val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, songId)
+                                context.contentResolver.openInputStream(uri)?.use { input ->
+                                    tempFile.outputStream().use { output ->
+                                        input.copyTo(output)
+                                    }
+                                } ?: throw java.io.IOException("Failed to open input stream for original audio file.")
+
+                                audioFile = AudioFileIO.read(tempFile)
+                                isTempUsed = true
+                            } catch (ex: Exception) {
+                                ex.printStackTrace()
+                            }
                         }
-                        true
-                    } catch (e: Exception) {
-                        e.printStackTrace()
+                    }
+
+                    if (audioFile != null) {
+                        try {
+                            val tag = if (audioFile is org.jaudiotagger.audio.mp3.MP3File) {
+                                audioFile.iD3v2Tag ?: audioFile.tag
+                            } else {
+                                audioFile.tag
+                            }
+                            if (tag != null) {
+                                albumArtist = tag.getFirst(FieldKey.ALBUM_ARTIST) ?: ""
+                                composer = tag.getFirst(FieldKey.COMPOSER) ?: ""
+                                genre = tag.getFirst(FieldKey.GENRE) ?: ""
+                                lyricist = tag.getFirst(FieldKey.LYRICIST) ?: ""
+                                recordLabel = tag.getFirst(FieldKey.RECORD_LABEL) ?: ""
+                                copyright = tag.getFirst("COPYRIGHT").ifEmpty { tag.getFirst("TCOP") }.ifEmpty { tag.getFirst("cprt") }
+                                language = tag.getFirst(FieldKey.LANGUAGE) ?: ""
+                                mood = tag.getFirst(FieldKey.MOOD) ?: ""
+                                comment = tag.getFirst(FieldKey.COMMENT) ?: ""
+                                discNo = tag.getFirst(FieldKey.DISC_NO) ?: ""
+                                val fileLyrics = tag.getFirst(FieldKey.LYRICS) ?: ""
+                                lyrics = TextFieldValue(fileLyrics)
+                            }
+                            true
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            false
+                        } finally {
+                            if (isTempUsed) {
+                                tempFile?.delete()
+                            }
+                        }
+                    } else {
                         false
-                    } finally {
-                        tempFile?.delete()
                     }
                 }
 
@@ -347,7 +375,8 @@ class EditTagsViewModel @Inject constructor(
         val path = filePath ?: return@withContext
         val targetSong = song ?: return@withContext
         val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, targetSong.id)
-        val tempFile = File(context.cacheDir, "temp_tag_edit_${targetSong.id}.mp3")
+        val ext = File(path).extension.ifEmpty { "mp3" }
+        val tempFile = File(context.cacheDir, "temp_tag_edit_${targetSong.id}.$ext")
 
         try {
             if (shouldRemoveArtwork) {

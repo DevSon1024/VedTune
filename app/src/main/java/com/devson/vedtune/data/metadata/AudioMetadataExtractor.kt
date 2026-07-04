@@ -8,6 +8,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import org.jaudiotagger.audio.AudioFileIO
+import org.jaudiotagger.audio.mp3.MP3File
 import org.jaudiotagger.tag.FieldKey
 import java.io.File
 import java.io.IOException
@@ -66,67 +67,95 @@ class AudioMetadataExtractor @Inject constructor(
         var replayGain = ""
         var audioHash = ""
 
-        try {
-            tempFile = File(context.cacheDir, "temp_metadata_extract_${songId}.mp3")
-            val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, songId)
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                tempFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
-            } ?: throw IOException("Could not open input stream")
+        var audioFile: org.jaudiotagger.audio.AudioFile? = null
+        var isTempUsed = false
 
-            val audioFile = AudioFileIO.read(tempFile)
-            val tag = audioFile.tag
-            if (tag != null) {
-                composer = tag.getFirst(FieldKey.COMPOSER).orEmpty()
-                genre = tag.getFirst(FieldKey.GENRE).orEmpty()
-                lyricist = tag.getFirst(FieldKey.LYRICIST).orEmpty()
-                trackNumber = tag.getFirst(FieldKey.TRACK).orEmpty()
-                discNumber = tag.getFirst(FieldKey.DISC_NO).orEmpty()
-                comment = tag.getFirst(FieldKey.COMMENT).orEmpty()
-                year = tag.getFirst(FieldKey.YEAR).orEmpty()
-                
-                // New tags
-                recordLabel = tag.getFirst(FieldKey.RECORD_LABEL).orEmpty()
-                copyright = tag.getFirst("COPYRIGHT").ifEmpty { tag.getFirst("TCOP") }.ifEmpty { tag.getFirst("cprt") }.orEmpty()
-                language = tag.getFirst(FieldKey.LANGUAGE).orEmpty()
-                mood = tag.getFirst(FieldKey.MOOD).orEmpty()
-
-                // ReplayGain extraction
-                val trackGain = tag.getFirst("REPLAYGAIN_TRACK_GAIN").ifEmpty { tag.getFirst("replaygain_track_gain") }.orEmpty()
-                val albumGain = tag.getFirst("REPLAYGAIN_ALBUM_GAIN").ifEmpty { tag.getFirst("replaygain_album_gain") }.orEmpty()
-                replayGain = when {
-                    trackGain.isNotEmpty() && albumGain.isNotEmpty() -> "Track: $trackGain, Album: $albumGain"
-                    trackGain.isNotEmpty() -> "Track: $trackGain"
-                    albumGain.isNotEmpty() -> "Album: $albumGain"
-                    else -> ""
-                }
-            }
-            
-            val audioHeader = audioFile.audioHeader
-            if (audioHeader != null) {
-                bitrate = runCatching { audioHeader.bitRate }.getOrDefault("")
-                sampleRate = runCatching { audioHeader.sampleRate }.getOrDefault("")
-                bitsPerSample = runCatching { audioHeader.bitsPerSample.toString() }.getOrDefault("")
-                format = runCatching { audioHeader.format }.getOrDefault("")
-                encodingType = runCatching { audioHeader.encodingType }.getOrDefault("")
-                channels = runCatching { audioHeader.channels }.getOrDefault("")
-                
-                // VBR/CBR Indicator
-                vbrIndicator = if (audioHeader.isVariableBitRate) "(VBR)" else "(CBR)"
-            }
-
-            // Safe & efficient MD5 generation using a buffer
+        if (filePath.isNotEmpty()) {
+            val actualFile = File(filePath)
             try {
-                audioHash = calculateMd5(tempFile)
+                audioFile = AudioFileIO.read(actualFile)
+            } catch (e: Exception) {
+                // Fallback to temp file with dynamic extension
+                try {
+                    val ext = actualFile.extension.ifEmpty { "mp3" }
+                    tempFile = File(context.cacheDir, "temp_metadata_extract_${songId}.$ext")
+                    val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, songId)
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        tempFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    } ?: throw IOException("Could not open input stream")
+
+                    audioFile = AudioFileIO.read(tempFile)
+                    isTempUsed = true
+                } catch (ex: Exception) {
+                    ex.printStackTrace()
+                }
+            }
+        }
+
+        if (audioFile != null) {
+            try {
+                val tag = if (audioFile is MP3File) {
+                    audioFile.iD3v2Tag ?: audioFile.tag
+                } else {
+                    audioFile.tag
+                }
+                if (tag != null) {
+                    composer = tag.getFirst(FieldKey.COMPOSER).orEmpty()
+                    genre = tag.getFirst(FieldKey.GENRE).orEmpty()
+                    lyricist = tag.getFirst(FieldKey.LYRICIST).orEmpty()
+                    trackNumber = tag.getFirst(FieldKey.TRACK).orEmpty()
+                    discNumber = tag.getFirst(FieldKey.DISC_NO).orEmpty()
+                    comment = tag.getFirst(FieldKey.COMMENT).orEmpty()
+                    year = tag.getFirst(FieldKey.YEAR).orEmpty()
+                    
+                    // New tags
+                    recordLabel = tag.getFirst(FieldKey.RECORD_LABEL).orEmpty()
+                    copyright = tag.getFirst("COPYRIGHT").ifEmpty { tag.getFirst("TCOP") }.ifEmpty { tag.getFirst("cprt") }.orEmpty()
+                    language = tag.getFirst(FieldKey.LANGUAGE).orEmpty()
+                    mood = tag.getFirst(FieldKey.MOOD).orEmpty()
+
+                    // ReplayGain extraction
+                    val trackGain = tag.getFirst("REPLAYGAIN_TRACK_GAIN").ifEmpty { tag.getFirst("replaygain_track_gain") }.orEmpty()
+                    val albumGain = tag.getFirst("REPLAYGAIN_ALBUM_GAIN").ifEmpty { tag.getFirst("replaygain_album_gain") }.orEmpty()
+                    replayGain = when {
+                        trackGain.isNotEmpty() && albumGain.isNotEmpty() -> "Track: $trackGain, Album: $albumGain"
+                        trackGain.isNotEmpty() -> "Track: $trackGain"
+                        albumGain.isNotEmpty() -> "Album: $albumGain"
+                        else -> ""
+                    }
+                }
+                
+                val audioHeader = audioFile.audioHeader
+                if (audioHeader != null) {
+                    bitrate = runCatching { audioHeader.bitRate }.getOrDefault("")
+                    sampleRate = runCatching { audioHeader.sampleRate }.getOrDefault("")
+                    bitsPerSample = runCatching { audioHeader.bitsPerSample.toString() }.getOrDefault("")
+                    format = runCatching { audioHeader.format }.getOrDefault("")
+                    encodingType = runCatching { audioHeader.encodingType }.getOrDefault("")
+                    channels = runCatching { audioHeader.channels }.getOrDefault("")
+                    
+                    // VBR/CBR Indicator
+                    vbrIndicator = if (audioHeader.isVariableBitRate) "(VBR)" else "(CBR)"
+                }
+
+                // Safe & efficient MD5 generation using a buffer
+                try {
+                    val fileToHash = if (isTempUsed && tempFile != null) tempFile else File(filePath)
+                    if (fileToHash.exists()) {
+                        audioHash = calculateMd5(fileToHash)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
+            } finally {
+                if (isTempUsed) {
+                    tempFile?.delete()
+                }
             }
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-        } finally {
-            tempFile?.delete()
         }
 
         ExtractedMetadata(
