@@ -48,16 +48,7 @@ fun ArtistsScreen(
     Column(
         modifier = modifier.fillMaxSize()
     ) {
-        VedTuneTopAppBar(
-            title = "Artists",
-            searchQuery = searchQuery,
-            onQueryChange = { viewModel.setSearchQuery(it) },
-            searchPlaceholder = "Search artists...",
-            totalItemCount = totalItemCount,
-            itemTypeLabel = "artists",
-            totalDurationMs = totalDurationMs,
-            modifier = Modifier.statusBarsPadding()
-        )
+        Spacer(modifier = Modifier.height(8.dp))
 
         if (artists.isEmpty()) {
             Box(

@@ -67,15 +67,7 @@ fun PlaylistsScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            VedTuneTopAppBar(
-                title = "Playlists",
-                searchQuery = searchQuery,
-                onQueryChange = { viewModel.setSearchQuery(it) },
-                searchPlaceholder = "Search playlists...",
-                totalItemCount = totalItemCount,
-                itemTypeLabel = "playlists",
-                modifier = Modifier.statusBarsPadding()
-            )
+            Spacer(modifier = Modifier.height(8.dp))
 
             if (playlists.isEmpty()) {
                 Box(

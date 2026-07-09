@@ -5,40 +5,25 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.devson.vedtune.ui.MainViewModel
 import com.devson.vedtune.ui.components.MiniPlayer
 import com.devson.vedtune.ui.navigation.navigateSafe
-import com.devson.vedtune.ui.songs.SongsScreen
-import com.devson.vedtune.ui.songs.SongsViewModel
-import com.devson.vedtune.ui.albums.AlbumsScreen
-import com.devson.vedtune.ui.albums.AlbumsViewModel
-import com.devson.vedtune.ui.artists.ArtistsScreen
-import com.devson.vedtune.ui.artists.ArtistsViewModel
-import com.devson.vedtune.ui.playlists.PlaylistsScreen
-import com.devson.vedtune.ui.playlists.PlaylistsViewModel
 import com.devson.vedtune.ui.settings.SettingsScreen
 import com.devson.vedtune.ui.settings.SettingsViewModel
 import com.devson.vedtune.ui.navigation.Screen
+import com.devson.vedtune.ui.components.VedTuneBottomNavBar
+import com.devson.vedtune.ui.search.SearchScreen
+import com.devson.vedtune.ui.search.SearchViewModel
+import com.devson.vedtune.ui.library.LibraryScreen
 import kotlinx.coroutines.launch
 
 @Composable
@@ -47,6 +32,7 @@ fun HomeScreen(
     onNavigateToAlbum: (Long) -> Unit,
     onNavigateToArtist: (String) -> Unit,
     onNavigateToPlaylist: (Long) -> Unit,
+    onNavigateToGenre: (String) -> Unit,
     onNavigateToFolderSettings: () -> Unit,
     onNavigateToAppearanceSettings: () -> Unit,
     onNavigateToPlayerInterfaceSettings: () -> Unit,
@@ -59,14 +45,20 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val tabRoutes = listOf(
-        Screen.Songs.route,
-        Screen.Albums.route,
-        Screen.Artists.route,
-        Screen.Playlists.route,
+        Screen.HomeTab.route,
+        Screen.SearchTab.route,
+        Screen.LibraryTab.route,
         Screen.Settings.route
     )
     val initialPage = remember(defaultStartScreen) {
-        val index = tabRoutes.indexOf(defaultStartScreen)
+        val resolvedRoute = when (defaultStartScreen) {
+            "songs", "albums", "artists", "playlists", "library_tab" -> Screen.LibraryTab.route
+            "home_tab" -> Screen.HomeTab.route
+            "search_tab" -> Screen.SearchTab.route
+            "settings" -> Screen.Settings.route
+            else -> Screen.HomeTab.route
+        }
+        val index = tabRoutes.indexOf(resolvedRoute)
         if (index != -1) index else 0
     }
     
@@ -116,75 +108,58 @@ fun HomeScreen(
                     )
                 }
 
-                val items = listOf(
-                    HomeNavigationItem("Songs", Screen.Songs.route, Icons.AutoMirrored.Filled.List),
-                    HomeNavigationItem("Albums", Screen.Albums.route, Icons.Default.PlayArrow),
-                    HomeNavigationItem("Artists", Screen.Artists.route, Icons.Default.Person),
-                    HomeNavigationItem("Playlists", Screen.Playlists.route, Icons.Default.Favorite),
-                    HomeNavigationItem("Settings", Screen.Settings.route, Icons.Default.Settings)
-                )
-                NavigationBar {
-                    items.forEachIndexed { index, item ->
-                        NavigationBarItem(
-                            selected = selectedIndex == index,
-                            onClick = {
-                                scope.launch {
-                                    pagerState.animateScrollToPage(index)
-                                }
-                            },
-                            icon = { Icon(imageVector = item.icon, contentDescription = item.label) },
-                            label = { Text(text = item.label) }
-                        )
+                VedTuneBottomNavBar(
+                    currentRoute = tabRoutes.getOrNull(selectedIndex),
+                    onNavigate = { route ->
+                        val index = tabRoutes.indexOf(route)
+                        if (index != -1) {
+                            scope.launch {
+                                pagerState.animateScrollToPage(index)
+                            }
+                        }
                     }
-                }
+                )
             }
         }
     ) { innerPadding ->
         HorizontalPager(
             state = pagerState,
+            userScrollEnabled = false, // Disable bottom bar horizontal swipe to avoid conflicts with library top swiping
             modifier = Modifier.fillMaxSize()
         ) { page ->
             when (page) {
                 0 -> {
-                    val viewModel: SongsViewModel = hiltViewModel()
-                    SongsScreen(
+                    val viewModel: HomeViewModel = hiltViewModel()
+                    HomeTabScreen(
+                        viewModel = viewModel,
+                        contentPadding = innerPadding,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                1 -> {
+                    val viewModel: SearchViewModel = hiltViewModel()
+                    SearchScreen(
                         viewModel = viewModel,
                         onNavigateToAlbum = onNavigateToAlbum,
                         onNavigateToArtist = onNavigateToArtist,
+                        onNavigateToGenre = onNavigateToGenre,
+                        contentPadding = innerPadding,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                2 -> {
+                    LibraryScreen(
+                        onNavigateToAlbum = onNavigateToAlbum,
+                        onNavigateToArtist = onNavigateToArtist,
+                        onNavigateToPlaylist = onNavigateToPlaylist,
+                        onNavigateToGenre = onNavigateToGenre,
                         onNavigateToEditTags = onNavigateToEditTags,
                         navigateToLocationEvent = mainViewModel.navigateToLocationEvent,
                         contentPadding = innerPadding,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
-                1 -> {
-                    val viewModel: AlbumsViewModel = hiltViewModel()
-                    AlbumsScreen(
-                        viewModel = viewModel,
-                        onAlbumClick = onNavigateToAlbum,
-                        contentPadding = innerPadding,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-                2 -> {
-                    val viewModel: ArtistsViewModel = hiltViewModel()
-                    ArtistsScreen(
-                        viewModel = viewModel,
-                        onArtistClick = onNavigateToArtist,
-                        contentPadding = innerPadding,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
                 3 -> {
-                    val viewModel: PlaylistsViewModel = hiltViewModel()
-                    PlaylistsScreen(
-                        viewModel = viewModel,
-                        onPlaylistClick = onNavigateToPlaylist,
-                        contentPadding = innerPadding,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-                4 -> {
                     val viewModel: SettingsViewModel = hiltViewModel()
                     SettingsScreen(
                         viewModel = viewModel,
@@ -201,9 +176,3 @@ fun HomeScreen(
         }
     }
 }
-
-private data class HomeNavigationItem(
-    val label: String,
-    val route: String,
-    val icon: ImageVector
-)

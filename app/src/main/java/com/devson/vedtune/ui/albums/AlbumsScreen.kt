@@ -47,16 +47,7 @@ fun AlbumsScreen(
     Column(
         modifier = modifier.fillMaxSize()
     ) {
-        VedTuneTopAppBar(
-            title = "Albums",
-            searchQuery = searchQuery,
-            onQueryChange = { viewModel.setSearchQuery(it) },
-            searchPlaceholder = "Search albums...",
-            totalItemCount = totalItemCount,
-            itemTypeLabel = "albums",
-            totalDurationMs = totalDurationMs,
-            modifier = Modifier.statusBarsPadding()
-        )
+        Spacer(modifier = Modifier.height(8.dp))
 
         if (albums.isEmpty()) {
             Box(

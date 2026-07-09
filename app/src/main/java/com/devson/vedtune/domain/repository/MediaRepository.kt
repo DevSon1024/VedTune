@@ -33,4 +33,5 @@ interface MediaRepository {
     suspend fun getUniqueAlbums(): List<String>
     suspend fun getUniqueComposers(): List<String>
     suspend fun getUniqueGenres(): List<String>
+    fun getSongsByGenre(genre: String): Flow<List<Song>>
 }

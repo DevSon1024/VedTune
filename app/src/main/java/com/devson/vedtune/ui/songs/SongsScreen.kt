@@ -65,6 +65,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.AssistChip
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -195,21 +198,51 @@ fun SongsScreen(
         modifier = modifier.fillMaxSize()
     ) {
         Box {
-            VedTuneTopAppBar(
-                title = "Songs",
-                searchQuery = uiState.searchQuery,
-                onQueryChange = { viewModel.setSearchQuery(it) },
-                searchPlaceholder = "Search songs, artists, albums...",
-                showSortAction = true,
-                onSortClick = { showSortMenu = true },
-                showLayoutToggleAction = true,
-                isGridView = uiState.isGridView,
-                onLayoutToggleClick = { viewModel.toggleLayoutView() },
-                totalItemCount = uiState.totalItemCount,
-                totalDurationMs = uiState.totalDurationMs,
-                onShuffleClick = { viewModel.playShuffleAll() },
-                modifier = Modifier.statusBarsPadding()
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val currentSortLabel = when (uiState.sortBy) {
+                    SortBy.TITLE -> "Title"
+                    SortBy.ARTIST -> "Artist"
+                    SortBy.ALBUM -> "Album"
+                    SortBy.DATE_ADDED -> "Date Added"
+                }
+                val orderIcon = if (uiState.sortOrder == SortOrder.ASCENDING) "↑" else "↓"
+                
+                AssistChip(
+                    onClick = { showSortMenu = true },
+                    label = { Text("$currentSortLabel $orderIcon") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Sort,
+                            contentDescription = "Sort",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                )
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { viewModel.playShuffleAll() }) {
+                        Icon(
+                            imageVector = Icons.Default.Shuffle,
+                            contentDescription = "Shuffle All"
+                        )
+                    }
+                    IconButton(onClick = { viewModel.toggleLayoutView() }) {
+                        Icon(
+                            imageVector = if (uiState.isGridView) Icons.AutoMirrored.Filled.List else Icons.Default.GridView,
+                            contentDescription = "Toggle Layout"
+                        )
+                    }
+                }
+            }
 
             DropdownMenu(
                 expanded = showSortMenu,

@@ -13,6 +13,7 @@ import com.devson.vedtune.data.local.entity.ArtistEntity
 import com.devson.vedtune.domain.repository.MediaRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flow
 import com.devson.vedtune.data.local.dao.PlaylistDao
 import com.devson.vedtune.data.local.entity.PlaylistEntity
 import com.devson.vedtune.data.local.entity.PlaylistSongCrossRef
@@ -221,5 +222,51 @@ class MediaRepositoryImpl @Inject constructor(
             e.printStackTrace()
         }
         return genres.toList().sorted()
+    }
+
+    override fun getSongsByGenre(genre: String): Flow<List<Song>> = flow {
+        val songIds = mutableListOf<Long>()
+        try {
+            var genreId: Long? = null
+            context.contentResolver.query(
+                MediaStore.Audio.Genres.EXTERNAL_CONTENT_URI,
+                arrayOf(MediaStore.Audio.Genres._ID),
+                "${MediaStore.Audio.Genres.NAME} = ?",
+                arrayOf(genre),
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    genreId = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Audio.Genres._ID))
+                }
+            }
+
+            genreId?.let { id ->
+                val uri = MediaStore.Audio.Genres.Members.getContentUri("external", id)
+                val projection = arrayOf(MediaStore.Audio.Genres.Members.AUDIO_ID)
+                context.contentResolver.query(
+                    uri,
+                    projection,
+                    null,
+                    null,
+                    null
+                )?.use { cursor ->
+                    val colIdx = cursor.getColumnIndex(MediaStore.Audio.Genres.Members.AUDIO_ID)
+                    if (colIdx != -1) {
+                        while (cursor.moveToNext()) {
+                            songIds.add(cursor.getLong(colIdx))
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        if (songIds.isNotEmpty()) {
+            val songEntities = songDao.getSongsByIds(songIds)
+            emit(songEntities.map { it.toSong() })
+        } else {
+            emit(emptyList())
+        }
     }
 }

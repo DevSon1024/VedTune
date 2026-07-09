@@ -39,6 +39,9 @@ import com.devson.vedtune.ui.lyrics.LyricsEditorScreen
 import com.devson.vedtune.ui.lyrics.LyricsEditorViewModel
 import com.devson.vedtune.ui.settings.LyricsConverterScreen
 
+import com.devson.vedtune.ui.genres.GenreDetailsScreen
+import com.devson.vedtune.ui.genres.GenreDetailsViewModel
+
 sealed class Screen(val route: String) {
     data object Home : Screen("home")
     data object Songs : Screen("songs")
@@ -68,6 +71,13 @@ sealed class Screen(val route: String) {
         fun createRoute(songId: Long) = "lyrics_editor/$songId"
     }
     data object LyricsConverter : Screen("lyrics_converter")
+    
+    data object HomeTab : Screen("home_tab")
+    data object SearchTab : Screen("search_tab")
+    data object LibraryTab : Screen("library_tab")
+    data object GenreDetails : Screen("genre_details/{genreName}") {
+        fun createRoute(genreName: String) = "genre_details/${android.net.Uri.encode(genreName)}"
+    }
 }
 
 @Composable
@@ -116,6 +126,9 @@ fun NavGraph(
                 },
                 onNavigateToLyricsConverter = {
                     navController.navigateSafe(Screen.LyricsConverter.route)
+                },
+                onNavigateToGenre = { genreName ->
+                    navController.navigateSafe(Screen.GenreDetails.createRoute(genreName))
                 },
                 defaultStartScreen = defaultStartScreen,
                 mainViewModel = mainViewModel,
@@ -413,6 +426,32 @@ fun NavGraph(
         ) {
             LyricsConverterScreen(
                 onNavigateBack = { navController.popBackStackSafe() }
+            )
+        }
+        composable(
+            route = Screen.GenreDetails.route,
+            arguments = listOf(
+                navArgument("genreName") { type = NavType.StringType }
+            ),
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(350)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(350)
+                )
+            }
+        ) {
+            val viewModel: GenreDetailsViewModel = hiltViewModel()
+            GenreDetailsScreen(
+                viewModel = viewModel,
+                mainViewModel = mainViewModel,
+                onBackClick = { navController.popBackStackSafe() },
+                onNavigateToPlayer = { navController.navigateSafe(Screen.Player.route) }
             )
         }
     }
