@@ -6,11 +6,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.*
+import com.devson.vedtune.ui.songs.SortOrder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -30,46 +32,85 @@ fun GenresScreen(
 ) {
     val genres by viewModel.genres.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isGridView by viewModel.isGridView.collectAsState()
+    val sortOrder by viewModel.sortOrder.collectAsState()
+
+    val currentSortLabel = "Name"
+    val orderIcon = if (sortOrder == com.devson.vedtune.ui.songs.SortOrder.ASCENDING) "↑" else "↓"
 
     Box(
         modifier = modifier.fillMaxSize()
     ) {
-        when {
-            isLoading -> {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            }
-            genres.isEmpty() -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No genres found",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            }
-            else -> {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 8.dp,
-                        bottom = contentPadding.calculateBottomPadding() + 16.dp
-                    ),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(
-                        items = genres,
-                        key = { it }
-                    ) { genre ->
-                        GenreGridItem(
-                            genreName = genre,
-                            onClick = { onGenreClick(genre) }
+        if (isLoading) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        } else {
+            Column(modifier = Modifier.fillMaxSize()) {
+                com.devson.vedtune.ui.components.LibraryUtilityRow(
+                    currentSortLabel = currentSortLabel,
+                    sortOrderIcon = orderIcon,
+                    onSortClick = { viewModel.toggleSortOrder() },
+                    isGridView = isGridView,
+                    onLayoutToggleClick = { viewModel.toggleLayoutView() },
+                    onShuffleClick = { viewModel.playShuffleAll() }
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                if (genres.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No genres found",
+                            style = MaterialTheme.typography.bodyLarge
                         )
+                    }
+                } else {
+                    if (isGridView) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = 8.dp,
+                                bottom = contentPadding.calculateBottomPadding() + 88.dp
+                            ),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(
+                                items = genres,
+                                key = { it }
+                            ) { genre ->
+                                GenreGridItem(
+                                    genreName = genre,
+                                    onClick = { onGenreClick(genre) }
+                                )
+                            }
+                        }
+                    } else {
+                        androidx.compose.foundation.lazy.LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = 8.dp,
+                                bottom = contentPadding.calculateBottomPadding() + 88.dp
+                            )
+                        ) {
+                            items(
+                                items = genres,
+                                key = { it }
+                            ) { genre ->
+                                GenreListItem(
+                                    genreName = genre,
+                                    onClick = { onGenreClick(genre) }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -83,24 +124,44 @@ fun GenreGridItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        ),
+    com.devson.vedtune.ui.components.VedTuneGridCard(
+        primaryText = genreName.ifEmpty { "Unknown" },
+        secondaryText = "Genre",
+        onClick = onClick,
         modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
         ) {
+            Icon(
+                imageVector = Icons.Default.MusicNote,
+                contentDescription = genreName,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(40.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun GenreListItem(
+    genreName: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    com.devson.vedtune.ui.components.VedTuneListItem(
+        primaryText = genreName.ifEmpty { "Unknown" },
+        secondaryText = "Genre",
+        onClick = onClick,
+        modifier = modifier,
+        leadingContent = {
             Box(
                 modifier = Modifier
-                    .size(80.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
@@ -109,17 +170,10 @@ fun GenreGridItem(
                     imageVector = Icons.Default.MusicNote,
                     contentDescription = genreName,
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = genreName.ifEmpty { "Unknown" },
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
         }
-    }
+    )
 }
+

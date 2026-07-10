@@ -26,6 +26,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.foundation.layout.Arrangement
 
 @Composable
 fun VedTuneListItem(
@@ -130,3 +141,69 @@ fun VedTuneGridCard(
         }
     }
 }
+
+@Composable
+fun LibraryUtilityRow(
+    currentSortLabel: String,
+    sortOrderIcon: String,
+    onSortClick: () -> Unit,
+    isGridView: Boolean,
+    onLayoutToggleClick: () -> Unit,
+    onShuffleClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(36.dp)
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AssistChip(
+            onClick = onSortClick,
+            label = {
+                Text(
+                    text = "$currentSortLabel $sortOrderIcon",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    fontWeight = FontWeight.Medium
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Sort,
+                    contentDescription = "Sort",
+                    modifier = Modifier.size(14.dp)
+                )
+            },
+            modifier = Modifier.height(26.dp)
+        )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onShuffleClick,
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Shuffle,
+                    contentDescription = "Shuffle All",
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            IconButton(
+                onClick = onLayoutToggleClick,
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(
+                    imageVector = if (isGridView) Icons.AutoMirrored.Filled.List else Icons.Default.GridView,
+                    contentDescription = "Toggle Layout",
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+}
+

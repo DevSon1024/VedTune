@@ -50,18 +50,21 @@ fun VedTuneBottomNavBar(
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
         tonalElevation = 3.dp,
-        modifier = modifier
-            .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.navigationBars)
+        modifier = modifier.fillMaxWidth()
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(58.dp)
-                .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
+                .windowInsetsPadding(WindowInsets.navigationBars)
         ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(58.dp)
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
             items.forEach { item ->
                 val isSelected = currentRoute == item.route
                 VedTuneNavBarItem(
@@ -77,6 +80,7 @@ fun VedTuneBottomNavBar(
             }
         }
     }
+}
 }
 
 @Composable

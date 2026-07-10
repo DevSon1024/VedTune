@@ -198,51 +198,22 @@ fun SongsScreen(
         modifier = modifier.fillMaxSize()
     ) {
         Box {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val currentSortLabel = when (uiState.sortBy) {
-                    SortBy.TITLE -> "Title"
-                    SortBy.ARTIST -> "Artist"
-                    SortBy.ALBUM -> "Album"
-                    SortBy.DATE_ADDED -> "Date Added"
-                }
-                val orderIcon = if (uiState.sortOrder == SortOrder.ASCENDING) "↑" else "↓"
-                
-                AssistChip(
-                    onClick = { showSortMenu = true },
-                    label = { Text("$currentSortLabel $orderIcon") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Sort,
-                            contentDescription = "Sort",
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                )
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = { viewModel.playShuffleAll() }) {
-                        Icon(
-                            imageVector = Icons.Default.Shuffle,
-                            contentDescription = "Shuffle All"
-                        )
-                    }
-                    IconButton(onClick = { viewModel.toggleLayoutView() }) {
-                        Icon(
-                            imageVector = if (uiState.isGridView) Icons.AutoMirrored.Filled.List else Icons.Default.GridView,
-                            contentDescription = "Toggle Layout"
-                        )
-                    }
-                }
+            val currentSortLabel = when (uiState.sortBy) {
+                SortBy.TITLE -> "Title"
+                SortBy.ARTIST -> "Artist"
+                SortBy.ALBUM -> "Album"
+                SortBy.DATE_ADDED -> "Date Added"
             }
+            val orderIcon = if (uiState.sortOrder == SortOrder.ASCENDING) "↑" else "↓"
+
+            com.devson.vedtune.ui.components.LibraryUtilityRow(
+                currentSortLabel = currentSortLabel,
+                sortOrderIcon = orderIcon,
+                onSortClick = { showSortMenu = true },
+                isGridView = uiState.isGridView,
+                onLayoutToggleClick = { viewModel.toggleLayoutView() },
+                onShuffleClick = { viewModel.playShuffleAll() }
+            )
 
             DropdownMenu(
                 expanded = showSortMenu,

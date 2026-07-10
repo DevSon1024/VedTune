@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -32,7 +33,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import com.devson.vedtune.ui.components.VedTuneTopAppBar
+import com.devson.vedtune.ui.songs.SortOrder
+import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -67,7 +69,57 @@ fun PlaylistsScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            val isGridView by viewModel.isGridView.collectAsState()
+            val sortBy by viewModel.sortBy.collectAsState()
+            val sortOrder by viewModel.sortOrder.collectAsState()
+            var showSortMenu by remember { mutableStateOf(false) }
+
+            val currentSortLabel = when (sortBy) {
+                PlaylistSortBy.NAME -> "Name"
+                PlaylistSortBy.SONG_COUNT -> "Song Count"
+                PlaylistSortBy.DATE_CREATED -> "Date Created"
+            }
+            val orderIcon = if (sortOrder == com.devson.vedtune.ui.songs.SortOrder.ASCENDING) "↑" else "↓"
+
+            Box(modifier = Modifier.fillMaxWidth()) {
+                com.devson.vedtune.ui.components.LibraryUtilityRow(
+                    currentSortLabel = currentSortLabel,
+                    sortOrderIcon = orderIcon,
+                    onSortClick = { showSortMenu = true },
+                    isGridView = isGridView,
+                    onLayoutToggleClick = { viewModel.toggleLayoutView() },
+                    onShuffleClick = { viewModel.playShuffleAll() }
+                )
+
+                DropdownMenu(
+                    expanded = showSortMenu,
+                    onDismissRequest = { showSortMenu = false }
+                ) {
+                    PlaylistSortBy.entries.forEach { option ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = when (option) {
+                                        PlaylistSortBy.NAME -> "Name"
+                                        PlaylistSortBy.SONG_COUNT -> "Song Count"
+                                        PlaylistSortBy.DATE_CREATED -> "Date Created"
+                                    }
+                                )
+                            },
+                            onClick = {
+                                if (sortBy == option) {
+                                    viewModel.toggleSortOrder()
+                                } else {
+                                    viewModel.setSortBy(option)
+                                }
+                                showSortMenu = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
 
             if (playlists.isEmpty()) {
                 Box(
@@ -80,26 +132,53 @@ fun PlaylistsScreen(
                     )
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 8.dp,
-                        bottom = contentPadding.calculateBottomPadding() + 88.dp // Space for FAB + bottom player/navbar
-                    )
-                ) {
-                    items(
-                        items = playlists,
-                        key = { it.id },
-                        contentType = { "playlist_list_item" }
-                    ) { playlist ->
-                        PlaylistItemRow(
-                            playlist = playlist,
-                            onClick = { onPlaylistClick(playlist.id) },
-                            onDeleteClick = { viewModel.deletePlaylist(playlist.id) }
+                if (isGridView) {
+                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 8.dp,
+                            bottom = contentPadding.calculateBottomPadding() + 88.dp
+                        ),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(
+                            items = playlists,
+                            key = { it.id },
+                            contentType = { "playlist_grid_item" }
+                        ) { playlist ->
+                            PlaylistGridItem(
+                                playlist = playlist,
+                                onClick = { onPlaylistClick(playlist.id) },
+                                onDeleteClick = { viewModel.deletePlaylist(playlist.id) }
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 8.dp,
+                            bottom = contentPadding.calculateBottomPadding() + 88.dp
                         )
+                    ) {
+                        items(
+                            items = playlists,
+                            key = { it.id },
+                            contentType = { "playlist_list_item" }
+                        ) { playlist ->
+                            PlaylistItemRow(
+                                playlist = playlist,
+                                onClick = { onPlaylistClick(playlist.id) },
+                                onDeleteClick = { viewModel.deletePlaylist(playlist.id) }
+                            )
+                        }
                     }
                 }
             }
@@ -219,3 +298,66 @@ fun CreatePlaylistDialog(
         }
     )
 }
+
+@Composable
+fun PlaylistGridItem(
+    playlist: Playlist,
+    onClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showMenu by remember { mutableStateOf(false) }
+
+    com.devson.vedtune.ui.components.VedTuneGridCard(
+        primaryText = playlist.name,
+        secondaryText = "${playlist.songCount} ${if (playlist.songCount == 1) "song" else "songs"}",
+        onClick = onClick,
+        modifier = modifier
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.secondaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.size(48.dp)
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+                contentAlignment = Alignment.TopEnd
+            ) {
+                IconButton(
+                    onClick = { showMenu = true },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Options",
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Delete") },
+                        onClick = {
+                            onDeleteClick()
+                            showMenu = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
