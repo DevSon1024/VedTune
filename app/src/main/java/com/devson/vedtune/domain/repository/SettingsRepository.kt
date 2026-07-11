@@ -3,9 +3,13 @@ package com.devson.vedtune.domain.repository
 import com.devson.vedtune.domain.model.AlbumArtClickAction
 import com.devson.vedtune.domain.model.FolderFilterMode
 import com.devson.vedtune.domain.model.SeekBarStyle
+import com.devson.vedtune.domain.model.ViewPreferences
 import kotlinx.coroutines.flow.Flow
 
 interface SettingsRepository {
+    val viewPreferences: Flow<ViewPreferences>
+    suspend fun setViewPreferences(preferences: ViewPreferences)
+
     val showAlbumArt: Flow<Boolean>
     val showRemainingTime: Flow<Boolean>
     val showMiniPlayerProgress: Flow<Boolean>

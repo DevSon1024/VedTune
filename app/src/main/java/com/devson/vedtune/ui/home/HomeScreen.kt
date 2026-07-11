@@ -124,7 +124,7 @@ fun HomeScreen(
     ) { innerPadding ->
         HorizontalPager(
             state = pagerState,
-            userScrollEnabled = false, // Disable bottom bar horizontal swipe to avoid conflicts with library top swiping
+            userScrollEnabled = true,
             modifier = Modifier.fillMaxSize()
         ) { page ->
             when (page) {

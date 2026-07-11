@@ -6,10 +6,12 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import com.devson.vedtune.data.local.dao.QueueDao
 import com.devson.vedtune.domain.model.AlbumArtClickAction
 import com.devson.vedtune.domain.model.FolderFilterMode
 import com.devson.vedtune.domain.model.SeekBarStyle
+import com.devson.vedtune.domain.model.ViewPreferences
 import com.devson.vedtune.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -23,6 +25,12 @@ class SettingsRepositoryImpl @Inject constructor(
 ) : SettingsRepository {
 
     companion object {
+        private val KEY_IS_GRID_VIEW = booleanPreferencesKey("is_grid_view")
+        private val KEY_GRID_SPAN_COUNT = intPreferencesKey("grid_span_count")
+        private val KEY_SHOW_ARTIST = booleanPreferencesKey("show_artist")
+        private val KEY_SHOW_ALBUM = booleanPreferencesKey("show_album")
+        private val KEY_SHOW_DURATION = booleanPreferencesKey("show_duration")
+
         private val KEY_SHOW_ALBUM_ART = booleanPreferencesKey("show_album_art")
         private val KEY_SHOW_REMAINING_TIME = booleanPreferencesKey("show_remaining_time")
         private val KEY_SHOW_MINIPLAYER_PROGRESS = booleanPreferencesKey("show_miniplayer_progress")
@@ -56,6 +64,28 @@ class SettingsRepositoryImpl @Inject constructor(
     }
 
     //  Existing settings flows 
+
+    override val viewPreferences: Flow<ViewPreferences> = dataStore.data.map { preferences ->
+        ViewPreferences(
+            isGridView = preferences[KEY_IS_GRID_VIEW] ?: false,
+            gridSpanCount = preferences[KEY_GRID_SPAN_COUNT] ?: 2,
+            showArtist = preferences[KEY_SHOW_ARTIST] ?: true,
+            showAlbum = preferences[KEY_SHOW_ALBUM] ?: true,
+            showDuration = preferences[KEY_SHOW_DURATION] ?: true,
+            showAlbumArt = preferences[KEY_SHOW_ALBUM_ART] ?: true
+        )
+    }
+
+    override suspend fun setViewPreferences(preferences: ViewPreferences) {
+        dataStore.edit { prefs ->
+            prefs[KEY_IS_GRID_VIEW] = preferences.isGridView
+            prefs[KEY_GRID_SPAN_COUNT] = preferences.gridSpanCount
+            prefs[KEY_SHOW_ARTIST] = preferences.showArtist
+            prefs[KEY_SHOW_ALBUM] = preferences.showAlbum
+            prefs[KEY_SHOW_DURATION] = preferences.showDuration
+            prefs[KEY_SHOW_ALBUM_ART] = preferences.showAlbumArt
+        }
+    }
 
     override val showAlbumArt: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[KEY_SHOW_ALBUM_ART] ?: true

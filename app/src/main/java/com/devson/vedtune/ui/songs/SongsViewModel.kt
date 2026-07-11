@@ -3,6 +3,7 @@ package com.devson.vedtune.ui.songs
 import androidx.lifecycle.viewModelScope
 import com.devson.vedtune.core.BaseViewModel
 import com.devson.vedtune.domain.model.Song
+import com.devson.vedtune.domain.model.ViewPreferences
 import com.devson.vedtune.domain.repository.MediaRepository
 import com.devson.vedtune.player.PlaybackConnection
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -116,9 +117,13 @@ class SongsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            settingsRepository.showAlbumArt.collect { show ->
+            settingsRepository.viewPreferences.collect { prefs ->
                 updateState {
-                    it.copy(showArtwork = show)
+                    it.copy(
+                        viewPreferences = prefs,
+                        isGridView = prefs.isGridView,
+                        showArtwork = prefs.showAlbumArt
+                    )
                 }
             }
         }
@@ -140,8 +145,16 @@ class SongsViewModel @Inject constructor(
     }
 
     fun toggleLayoutView() {
-        val newGridView = !currentState.isGridView
-        updateState { it.copy(isGridView = newGridView) }
+        viewModelScope.launch {
+            val currentPrefs = currentState.viewPreferences
+            settingsRepository.setViewPreferences(currentPrefs.copy(isGridView = !currentPrefs.isGridView))
+        }
+    }
+
+    fun updateViewPreferences(preferences: ViewPreferences) {
+        viewModelScope.launch {
+            settingsRepository.setViewPreferences(preferences)
+        }
     }
 
     fun playSong(song: Song) {

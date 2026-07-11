@@ -27,12 +27,14 @@ import androidx.compose.ui.unit.dp
 fun GenresScreen(
     viewModel: GenresViewModel,
     onGenreClick: (String) -> Unit,
+    viewPreferences: com.devson.vedtune.domain.model.ViewPreferences,
+    onLayoutToggleClick: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
     val genres by viewModel.genres.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-    val isGridView by viewModel.isGridView.collectAsState()
+    val isGridView = viewPreferences.isGridView
     val sortOrder by viewModel.sortOrder.collectAsState()
 
     val currentSortLabel = "Name"
@@ -50,7 +52,7 @@ fun GenresScreen(
                     sortOrderIcon = orderIcon,
                     onSortClick = { viewModel.toggleSortOrder() },
                     isGridView = isGridView,
-                    onLayoutToggleClick = { viewModel.toggleLayoutView() },
+                    onLayoutToggleClick = onLayoutToggleClick,
                     onShuffleClick = { viewModel.playShuffleAll() }
                 )
 
@@ -69,7 +71,7 @@ fun GenresScreen(
                 } else {
                     if (isGridView) {
                         LazyVerticalGrid(
-                            columns = GridCells.Fixed(2),
+                            columns = GridCells.Fixed(viewPreferences.gridSpanCount),
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(
                                 start = 16.dp,
@@ -86,7 +88,9 @@ fun GenresScreen(
                             ) { genre ->
                                 GenreGridItem(
                                     genreName = genre,
-                                    onClick = { onGenreClick(genre) }
+                                    onClick = { onGenreClick(genre) },
+                                    showArtwork = viewPreferences.showAlbumArt,
+                                    gridCount = viewPreferences.gridSpanCount
                                 )
                             }
                         }
@@ -107,7 +111,8 @@ fun GenresScreen(
                             ) { genre ->
                                 GenreListItem(
                                     genreName = genre,
-                                    onClick = { onGenreClick(genre) }
+                                    onClick = { onGenreClick(genre) },
+                                    showArtwork = viewPreferences.showAlbumArt
                                 )
                             }
                         }
@@ -122,13 +127,17 @@ fun GenresScreen(
 fun GenreGridItem(
     genreName: String,
     onClick: () -> Unit,
+    showArtwork: Boolean = true,
+    gridCount: Int = 2,
     modifier: Modifier = Modifier
 ) {
     com.devson.vedtune.ui.components.VedTuneGridCard(
         primaryText = genreName.ifEmpty { "Unknown" },
         secondaryText = "Genre",
         onClick = onClick,
-        modifier = modifier
+        modifier = modifier,
+        gridCount = gridCount,
+        showArtwork = showArtwork
     ) {
         Box(
             modifier = Modifier
@@ -151,6 +160,7 @@ fun GenreGridItem(
 fun GenreListItem(
     genreName: String,
     onClick: () -> Unit,
+    showArtwork: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     com.devson.vedtune.ui.components.VedTuneListItem(
@@ -158,22 +168,24 @@ fun GenreListItem(
         secondaryText = "Genre",
         onClick = onClick,
         modifier = modifier,
-        leadingContent = {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MusicNote,
-                    contentDescription = genreName,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(24.dp)
-                )
+        leadingContent = if (showArtwork) {
+            {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = genreName,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
-        }
+        } else null
     )
 }
 

@@ -45,14 +45,16 @@ import com.devson.vedtune.ui.components.VedTuneTopAppBar
 fun AlbumsScreen(
     viewModel: AlbumsViewModel,
     onAlbumClick: (Long) -> Unit,
+    viewPreferences: com.devson.vedtune.domain.model.ViewPreferences,
+    onLayoutToggleClick: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
     val albums by viewModel.albums.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
-    val showArtwork by viewModel.showAlbumArt.collectAsState()
     
-    val isGridView by viewModel.isGridView.collectAsState()
+    val isGridView = viewPreferences.isGridView
+    val showArtwork = viewPreferences.showAlbumArt
     val sortBy by viewModel.sortBy.collectAsState()
     val sortOrder by viewModel.sortOrder.collectAsState()
     var showSortMenu by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
@@ -73,7 +75,7 @@ fun AlbumsScreen(
                 sortOrderIcon = orderIcon,
                 onSortClick = { showSortMenu = true },
                 isGridView = isGridView,
-                onLayoutToggleClick = { viewModel.toggleLayoutView() },
+                onLayoutToggleClick = onLayoutToggleClick,
                 onShuffleClick = { viewModel.playShuffleAll() }
             )
 
@@ -120,7 +122,7 @@ fun AlbumsScreen(
         } else {
             if (isGridView) {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
+                    columns = GridCells.Fixed(viewPreferences.gridSpanCount),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = 16.dp,
@@ -139,7 +141,9 @@ fun AlbumsScreen(
                         AlbumGridItem(
                             album = album,
                             onClick = { onAlbumClick(album.id) },
-                            showArtwork = showArtwork
+                            showArtwork = showArtwork,
+                            showArtist = viewPreferences.showArtist,
+                            gridCount = viewPreferences.gridSpanCount
                         )
                     }
                 }
@@ -161,17 +165,27 @@ fun AlbumsScreen(
                     ) { album ->
                         com.devson.vedtune.ui.components.VedTuneListItem(
                             primaryText = album.title,
-                            secondaryText = "${album.artist} • ${album.songCount} ${if (album.songCount == 1) "song" else "songs"}",
+                            secondaryText = buildString {
+                                val artistPart = if (viewPreferences.showArtist) album.artist else ""
+                                val songCountPart = "${album.songCount} ${if (album.songCount == 1) "song" else "songs"}"
+                                if (artistPart.isNotEmpty()) {
+                                    append(artistPart)
+                                    append(" • ")
+                                }
+                                append(songCountPart)
+                            },
                             onClick = { onAlbumClick(album.id) },
-                            leadingContent = {
-                                SongArtwork(
-                                    albumId = album.id,
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
-                                    showArtwork = showArtwork
-                                )
-                            }
+                            leadingContent = if (showArtwork) {
+                                {
+                                    SongArtwork(
+                                        albumId = album.id,
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
+                                        showArtwork = showArtwork
+                                    )
+                                }
+                            } else null
                         )
                     }
                 }
@@ -185,13 +199,26 @@ fun AlbumGridItem(
     album: Album,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    showArtwork: Boolean = true
+    showArtwork: Boolean = true,
+    showArtist: Boolean = true,
+    gridCount: Int = 2
 ) {
+    val artistPart = if (showArtist) album.artist else ""
+    val songCountPart = "${album.songCount} ${if (album.songCount == 1) "song" else "songs"}"
+    val secondaryText = buildString {
+        if (artistPart.isNotEmpty()) {
+            append(artistPart)
+            append(" • ")
+        }
+        append(songCountPart)
+    }
     com.devson.vedtune.ui.components.VedTuneGridCard(
         primaryText = album.title,
-        secondaryText = "${album.artist} • ${album.songCount} ${if (album.songCount == 1) "song" else "songs"}",
+        secondaryText = secondaryText,
         onClick = onClick,
-        modifier = modifier
+        modifier = modifier,
+        gridCount = gridCount,
+        showArtwork = showArtwork
     ) {
         SongArtwork(
             albumId = album.id,

@@ -19,6 +19,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,6 +62,10 @@ fun LibraryScreen(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
+    val songsViewModel: SongsViewModel = hiltViewModel()
+    val uiState by songsViewModel.uiState.collectAsState()
+    var showViewSettings by remember { mutableStateOf(false) }
+
     val tabs = listOf(
         LibraryTabItem("Songs", Icons.AutoMirrored.Filled.List),
         LibraryTabItem("Albums", Icons.Default.Album),
@@ -71,6 +79,9 @@ fun LibraryScreen(
         pageCount = { tabs.size }
     )
     val scope = rememberCoroutineScope()
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp.dp
+    val tabWidth = screenWidth / 4.5f
 
     Column(
         modifier = modifier
@@ -92,7 +103,7 @@ fun LibraryScreen(
                 // scrolls, with no manual math required.
                 ScrollableTabRow(
                     selectedTabIndex = pagerState.currentPage,
-                    edgePadding = 16.dp,
+                    edgePadding = 0.dp,
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.primary,
                     divider = {},
@@ -108,19 +119,17 @@ fun LibraryScreen(
 
                             val left = androidx.compose.ui.unit.lerp(floorPosition.left, ceilPosition.left, fraction)
                             val right = androidx.compose.ui.unit.lerp(floorPosition.right, ceilPosition.right, fraction)
-                            val tabWidth = right - left
+                            val currentTabWidth = right - left
                             val indicatorWidth = 24.dp
-                            val centerX = left + (tabWidth - indicatorWidth) / 2
+                            val centerX = left + (currentTabWidth - indicatorWidth) / 2
 
-                            Box(
+                            TabRowDefaults.SecondaryIndicator(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .wrapContentSize(Alignment.BottomStart)
                                     .offset(x = centerX)
-                                    .width(indicatorWidth)
-                                    .height(3.dp)
-                                    .clip(RoundedCornerShape(50))
-                                    .background(MaterialTheme.colorScheme.primary)
+                                    .width(indicatorWidth),
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     },
@@ -147,6 +156,7 @@ fun LibraryScreen(
                                     pagerState.animateScrollToPage(index)
                                 }
                             },
+                            modifier = Modifier.width(tabWidth),
                             selectedContentColor = MaterialTheme.colorScheme.primary,
                             unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         ) {
@@ -154,7 +164,7 @@ fun LibraryScreen(
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center,
-                                modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp)
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 12.dp)
                             ) {
                                 Icon(
                                     imageVector = tab.icon,
@@ -195,13 +205,13 @@ fun LibraryScreen(
         ) { page ->
             when (page) {
                 0 -> {
-                    val viewModel: SongsViewModel = hiltViewModel()
                     SongsScreen(
-                        viewModel = viewModel,
+                        viewModel = songsViewModel,
                         onNavigateToAlbum = onNavigateToAlbum,
                         onNavigateToArtist = onNavigateToArtist,
                         onNavigateToEditTags = onNavigateToEditTags,
                         navigateToLocationEvent = navigateToLocationEvent,
+                        onLayoutToggleClick = { showViewSettings = true },
                         contentPadding = contentPadding,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -211,6 +221,8 @@ fun LibraryScreen(
                     AlbumsScreen(
                         viewModel = viewModel,
                         onAlbumClick = onNavigateToAlbum,
+                        viewPreferences = uiState.viewPreferences,
+                        onLayoutToggleClick = { showViewSettings = true },
                         contentPadding = contentPadding,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -220,6 +232,8 @@ fun LibraryScreen(
                     ArtistsScreen(
                         viewModel = viewModel,
                         onArtistClick = onNavigateToArtist,
+                        viewPreferences = uiState.viewPreferences,
+                        onLayoutToggleClick = { showViewSettings = true },
                         contentPadding = contentPadding,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -229,6 +243,8 @@ fun LibraryScreen(
                     GenresScreen(
                         viewModel = viewModel,
                         onGenreClick = onNavigateToGenre,
+                        viewPreferences = uiState.viewPreferences,
+                        onLayoutToggleClick = { showViewSettings = true },
                         contentPadding = contentPadding,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -238,11 +254,21 @@ fun LibraryScreen(
                     PlaylistsScreen(
                         viewModel = viewModel,
                         onPlaylistClick = onNavigateToPlaylist,
+                        viewPreferences = uiState.viewPreferences,
+                        onLayoutToggleClick = { showViewSettings = true },
                         contentPadding = contentPadding,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
             }
         }
+    }
+
+    if (showViewSettings) {
+        com.devson.vedtune.ui.components.ViewSettingsSheet(
+            preferences = uiState.viewPreferences,
+            onPreferencesChange = { songsViewModel.updateViewPreferences(it) },
+            onDismiss = { showViewSettings = false }
+        )
     }
 }

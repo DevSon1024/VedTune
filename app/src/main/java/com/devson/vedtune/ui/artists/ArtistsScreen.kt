@@ -41,13 +41,15 @@ import androidx.compose.material3.DropdownMenuItem
 fun ArtistsScreen(
     viewModel: ArtistsViewModel,
     onArtistClick: (String) -> Unit,
+    viewPreferences: com.devson.vedtune.domain.model.ViewPreferences,
+    onLayoutToggleClick: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
     val artists by viewModel.artists.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     
-    val isGridView by viewModel.isGridView.collectAsState()
+    val isGridView = viewPreferences.isGridView
     val sortBy by viewModel.sortBy.collectAsState()
     val sortOrder by viewModel.sortOrder.collectAsState()
     var showSortMenu by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
@@ -68,7 +70,7 @@ fun ArtistsScreen(
                 sortOrderIcon = orderIcon,
                 onSortClick = { showSortMenu = true },
                 isGridView = isGridView,
-                onLayoutToggleClick = { viewModel.toggleLayoutView() },
+                onLayoutToggleClick = onLayoutToggleClick,
                 onShuffleClick = { viewModel.playShuffleAll() }
             )
 
@@ -115,7 +117,7 @@ fun ArtistsScreen(
         } else {
             if (isGridView) {
                 androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                    columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+                    columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(viewPreferences.gridSpanCount),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = 16.dp,
@@ -133,7 +135,9 @@ fun ArtistsScreen(
                     ) { artist ->
                         ArtistGridItem(
                             artist = artist,
-                            onClick = { onArtistClick(artist.name) }
+                            onClick = { onArtistClick(artist.name) },
+                            showArtwork = viewPreferences.showAlbumArt,
+                            gridCount = viewPreferences.gridSpanCount
                         )
                     }
                 }
@@ -155,7 +159,8 @@ fun ArtistsScreen(
                     ) { artist ->
                         ArtistListItem(
                             artist = artist,
-                            onClick = { onArtistClick(artist.name) }
+                            onClick = { onArtistClick(artist.name) },
+                            showArtwork = viewPreferences.showAlbumArt
                         )
                     }
                 }
@@ -168,6 +173,7 @@ fun ArtistsScreen(
 fun ArtistListItem(
     artist: Artist,
     onClick: () -> Unit,
+    showArtwork: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val firstLetter = remember(artist.name) {
@@ -178,22 +184,24 @@ fun ArtistListItem(
         secondaryText = "${if (artist.songCount == 1) "1 song" else "${artist.songCount} songs"} • ${if (artist.albumCount == 1) "1 album" else "${artist.albumCount} albums"}",
         onClick = onClick,
         modifier = modifier,
-        leadingContent = {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = firstLetter,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+        leadingContent = if (showArtwork) {
+            {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = firstLetter,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
             }
-        }
+        } else null
     )
 }
 
@@ -201,6 +209,8 @@ fun ArtistListItem(
 fun ArtistGridItem(
     artist: Artist,
     onClick: () -> Unit,
+    showArtwork: Boolean = true,
+    gridCount: Int = 2,
     modifier: Modifier = Modifier
 ) {
     val firstLetter = remember(artist.name) {
@@ -210,7 +220,9 @@ fun ArtistGridItem(
         primaryText = artist.name,
         secondaryText = "${artist.songCount} ${if (artist.songCount == 1) "song" else "songs"} • ${artist.albumCount} ${if (artist.albumCount == 1) "album" else "albums"}",
         onClick = onClick,
-        modifier = modifier
+        modifier = modifier,
+        gridCount = gridCount,
+        showArtwork = showArtwork
     ) {
         Box(
             modifier = Modifier
@@ -228,4 +240,3 @@ fun ArtistGridItem(
         }
     }
 }
-

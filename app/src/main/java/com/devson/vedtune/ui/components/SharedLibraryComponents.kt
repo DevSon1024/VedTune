@@ -58,15 +58,17 @@ fun VedTuneListItem(
                 overflow = TextOverflow.Ellipsis
             )
         },
-        supportingContent = {
-            Text(
-                text = secondaryText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        },
+        supportingContent = if (secondaryText.isNotBlank()) {
+            {
+                Text(
+                    text = secondaryText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        } else null,
         leadingContent = leadingContent,
         trailingContent = trailingContent,
         colors = ListItemDefaults.colors(
@@ -86,31 +88,43 @@ fun VedTuneGridCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+    gridCount: Int = 2,
+    showArtwork: Boolean = true,
     trailingContent: @Composable (() -> Unit)? = null,
     artworkContent: @Composable () -> Unit
 ) {
+    val padding = if (gridCount >= 4) 6.dp else 12.dp
+    val titleStyle = when {
+        gridCount >= 4 -> MaterialTheme.typography.labelSmall
+        gridCount >= 3 -> MaterialTheme.typography.bodyMedium
+        else -> MaterialTheme.typography.bodyLarge
+    }
+    val subtitleStyle = MaterialTheme.typography.bodyMedium
+
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(if (gridCount >= 4) 8.dp else 16.dp),
         colors = CardDefaults.cardColors(
             containerColor = containerColor
         ),
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(if (gridCount >= 4) 8.dp else 16.dp))
             .clickable(onClick = onClick)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp)
+            modifier = Modifier.padding(padding)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(12.dp))
-            ) {
-                artworkContent()
+            if (showArtwork) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(if (gridCount >= 4) 6.dp else 12.dp))
+                ) {
+                    artworkContent()
+                }
+                Spacer(modifier = Modifier.height(if (gridCount >= 4) 4.dp else 8.dp))
             }
-            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -120,21 +134,23 @@ fun VedTuneGridCard(
                 ) {
                     Text(
                         text = primaryText,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = titleStyle,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Text(
-                        text = secondaryText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    if (gridCount < 4 && secondaryText.isNotBlank()) {
+                        Text(
+                            text = secondaryText,
+                            style = subtitleStyle,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
-                if (trailingContent != null) {
+                if (gridCount < 4 && trailingContent != null) {
                     trailingContent()
                 }
             }

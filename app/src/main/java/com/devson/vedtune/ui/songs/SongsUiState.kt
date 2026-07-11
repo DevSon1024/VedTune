@@ -4,6 +4,8 @@ import com.devson.vedtune.core.UiEvent
 import com.devson.vedtune.core.UiState
 import com.devson.vedtune.domain.model.Song
 
+import com.devson.vedtune.domain.model.ViewPreferences
+
 enum class SortBy {
     TITLE, ARTIST, ALBUM, DATE_ADDED
 }
@@ -23,7 +25,8 @@ data class SongsUiState(
     val errorMessage: String? = null,
     val showArtwork: Boolean = true,
     val totalItemCount: Int = 0,
-    val totalDurationMs: Long = 0L
+    val totalDurationMs: Long = 0L,
+    val viewPreferences: ViewPreferences = ViewPreferences()
 ) : UiState
 
 sealed interface SongsUiEvent : UiEvent {

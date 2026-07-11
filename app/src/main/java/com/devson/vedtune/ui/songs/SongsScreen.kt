@@ -79,6 +79,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -100,6 +101,7 @@ fun SongsScreen(
     onNavigateToAlbum: (Long) -> Unit,
     onNavigateToArtist: (String) -> Unit,
     onNavigateToEditTags: (Long) -> Unit,
+    onLayoutToggleClick: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     navigateToLocationEvent: kotlinx.coroutines.flow.SharedFlow<Long>? = null
@@ -116,6 +118,7 @@ fun SongsScreen(
     val scope = rememberCoroutineScope()
     var highlightedSongId by remember { mutableStateOf<Long?>(null) }
     val highlightAlpha = remember { Animatable(0f) }
+    val highlightColor = MaterialTheme.colorScheme.primaryContainer
 
     LaunchedEffect(navigateToLocationEvent) {
         navigateToLocationEvent?.collect { songId ->
@@ -211,7 +214,7 @@ fun SongsScreen(
                 sortOrderIcon = orderIcon,
                 onSortClick = { showSortMenu = true },
                 isGridView = uiState.isGridView,
-                onLayoutToggleClick = { viewModel.toggleLayoutView() },
+                onLayoutToggleClick = onLayoutToggleClick,
                 onShuffleClick = { viewModel.playShuffleAll() }
             )
 
@@ -362,7 +365,7 @@ fun SongsScreen(
                 }
                 uiState.isGridView -> {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
+                        columns = GridCells.Fixed(uiState.viewPreferences.gridSpanCount),
                         state = lazyGridState,
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -380,47 +383,59 @@ fun SongsScreen(
                             contentType = { "song_grid_item" }
                         ) { song ->
                             val isCurrentSong = song.id == currentSongId
-                            val containerColor = if (song.id == highlightedSongId && highlightAlpha.value > 0f) {
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = highlightAlpha.value)
+                            val isHighlighted = song.id == highlightedSongId
+                            val containerColor = if (isHighlighted) {
+                                Color.Transparent
                             } else {
                                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                             }
                             com.devson.vedtune.ui.components.VedTuneGridCard(
                                 primaryText = song.title,
-                                secondaryText = song.artist,
+                                secondaryText = if (uiState.viewPreferences.showArtist) song.artist else "",
                                 onClick = { viewModel.playSong(song) },
                                 containerColor = containerColor,
-                                modifier = Modifier,
+                                gridCount = uiState.viewPreferences.gridSpanCount,
+                                showArtwork = uiState.viewPreferences.showAlbumArt,
+                                modifier = Modifier.drawBehind {
+                                    if (isHighlighted) {
+                                        drawRect(
+                                            color = highlightColor,
+                                            alpha = highlightAlpha.value
+                                        )
+                                    }
+                                },
                                 trailingContent = {
                                     IconButton(onClick = { selectedSongForOptions = song }) {
                                         Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
                                     }
                                 }
                             ) {
-                                Box(
-                                    modifier = Modifier.fillMaxSize()
-                                ) {
-                                    SongArtwork(
-                                        albumId = song.albumId,
-                                        lastModified = song.dateModified,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                                        showArtwork = uiState.showArtwork
-                                    )
-                                    if (isCurrentSong) {
-                                        Box(
+                                if (uiState.viewPreferences.showAlbumArt) {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        SongArtwork(
+                                            albumId = song.albumId,
+                                            lastModified = song.dateModified,
                                             modifier = Modifier
                                                 .fillMaxSize()
                                                 .clip(RoundedCornerShape(12.dp))
-                                                .background(Color.Black.copy(alpha = 0.4f)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            PlayingIndicator(
-                                                isPlaying = isPlaying,
-                                                modifier = Modifier.size(32.dp)
-                                            )
+                                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                                            showArtwork = uiState.showArtwork
+                                        )
+                                        if (isCurrentSong) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .background(Color.Black.copy(alpha = 0.4f)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                PlayingIndicator(
+                                                    isPlaying = isPlaying,
+                                                    modifier = Modifier.size(32.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -446,41 +461,52 @@ fun SongsScreen(
                             contentType = { "song_list_item" }
                         ) { song ->
                             val isCurrentSong = song.id == currentSongId
-                            val containerColor = if (song.id == highlightedSongId && highlightAlpha.value > 0f) {
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = highlightAlpha.value)
+                            val isHighlighted = song.id == highlightedSongId
+                            val containerColor = if (isHighlighted) {
+                                Color.Transparent
                             } else {
                                 MaterialTheme.colorScheme.surface
                             }
                             com.devson.vedtune.ui.components.VedTuneListItem(
                                 primaryText = song.title,
-                                secondaryText = song.artist,
+                                secondaryText = if (uiState.viewPreferences.showArtist) song.artist else "",
                                 onClick = { viewModel.playSong(song) },
                                 containerColor = containerColor,
-                                leadingContent = {
-                                    Box(
-                                        modifier = Modifier.size(56.dp)
-                                    ) {
-                                        SongArtwork(
-                                            albumId = song.albumId,
-                                            lastModified = song.dateModified,
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                                            showArtwork = uiState.showArtwork
+                                modifier = Modifier.drawBehind {
+                                    if (isHighlighted) {
+                                        drawRect(
+                                            color = highlightColor,
+                                            alpha = highlightAlpha.value
                                         )
-                                        if (isCurrentSong) {
-                                            Box(
+                                    }
+                                },
+                                leadingContent = {
+                                    if (uiState.viewPreferences.showAlbumArt) {
+                                        Box(
+                                            modifier = Modifier.size(56.dp)
+                                        ) {
+                                            SongArtwork(
+                                                albumId = song.albumId,
+                                                lastModified = song.dateModified,
                                                 modifier = Modifier
                                                     .fillMaxSize()
                                                     .clip(RoundedCornerShape(8.dp))
-                                                    .background(Color.Black.copy(alpha = 0.4f)),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                PlayingIndicator(
-                                                    isPlaying = isPlaying,
-                                                    modifier = Modifier.size(24.dp)
-                                                )
+                                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                                showArtwork = uiState.showArtwork
+                                            )
+                                            if (isCurrentSong) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .background(Color.Black.copy(alpha = 0.4f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    PlayingIndicator(
+                                                        isPlaying = isPlaying,
+                                                        modifier = Modifier.size(24.dp)
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -489,12 +515,14 @@ fun SongsScreen(
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
-                                            text = formatDuration(song.duration),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
+                                        if (uiState.viewPreferences.showDuration) {
+                                            Text(
+                                                text = formatDuration(song.duration),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                        }
                                         IconButton(onClick = { selectedSongForOptions = song }) {
                                             Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
                                         }

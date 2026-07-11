@@ -2,8 +2,10 @@ package com.devson.vedtune.ui.navigation
 
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -38,7 +40,6 @@ import com.devson.vedtune.ui.songs.EditTagsViewModel
 import com.devson.vedtune.ui.lyrics.LyricsEditorScreen
 import com.devson.vedtune.ui.lyrics.LyricsEditorViewModel
 import com.devson.vedtune.ui.settings.LyricsConverterScreen
-
 import com.devson.vedtune.ui.genres.GenreDetailsScreen
 import com.devson.vedtune.ui.genres.GenreDetailsViewModel
 
@@ -80,6 +81,17 @@ sealed class Screen(val route: String) {
     }
 }
 
+private val horizontalEnterTransition: AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.() -> androidx.compose.animation.EnterTransition = {
+    fadeIn(animationSpec = tween(200)) + slideInHorizontally(
+        initialOffsetX = { it / 8 },
+        animationSpec = tween(250, easing = FastOutSlowInEasing)
+    )
+}
+
+private val horizontalExitTransition: AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.() -> androidx.compose.animation.ExitTransition = {
+    fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing))
+}
+
 @Composable
 fun NavGraph(
     navController: NavHostController,
@@ -90,8 +102,8 @@ fun NavGraph(
         navController = navController,
         startDestination = Screen.Home.route,
         modifier = modifier,
-        enterTransition = { fadeIn(animationSpec = tween(300)) },
-        exitTransition = { fadeOut(animationSpec = tween(300)) }
+        enterTransition = { fadeIn(animationSpec = tween(250, easing = FastOutSlowInEasing)) },
+        exitTransition = { fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing)) }
     ) {
         composable(Screen.Home.route) {
             val defaultStartScreen by mainViewModel.defaultStartScreen.collectAsState()
@@ -137,18 +149,8 @@ fun NavGraph(
         }
         composable(
             route = Screen.FolderSettings.route,
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(350)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(350)
-                )
-            }
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
         ) {
             val viewModel: SettingsViewModel = hiltViewModel()
             FolderSettingsScreen(
@@ -158,18 +160,8 @@ fun NavGraph(
         }
         composable(
             route = Screen.AppearanceSettings.route,
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(350)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(350)
-                )
-            }
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
         ) {
             val viewModel: SettingsViewModel = hiltViewModel()
             AppearanceSettingsScreen(
@@ -179,18 +171,8 @@ fun NavGraph(
         }
         composable(
             route = Screen.PlayerInterfaceSettings.route,
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(350)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(350)
-                )
-            }
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
         ) {
             val viewModel: SettingsViewModel = hiltViewModel()
             PlayerInterfaceSettingScreen(
@@ -200,18 +182,8 @@ fun NavGraph(
         }
         composable(
             route = Screen.PlaybackSettings.route,
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(350)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(350)
-                )
-            }
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
         ) {
             val viewModel: SettingsViewModel = hiltViewModel()
             PlaybackSettingsScreen(
@@ -221,18 +193,8 @@ fun NavGraph(
         }
         composable(
             route = Screen.LibrarySettings.route,
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(350)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(350)
-                )
-            }
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
         ) {
             val viewModel: SettingsViewModel = hiltViewModel()
             LibrarySettingsScreen(
@@ -248,18 +210,8 @@ fun NavGraph(
             arguments = listOf(
                 navArgument("artistName") { type = NavType.StringType }
             ),
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(350)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(350)
-                )
-            }
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
         ) {
             val viewModel: ArtistDetailsViewModel = hiltViewModel()
             ArtistDetailsScreen(
@@ -274,13 +226,13 @@ fun NavGraph(
             enterTransition = {
                 slideIntoContainer(
                     AnimatedContentTransitionScope.SlideDirection.Up,
-                    animationSpec = tween(400)
+                    animationSpec = tween(250, easing = FastOutSlowInEasing)
                 )
             },
             exitTransition = {
                 slideOutOfContainer(
                     AnimatedContentTransitionScope.SlideDirection.Down,
-                    animationSpec = tween(400)
+                    animationSpec = tween(250, easing = FastOutSlowInEasing)
                 )
             }
         ) {
@@ -311,18 +263,8 @@ fun NavGraph(
             arguments = listOf(
                 navArgument("albumId") { type = NavType.LongType }
             ),
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(350)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(350)
-                )
-            }
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
         ) {
             val viewModel: AlbumDetailsViewModel = hiltViewModel()
             AlbumDetailsScreen(
@@ -337,18 +279,8 @@ fun NavGraph(
             arguments = listOf(
                 navArgument("playlistId") { type = NavType.LongType }
             ),
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(350)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(350)
-                )
-            }
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
         ) {
             val viewModel: PlaylistDetailsViewModel = hiltViewModel()
             PlaylistDetailsScreen(
@@ -363,18 +295,8 @@ fun NavGraph(
             arguments = listOf(
                 navArgument("songId") { type = NavType.LongType }
             ),
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(350)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(350)
-                )
-            }
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
         ) {
             val viewModel: EditTagsViewModel = hiltViewModel()
             EditTagsScreen(
@@ -390,18 +312,8 @@ fun NavGraph(
             arguments = listOf(
                 navArgument("songId") { type = NavType.LongType }
             ),
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(350)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(350)
-                )
-            }
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
         ) {
             val viewModel: LyricsEditorViewModel = hiltViewModel()
             LyricsEditorScreen(
@@ -411,18 +323,8 @@ fun NavGraph(
         }
         composable(
             route = Screen.LyricsConverter.route,
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(350)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(350)
-                )
-            }
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
         ) {
             LyricsConverterScreen(
                 onNavigateBack = { navController.popBackStackSafe() }
@@ -433,18 +335,8 @@ fun NavGraph(
             arguments = listOf(
                 navArgument("genreName") { type = NavType.StringType }
             ),
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(350)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(350)
-                )
-            }
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
         ) {
             val viewModel: GenreDetailsViewModel = hiltViewModel()
             GenreDetailsScreen(

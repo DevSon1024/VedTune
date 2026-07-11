@@ -55,6 +55,8 @@ import com.devson.vedtune.domain.model.Playlist
 fun PlaylistsScreen(
     viewModel: PlaylistsViewModel,
     onPlaylistClick: (Long) -> Unit,
+    viewPreferences: com.devson.vedtune.domain.model.ViewPreferences,
+    onLayoutToggleClick: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
@@ -69,7 +71,7 @@ fun PlaylistsScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            val isGridView by viewModel.isGridView.collectAsState()
+            val isGridView = viewPreferences.isGridView
             val sortBy by viewModel.sortBy.collectAsState()
             val sortOrder by viewModel.sortOrder.collectAsState()
             var showSortMenu by remember { mutableStateOf(false) }
@@ -87,7 +89,7 @@ fun PlaylistsScreen(
                     sortOrderIcon = orderIcon,
                     onSortClick = { showSortMenu = true },
                     isGridView = isGridView,
-                    onLayoutToggleClick = { viewModel.toggleLayoutView() },
+                    onLayoutToggleClick = onLayoutToggleClick,
                     onShuffleClick = { viewModel.playShuffleAll() }
                 )
 
@@ -134,7 +136,7 @@ fun PlaylistsScreen(
             } else {
                 if (isGridView) {
                     androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+                        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(viewPreferences.gridSpanCount),
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             start = 16.dp,
@@ -153,7 +155,9 @@ fun PlaylistsScreen(
                             PlaylistGridItem(
                                 playlist = playlist,
                                 onClick = { onPlaylistClick(playlist.id) },
-                                onDeleteClick = { viewModel.deletePlaylist(playlist.id) }
+                                onDeleteClick = { viewModel.deletePlaylist(playlist.id) },
+                                showArtwork = viewPreferences.showAlbumArt,
+                                gridCount = viewPreferences.gridSpanCount
                             )
                         }
                     }
@@ -176,7 +180,8 @@ fun PlaylistsScreen(
                             PlaylistItemRow(
                                 playlist = playlist,
                                 onClick = { onPlaylistClick(playlist.id) },
-                                onDeleteClick = { viewModel.deletePlaylist(playlist.id) }
+                                onDeleteClick = { viewModel.deletePlaylist(playlist.id) },
+                                showArtwork = viewPreferences.showAlbumArt
                             )
                         }
                     }
@@ -212,6 +217,7 @@ fun PlaylistItemRow(
     playlist: Playlist,
     onClick: () -> Unit,
     onDeleteClick: () -> Unit,
+    showArtwork: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -221,21 +227,23 @@ fun PlaylistItemRow(
         secondaryText = if (playlist.songCount == 1) "1 song" else "${playlist.songCount} songs",
         onClick = onClick,
         modifier = modifier,
-        leadingContent = {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Playlist Placeholder",
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer
-                )
+        leadingContent = if (showArtwork) {
+            {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.secondaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "Playlist Placeholder",
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
             }
-        },
+        } else null,
         trailingContent = {
             Box {
                 IconButton(onClick = { showMenu = true }) {
@@ -304,6 +312,8 @@ fun PlaylistGridItem(
     playlist: Playlist,
     onClick: () -> Unit,
     onDeleteClick: () -> Unit,
+    showArtwork: Boolean = true,
+    gridCount: Int = 2,
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -312,7 +322,9 @@ fun PlaylistGridItem(
         primaryText = playlist.name,
         secondaryText = "${playlist.songCount} ${if (playlist.songCount == 1) "song" else "songs"}",
         onClick = onClick,
-        modifier = modifier
+        modifier = modifier,
+        gridCount = gridCount,
+        showArtwork = showArtwork
     ) {
         Box(
             modifier = Modifier
@@ -360,4 +372,3 @@ fun PlaylistGridItem(
         }
     }
 }
-
