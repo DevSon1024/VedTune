@@ -44,8 +44,12 @@ class PlaybackService : MediaSessionService() {
     @Inject
     lateinit var dataStore: DataStore<Preferences>
 
+    @Inject
+    lateinit var volumeNormalizationManager: VolumeNormalizationManager
+
     private var mediaSession: MediaSession? = null
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
 
     companion object {
         private val KEY_CURRENT_SON_ID = longPreferencesKey("current_song_id")
@@ -73,6 +77,8 @@ class PlaybackService : MediaSessionService() {
         super.onCreate()
         
         exoPlayer.addListener(playerListener)
+        volumeNormalizationManager.attachPlayer(exoPlayer)
+
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -212,6 +218,7 @@ class PlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         exoPlayer.removeListener(playerListener)
+        volumeNormalizationManager.release()
         mediaSession?.run {
             player.release()
             release()
@@ -219,4 +226,5 @@ class PlaybackService : MediaSessionService() {
         mediaSession = null
         super.onDestroy()
     }
+
 }
