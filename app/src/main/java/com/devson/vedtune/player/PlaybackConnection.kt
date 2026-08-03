@@ -301,10 +301,11 @@ class PlaybackConnection @Inject constructor(
                         lastSaveTime = now
                     }
                 }
-                delay(500)
+                delay(50)
             }
         }
     }
+
 
     private fun savePlaybackPosition(position: Long) {
         scope.launch {

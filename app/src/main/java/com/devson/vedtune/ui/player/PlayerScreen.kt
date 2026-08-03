@@ -1790,15 +1790,18 @@ fun parseLrc(lrcText: String): List<LrcLine> {
 
 fun getActiveLyricsLineIndex(lines: List<LrcLine>, currentPosition: Long): Int {
     if (lines.isEmpty()) return -1
+    // Offset +150ms compensates for AudioTrack buffer latency and UI rendering
+    val effectivePosition = currentPosition + 150L
     var activeIndex = -1
     for (i in lines.indices) {
         val timestamp = lines[i].timestamp
-        if (timestamp in 0L..currentPosition) {
+        if (timestamp in 0L..effectivePosition) {
             activeIndex = i
         }
     }
     return activeIndex
 }
+
 
 @Composable
 private fun ViewAlbumArtOverlay(
