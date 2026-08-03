@@ -61,6 +61,10 @@ interface SettingsRepository {
     suspend fun setShowShuffleRepeatButtons(show: Boolean)
     suspend fun clearPlaybackQueue()
 
+    val lrcSearchField: Flow<com.devson.vedtune.data.repository.LrcSearchField>
+    suspend fun setLrcSearchField(field: com.devson.vedtune.data.repository.LrcSearchField)
+
+
     // Folder filtering setters
     suspend fun setFolderFilterMode(mode: FolderFilterMode)
     suspend fun setBlacklistedFolders(folders: Set<String>)

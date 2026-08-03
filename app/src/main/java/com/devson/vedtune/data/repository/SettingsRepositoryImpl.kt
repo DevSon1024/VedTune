@@ -52,6 +52,8 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_SHOW_LYRICS_BUTTON = booleanPreferencesKey("show_lyrics_button")
         private val KEY_SHOW_SLEEP_TIMER_BUTTON = booleanPreferencesKey("show_sleep_timer_button")
         private val KEY_SHOW_SHUFFLE_REPEAT_BUTTONS = booleanPreferencesKey("show_shuffle_repeat_buttons")
+        private val KEY_LRC_SEARCH_FIELD = stringPreferencesKey("lrc_search_field")
+
 
         // Folder filter
         private val KEY_FOLDER_FILTER_MODE = stringPreferencesKey("folder_filter_mode")
@@ -308,6 +310,20 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setIncludeSubfolders(include: Boolean) {
         dataStore.edit { it[KEY_INCLUDE_SUBFOLDERS] = include }
     }
+
+    override val lrcSearchField: Flow<LrcSearchField> = dataStore.data.map { preferences ->
+        val name = preferences[KEY_LRC_SEARCH_FIELD]
+        try {
+            if (name != null) LrcSearchField.valueOf(name) else LrcSearchField.TRACK_NAME
+        } catch (e: Exception) {
+            LrcSearchField.TRACK_NAME
+        }
+    }
+
+    override suspend fun setLrcSearchField(field: LrcSearchField) {
+        dataStore.edit { it[KEY_LRC_SEARCH_FIELD] = field.name }
+    }
+
 
     //  Serialisation helpers 
 

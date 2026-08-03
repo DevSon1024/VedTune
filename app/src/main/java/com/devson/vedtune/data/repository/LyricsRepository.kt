@@ -1,10 +1,20 @@
 package com.devson.vedtune.data.repository
 
 import com.devson.vedtune.data.remote.api.LrcLibApi
+import com.devson.vedtune.data.remote.model.LrcLibResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class LyricsRepository(
+enum class LrcSearchField(val label: String) {
+    TRACK_NAME("Track Name"),
+    ARTIST_NAME("Artist Name"),
+    ALBUM_NAME("Album Name")
+}
+
+@Singleton
+class LyricsRepository @Inject constructor(
     private val api: LrcLibApi
 ) {
 
@@ -52,6 +62,42 @@ class LyricsRepository(
                     Result.failure(Exception("No lyrics available for this track."))
                 }
             }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun searchLyrics(
+        field: LrcSearchField,
+        query: String
+    ): Result<List<LrcLibResponse>> = withContext(Dispatchers.IO) {
+        try {
+            val trimmedQuery = query.trim()
+            if (trimmedQuery.isEmpty()) {
+                return@withContext Result.success(emptyList())
+            }
+
+            val trackParam = if (field == LrcSearchField.TRACK_NAME) trimmedQuery else null
+            val artistParam = if (field == LrcSearchField.ARTIST_NAME) trimmedQuery else null
+            val albumParam = if (field == LrcSearchField.ALBUM_NAME) trimmedQuery else null
+
+            val response = api.searchLyrics(
+                query = null,
+                trackName = trackParam,
+                artistName = artistParam,
+                albumName = albumParam
+            )
+
+            if (response.code() == 429) {
+                return@withContext Result.failure(Exception("Rate limit exceeded. Try again later."))
+            }
+
+            if (!response.isSuccessful) {
+                return@withContext Result.failure(Exception("Search failed with status code ${response.code()}."))
+            }
+
+            val body = response.body() ?: emptyList()
+            Result.success(body)
         } catch (e: Exception) {
             Result.failure(e)
         }

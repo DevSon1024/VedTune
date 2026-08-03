@@ -32,6 +32,10 @@ import java.io.IOException
 import java.util.Locale
 import javax.inject.Inject
 
+import com.devson.vedtune.data.remote.model.LrcLibResponse
+import com.devson.vedtune.data.repository.LrcSearchField
+import com.devson.vedtune.data.repository.LyricsRepository
+
 data class LrcLine(val timestamp: Long, val text: String)
 
 sealed interface LyricsEditorUiState {
@@ -39,6 +43,13 @@ sealed interface LyricsEditorUiState {
     object Loading : LyricsEditorUiState
     object Success : LyricsEditorUiState
     data class Error(val message: String) : LyricsEditorUiState
+}
+
+sealed interface LrcSearchUiState {
+    object Idle : LrcSearchUiState
+    object Loading : LrcSearchUiState
+    data class Success(val results: List<LrcLibResponse>) : LrcSearchUiState
+    data class Error(val message: String) : LrcSearchUiState
 }
 
 sealed interface LyricsEditorUiEvent {
@@ -50,6 +61,7 @@ sealed interface LyricsEditorUiEvent {
 @HiltViewModel
 class LyricsEditorViewModel @Inject constructor(
     private val repository: MediaRepository,
+    private val lyricsRepository: LyricsRepository,
     private val playbackConnection: PlaybackConnection,
     private val settingsRepository: SettingsRepository,
     @ApplicationContext private val context: Context,
@@ -73,6 +85,20 @@ class LyricsEditorViewModel @Inject constructor(
     private val _rawLyrics = MutableStateFlow("")
     val rawLyrics: StateFlow<String> = _rawLyrics.asStateFlow()
 
+    // LRCLIB Search State
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _selectedSearchField = MutableStateFlow(LrcSearchField.TRACK_NAME)
+    val selectedSearchField: StateFlow<LrcSearchField> = _selectedSearchField.asStateFlow()
+
+    private val _showSyncedOnly = MutableStateFlow(false)
+    val showSyncedOnly: StateFlow<Boolean> = _showSyncedOnly.asStateFlow()
+
+    private val _searchUiState = MutableStateFlow<LrcSearchUiState>(LrcSearchUiState.Idle)
+    val searchUiState: StateFlow<LrcSearchUiState> = _searchUiState.asStateFlow()
+
+
     private val _parsedLines = MutableStateFlow<List<LrcLine>>(emptyList())
     val parsedLines: StateFlow<List<LrcLine>> = _parsedLines.asStateFlow()
 
@@ -87,7 +113,23 @@ class LyricsEditorViewModel @Inject constructor(
     private var seekJob: kotlinx.coroutines.Job? = null
 
     init {
+        viewModelScope.launch {
+            settingsRepository.lrcSearchField.collect { savedField ->
+                _selectedSearchField.value = savedField
+                _song.value?.let { currentSong ->
+                    _searchQuery.value = getFieldValueForSong(savedField, currentSong)
+                }
+            }
+        }
         loadSongAndLyrics()
+    }
+
+    private fun getFieldValueForSong(field: LrcSearchField, song: Song): String {
+        return when (field) {
+            LrcSearchField.TRACK_NAME -> song.title
+            LrcSearchField.ARTIST_NAME -> song.artist
+            LrcSearchField.ALBUM_NAME -> song.album ?: ""
+        }.trim()
     }
 
     private fun loadSongAndLyrics() {
@@ -100,8 +142,11 @@ class LyricsEditorViewModel @Inject constructor(
                     return@launch
                 }
                 _song.value = songData
+                _searchQuery.value = getFieldValueForSong(_selectedSearchField.value, songData)
+
 
                 val lrcText = withContext(Dispatchers.IO) {
+
                     // 1. Check internal lrc file
                     val internalFile = File(context.filesDir, "custom_lyrics/$songId.lrc")
                     if (internalFile.exists()) {
@@ -440,4 +485,63 @@ class LyricsEditorViewModel @Inject constructor(
         }
         return if (includeBrackets) "[$formatted]" else formatted
     }
+
+    // LRCLIB Search Handlers
+    fun onSearchQueryChange(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun onSearchFieldChange(field: LrcSearchField) {
+        _selectedSearchField.value = field
+        viewModelScope.launch {
+            settingsRepository.setLrcSearchField(field)
+        }
+        _song.value?.let { currentSong ->
+            _searchQuery.value = getFieldValueForSong(field, currentSong)
+        }
+    }
+
+
+    fun onShowSyncedOnlyChange(show: Boolean) {
+        _showSyncedOnly.value = show
+    }
+
+    fun executeLrcLibSearch() {
+        val query = _searchQuery.value.trim()
+        if (query.isEmpty()) {
+            _searchUiState.value = LrcSearchUiState.Error("Please enter a search query.")
+            return
+        }
+
+        viewModelScope.launch {
+            _searchUiState.value = LrcSearchUiState.Loading
+            val field = _selectedSearchField.value
+            val result = lyricsRepository.searchLyrics(field, query)
+            result.fold(
+                onSuccess = { list ->
+                    _searchUiState.value = LrcSearchUiState.Success(list)
+                },
+                onFailure = { throwable ->
+                    val errorMessage = throwable.message ?: "Search failed. Please try again."
+                    _searchUiState.value = LrcSearchUiState.Error(errorMessage)
+                }
+            )
+        }
+    }
+
+    fun applyLyricsFromSearch(item: LrcLibResponse) {
+        val lyricsText = item.syncedLyrics ?: item.plainLyrics ?: ""
+        if (lyricsText.isNotBlank()) {
+            _rawLyrics.value = lyricsText
+            _parsedLines.value = parseRawLyricsToLines(lyricsText)
+            viewModelScope.launch {
+                _uiEvent.emit(LyricsEditorUiEvent.ShowToast("Applied lyrics for \"${item.trackName}\""))
+            }
+        } else {
+            viewModelScope.launch {
+                _uiEvent.emit(LyricsEditorUiEvent.ShowToast("Selected item has no lyrics content."))
+            }
+        }
+    }
 }
+

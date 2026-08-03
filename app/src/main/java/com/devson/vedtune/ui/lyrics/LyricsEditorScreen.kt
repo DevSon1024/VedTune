@@ -96,8 +96,16 @@ fun LyricsEditorScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val seekbarStyle by viewModel.seekbarStyle.collectAsStateWithLifecycle()
 
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val selectedSearchField by viewModel.selectedSearchField.collectAsStateWithLifecycle()
+    val showSyncedOnly by viewModel.showSyncedOnly.collectAsStateWithLifecycle()
+    val searchUiState by viewModel.searchUiState.collectAsStateWithLifecycle()
+
     var showDiscardDialog by remember { mutableStateOf(false) }
+    var showSearchOptionsDialog by remember { mutableStateOf(false) }
+    var showLrcLibBottomSheet by remember { mutableStateOf(false) }
     var editingLineIndex by remember { mutableStateOf<Int?>(null) }
+
 
     val intentSenderLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -170,6 +178,44 @@ fun LyricsEditorScreen(
             )
         }
     }
+
+    if (showSearchOptionsDialog) {
+        LyricsSearchOptionsDialog(
+            onDismiss = { showSearchOptionsDialog = false },
+            onSearchGoogle = {
+                val songTitle = song?.title ?: ""
+                val songArtist = song?.artist ?: ""
+                val query = "lyrics: $songTitle $songArtist"
+                val intent = Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse("https://www.google.com/search?q=${Uri.encode(query)}")
+                )
+                context.startActivity(intent)
+            },
+            onSearchLrcLib = {
+                showLrcLibBottomSheet = true
+            }
+        )
+    }
+
+    if (showLrcLibBottomSheet) {
+        LrcLibSearchBottomSheet(
+            searchQuery = searchQuery,
+            selectedField = selectedSearchField,
+            showSyncedOnly = showSyncedOnly,
+            searchUiState = searchUiState,
+            onQueryChange = viewModel::onSearchQueryChange,
+            onFieldChange = viewModel::onSearchFieldChange,
+            onSyncedOnlyChange = viewModel::onShowSyncedOnlyChange,
+            onSearchClick = viewModel::executeLrcLibSearch,
+            onSelectResult = { selectedResult ->
+                viewModel.applyLyricsFromSearch(selectedResult)
+                showLrcLibBottomSheet = false
+            },
+            onDismiss = { showLrcLibBottomSheet = false }
+        )
+    }
+
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -303,8 +349,10 @@ fun LyricsEditorScreen(
                                         putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI, initialUri)
                                     }
                                     importLyricsLauncher.launch(intent)
-                                }
+                                },
+                                onSearchClick = { showSearchOptionsDialog = true }
                             )
+
                         } else {
                             SyncedTabContent(
                                 parsedLines = parsedLines,
@@ -326,7 +374,8 @@ fun SimpleTabContent(
     songTitle: String,
     songArtist: String,
     onRawLyricsChange: (String) -> Unit,
-    onImportClick: () -> Unit
+    onImportClick: () -> Unit,
+    onSearchClick: () -> Unit
 ) {
     val context = LocalContext.current
     val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
@@ -356,20 +405,17 @@ fun SimpleTabContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedButton(
-                onClick = {
-                    val query = "lyrics: $songTitle $songArtist"
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${Uri.encode(query)}"))
-                    context.startActivity(intent)
-                },
+                onClick = onSearchClick,
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Search,
-                    contentDescription = "Search Web"
+                    contentDescription = "Search Lyrics"
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Search")
             }
+
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)

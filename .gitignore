@@ -16,5 +16,6 @@ local.properties
 update_details.md
 .kotlin
 /*.txt
+/*.log
 vedtune-keystore
 *.properties

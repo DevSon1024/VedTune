@@ -72,4 +72,19 @@ object AppModule {
     ): SettingsRepository {
         return SettingsRepositoryImpl(dataStore, queueDao)
     }
+
+    @Provides
+    @Singleton
+    fun provideLrcLibApi(): com.devson.vedtune.data.remote.api.LrcLibApi {
+        return com.devson.vedtune.data.remote.NetworkClient.lrcLibApi
+    }
+
+    @Provides
+    @Singleton
+    fun provideLyricsRepository(
+        api: com.devson.vedtune.data.remote.api.LrcLibApi
+    ): com.devson.vedtune.data.repository.LyricsRepository {
+        return com.devson.vedtune.data.repository.LyricsRepository(api)
+    }
 }
+
