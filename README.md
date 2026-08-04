@@ -2,10 +2,10 @@
 
 <div align="center">
 
-![VedTune Logo](screenshots/vedtune.png)
+<img src="screenshots/vedtune.png" width="140" height="140" style="border-radius: 28px;" />
 
 **A powerful, offline-first local music player for Android built with modern Android development standards.**
-
+[![Downloads](https://img.shields.io/github/downloads/DevSon1024/VedTune/total?logo=github)](https://github.com/DevSon1024/VedTune/releases)
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=flat-square&logo=android&logoColor=white)](https://developer.android.com/jetpack/compose)
 [![Media3 ExoPlayer](https://img.shields.io/badge/Audio-Media3%20ExoPlayer-00C853?style=flat-square&logo=android&logoColor=white)](https://developer.android.com/media/media3)
