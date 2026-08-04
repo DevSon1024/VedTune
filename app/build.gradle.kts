@@ -104,12 +104,10 @@ android {
         compose = true
         viewBinding = true
         resValues = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"
-    }
-    buildFeatures {
-        compose = true
     }
     ndkVersion = "27.0.12077973"
 }
