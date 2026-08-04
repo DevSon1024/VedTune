@@ -40,6 +40,8 @@ import com.devson.vedtune.ui.songs.EditTagsViewModel
 import com.devson.vedtune.ui.lyrics.LyricsEditorScreen
 import com.devson.vedtune.ui.lyrics.LyricsEditorViewModel
 import com.devson.vedtune.ui.settings.LyricsConverterScreen
+import com.devson.vedtune.ui.settings.AboutScreen
+import com.devson.vedtune.ui.settings.CreditsScreen
 import com.devson.vedtune.ui.genres.GenreDetailsScreen
 import com.devson.vedtune.ui.genres.GenreDetailsViewModel
 
@@ -72,6 +74,8 @@ sealed class Screen(val route: String) {
         fun createRoute(songId: Long) = "lyrics_editor/$songId"
     }
     data object LyricsConverter : Screen("lyrics_converter")
+    data object About : Screen("about")
+    data object Credits : Screen("credits")
     
     data object HomeTab : Screen("home_tab")
     data object SearchTab : Screen("search_tab")
@@ -138,6 +142,9 @@ fun NavGraph(
                 },
                 onNavigateToLyricsConverter = {
                     navController.navigateSafe(Screen.LyricsConverter.route)
+                },
+                onNavigateToAbout = {
+                    navController.navigateSafe(Screen.About.route)
                 },
                 onNavigateToGenre = { genreName ->
                     navController.navigateSafe(Screen.GenreDetails.createRoute(genreName))
@@ -344,6 +351,25 @@ fun NavGraph(
                 mainViewModel = mainViewModel,
                 onBackClick = { navController.popBackStackSafe() },
                 onNavigateToPlayer = { navController.navigateSafe(Screen.Player.route) }
+            )
+        }
+        composable(
+            route = Screen.About.route,
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
+        ) {
+            AboutScreen(
+                onBack = { navController.popBackStackSafe() },
+                onNavigateToCredits = { navController.navigateSafe(Screen.Credits.route) }
+            )
+        }
+        composable(
+            route = Screen.Credits.route,
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
+        ) {
+            CreditsScreen(
+                onBack = { navController.popBackStackSafe() }
             )
         }
     }
