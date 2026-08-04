@@ -1,7 +1,10 @@
 package com.devson.vedtune.ui.settings
 
+import android.content.Context
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,16 +17,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -34,6 +41,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,7 +52,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.devson.vedtune.ui.components.VedTuneTopAppBar
@@ -62,9 +72,24 @@ fun SettingsScreen(
     onNavigateToPlayerInterfaceSettings: () -> Unit = {},
     onNavigateToPlaybackSettings: () -> Unit = {},
     onNavigateToLibrarySettings: () -> Unit = {},
-    onNavigateToLyricsConverter: () -> Unit = {}
+    onNavigateToLyricsConverter: () -> Unit = {},
+    onNavigateToAbout: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     var queueClearedMessageVisible by remember { mutableStateOf(false) }
+
+    val versionName = remember(context) {
+        runCatching {
+            val info = context.packageManager.getPackageInfo(context.packageName, 0)
+            info.versionName ?: "1.0.0"
+        }.getOrDefault("1.0.0")
+    }
+
+    val isDebug = remember {
+        runCatching {
+            com.devson.vedtune.BuildConfig.DEBUG
+        }.getOrDefault(false)
+    }
 
     Column(modifier = modifier.fillMaxSize()) {
         VedTuneTopAppBar(
@@ -77,128 +102,343 @@ fun SettingsScreen(
             modifier = Modifier.statusBarsPadding()
         )
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                top = 8.dp,
+                end = 16.dp,
+                bottom = contentPadding.calculateBottomPadding() + 16.dp
+            )
         ) {
-
-            // CARD 1: Appearance & Theme
-            SettingsCard(
-                title = "Appearance & Theme",
-                icon = Icons.Default.Palette
-            ) {
-                SettingsNavigationRow(
-                    title = "Appearance & Theme",
-                    description = "Theme mode, dynamic colors, album artwork display.",
-                    onClick = onNavigateToAppearanceSettings
+            item {
+                AppIdentityCard(
+                    versionName = versionName,
+                    isDebug = isDebug,
+                    onClick = onNavigateToAbout
                 )
             }
 
-            // CARD 2: Player Interface
-            SettingsCard(
-                title = "Player Interface",
-                icon = Icons.Default.Tune
-            ) {
-                SettingsNavigationRow(
-                    title = "Player Interface",
-                    description = "Seekbar styles, controls visibility, player gestures.",
-                    onClick = onNavigateToPlayerInterfaceSettings
-                )
-            }
-
-            // CARD 2: Playback Preferences
-            SettingsCard(
-                title = "Playback Preferences",
-                icon = Icons.Default.PlayArrow
-            ) {
-                SettingsNavigationRow(
-                    title = "Playback & Equalizer",
-                    description = "Auto-resume, fade-in, gestures, system equalizer.",
-                    onClick = onNavigateToPlaybackSettings
-                )
-            }
-
-            // CARD 3: Library & Folders
-            SettingsCard(
-                title = "Library & Folders",
-                icon = Icons.Default.Folder
-            ) {
-                SettingsNavigationRow(
-                    title = "Library & Folders",
-                    description = "Auto-sync on startup, folder visibility filters.",
-                    onClick = onNavigateToLibrarySettings
-                )
-            }
-
-            // CARD 4: Tools & Utilities
-            SettingsCard(
-                title = "Tools & Utilities",
-                icon = Icons.Default.Build
-            ) {
-                SettingsNavigationRow(
-                    title = "Lyrics Converter",
-                    description = "Convert raw text lyrics to timed LRC format.",
-                    onClick = onNavigateToLyricsConverter
-                )
-            }
-
-            // CARD 5: Cache & Storage (inline — single destructive action)
-            SettingsCard(
-                title = "Cache & Storage",
-                icon = Icons.Default.Delete
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Clears all cached song items from the active queue. Restores play state to default.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    ElevatedButton(
-                        onClick = {
-                            viewModel.clearPlaybackQueue()
-                            queueClearedMessageVisible = true
-                            CoroutineScope(Dispatchers.Main).launch {
-                                delay(3000)
-                                queueClearedMessageVisible = false
-                            }
-                        },
-                        colors = ButtonDefaults.elevatedButtonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(text = "Clear Playback Queue")
-                    }
-
-                    if (queueClearedMessageVisible) {
-                        Text(
-                            text = "Playback queue cache cleared successfully.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(top = 4.dp)
+            // APPEARANCE SECTION
+            settingsSection("Appearance") {
+                item {
+                    SettingsGroupCard {
+                        SettingsItemRow(
+                            icon = Icons.Default.Palette,
+                            title = "Appearance & Theme",
+                            subtitle = "Theme mode, dynamic colors, album artwork display",
+                            onClick = onNavigateToAppearanceSettings
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            // PLAYER & PLAYBACK SECTION
+            settingsSection("Player & Playback") {
+                item {
+                    SettingsGroupCard {
+                        SettingsItemRow(
+                            icon = Icons.Default.Tune,
+                            title = "Player Interface",
+                            subtitle = "Seekbar styles, controls visibility, gesture options",
+                            onClick = onNavigateToPlayerInterfaceSettings
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 72.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                        SettingsItemRow(
+                            icon = Icons.Default.PlayArrow,
+                            title = "Playback & Equalizer",
+                            subtitle = "Auto-resume, fade-in, gestures, system equalizer",
+                            onClick = onNavigateToPlaybackSettings
+                        )
+                    }
+                }
+            }
 
-            Text(
-                text = "VedTune v1.0.0",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.align(Alignment.CenterHorizontally)
+            // LIBRARY & STORAGE SECTION
+            settingsSection("Library & Storage") {
+                item {
+                    SettingsGroupCard {
+                        SettingsItemRow(
+                            icon = Icons.Default.Folder,
+                            title = "Library & Folders",
+                            subtitle = "Auto-sync on startup, folder visibility filters",
+                            onClick = onNavigateToLibrarySettings
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 72.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.errorContainer),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Clear Playback Queue",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = "Clears active playback queue items and resets state",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            ElevatedButton(
+                                onClick = {
+                                    viewModel.clearPlaybackQueue()
+                                    queueClearedMessageVisible = true
+                                    CoroutineScope(Dispatchers.Main).launch {
+                                        delay(3000)
+                                        queueClearedMessageVisible = false
+                                    }
+                                },
+                                colors = ButtonDefaults.elevatedButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(text = "Clear Queue Cache")
+                            }
+
+                            if (queueClearedMessageVisible) {
+                                Text(
+                                    text = "Playback queue cache cleared successfully.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // TOOLS SECTION
+            settingsSection("Tools") {
+                item {
+                    SettingsGroupCard {
+                        SettingsItemRow(
+                            icon = Icons.Default.Build,
+                            title = "Lyrics Converter",
+                            subtitle = "Convert raw text lyrics to timed LRC format",
+                            onClick = onNavigateToLyricsConverter
+                        )
+                    }
+                }
+            }
+
+            // APP SECTION
+            settingsSection("App") {
+                item {
+                    SettingsGroupCard {
+                        SettingsItemRow(
+                            icon = Icons.Default.Info,
+                            title = "About VedTune",
+                            subtitle = "App version, device specs, open-source credits",
+                            onClick = onNavigateToAbout
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+fun LazyListScope.settingsSection(
+    title: String,
+    content: LazyListScope.() -> Unit
+) {
+    item {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(start = 8.dp, top = 16.dp, bottom = 8.dp)
+        )
+    }
+    content()
+    item {
+        Spacer(modifier = Modifier.height(12.dp))
+    }
+}
+
+@Composable
+fun SettingsGroupCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp)),
+            content = content
+        )
+    }
+}
+
+@Composable
+fun SettingsItemRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSecondaryContainer
             )
+        }
 
-            Spacer(modifier = Modifier.height(contentPadding.calculateBottomPadding()))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun AppIdentityCard(
+    versionName: String,
+    isDebug: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onClick() }
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Gradient app logo circle
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.secondary
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.LibraryMusic,
+                    contentDescription = null,
+                    modifier = Modifier.size(34.dp),
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "VedTune",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    text = "Version $versionName",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = if (isDebug) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.padding(end = 2.dp)
+            ) {
+                Text(
+                    text = if (isDebug) "DEBUG" else "STABLE",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isDebug) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
         }
     }
 }
@@ -275,7 +515,7 @@ fun SettingsNavigationRow(
         }
         Spacer(modifier = Modifier.width(12.dp))
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+            imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowForward,
             contentDescription = "Navigate",
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(18.dp)
