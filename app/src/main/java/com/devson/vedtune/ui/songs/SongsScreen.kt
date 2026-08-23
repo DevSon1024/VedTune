@@ -383,21 +383,15 @@ fun SongsScreen(
                             contentType = { "song_grid_item" }
                         ) { song ->
                             val isCurrentSong = song.id == currentSongId
-                            val isHighlighted = song.id == highlightedSongId
-                            val containerColor = if (isHighlighted) {
-                                Color.Transparent
-                            } else {
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                            }
                             com.devson.vedtune.ui.components.VedTuneGridCard(
                                 primaryText = song.title,
                                 secondaryText = if (uiState.viewPreferences.showArtist) song.artist else "",
                                 onClick = { viewModel.playSong(song) },
-                                containerColor = containerColor,
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                                 gridCount = uiState.viewPreferences.gridSpanCount,
                                 showArtwork = uiState.viewPreferences.showAlbumArt,
                                 modifier = Modifier.drawBehind {
-                                    if (isHighlighted) {
+                                    if (highlightedSongId == song.id) {
                                         drawRect(
                                             color = highlightColor,
                                             alpha = highlightAlpha.value
@@ -461,19 +455,13 @@ fun SongsScreen(
                             contentType = { "song_list_item" }
                         ) { song ->
                             val isCurrentSong = song.id == currentSongId
-                            val isHighlighted = song.id == highlightedSongId
-                            val containerColor = if (isHighlighted) {
-                                Color.Transparent
-                            } else {
-                                MaterialTheme.colorScheme.surface
-                            }
                             com.devson.vedtune.ui.components.VedTuneListItem(
                                 primaryText = song.title,
                                 secondaryText = if (uiState.viewPreferences.showArtist) song.artist else "",
                                 onClick = { viewModel.playSong(song) },
-                                containerColor = containerColor,
+                                containerColor = MaterialTheme.colorScheme.surface,
                                 modifier = Modifier.drawBehind {
-                                    if (isHighlighted) {
+                                    if (highlightedSongId == song.id) {
                                         drawRect(
                                             color = highlightColor,
                                             alpha = highlightAlpha.value
