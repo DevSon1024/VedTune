@@ -14,6 +14,7 @@ import com.devson.vedtune.domain.repository.MediaRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.first
 import com.devson.vedtune.data.local.dao.PlaylistDao
 import com.devson.vedtune.data.local.entity.PlaylistEntity
 import com.devson.vedtune.data.local.entity.PlaylistSongCrossRef
@@ -162,6 +163,29 @@ class MediaRepositoryImpl @Inject constructor(
 
     override fun isSongInPlaylist(playlistId: Long, songId: Long): Flow<Boolean> {
         return playlistDao.isSongInPlaylist(playlistId, songId)
+    }
+
+    override suspend fun toggleFavorite(songId: Long): Boolean {
+        val isFav = playlistDao.isSongInPlaylist(Playlist.FAVORITES_PLAYLIST_ID, songId).first()
+        val nextFavState = !isFav
+        if (nextFavState) {
+            playlistDao.insertPlaylistSong(PlaylistSongCrossRef(Playlist.FAVORITES_PLAYLIST_ID, songId))
+            songDao.updateFavoriteStatus(songId, true)
+        } else {
+            playlistDao.deletePlaylistSong(Playlist.FAVORITES_PLAYLIST_ID, songId)
+            songDao.updateFavoriteStatus(songId, false)
+        }
+        return nextFavState
+    }
+
+    override fun isFavoriteFlow(songId: Long): Flow<Boolean> {
+        return playlistDao.isSongInPlaylist(Playlist.FAVORITES_PLAYLIST_ID, songId)
+    }
+
+    override fun getFavoriteSongIdsFlow(): Flow<Set<Long>> {
+        return playlistDao.getPlaylistWithSongs(Playlist.FAVORITES_PLAYLIST_ID).map { playlistWithSongs ->
+            playlistWithSongs?.songs?.map { it.id }?.toSet() ?: emptySet()
+        }
     }
 
     override suspend fun getSongsByIds(ids: List<Long>): List<Song> {

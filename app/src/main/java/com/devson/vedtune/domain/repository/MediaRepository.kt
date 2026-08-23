@@ -33,5 +33,8 @@ interface MediaRepository {
     suspend fun getUniqueAlbums(): List<String>
     suspend fun getUniqueComposers(): List<String>
     suspend fun getUniqueGenres(): List<String>
+    suspend fun toggleFavorite(songId: Long): Boolean
+    fun isFavoriteFlow(songId: Long): Flow<Boolean>
+    fun getFavoriteSongIdsFlow(): Flow<Set<Long>>
     fun getSongsByGenre(genre: String): Flow<List<Song>>
 }

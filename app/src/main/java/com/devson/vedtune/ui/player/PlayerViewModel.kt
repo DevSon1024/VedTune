@@ -100,7 +100,7 @@ class PlayerViewModel @Inject constructor(
     val isFavorite: StateFlow<Boolean> = currentSong
         .flatMapLatest { song ->
             if (song != null) {
-                repository.isSongInPlaylist(Playlist.FAVORITES_PLAYLIST_ID, song.id)
+                repository.isFavoriteFlow(song.id)
             } else {
                 flowOf(false)
             }
@@ -264,13 +264,7 @@ class PlayerViewModel @Inject constructor(
     fun toggleFavorite() {
         val song = currentSong.value ?: return
         viewModelScope.launch {
-            val isFav = isFavorite.value
-            if (isFav) {
-                repository.removeSongFromPlaylist(Playlist.FAVORITES_PLAYLIST_ID, song.id)
-            } else {
-                repository.addSongToPlaylist(Playlist.FAVORITES_PLAYLIST_ID, song.id)
-            }
-            repository.updateFavoriteStatus(song.id, !isFav)
+            repository.toggleFavorite(song.id)
         }
     }
 
