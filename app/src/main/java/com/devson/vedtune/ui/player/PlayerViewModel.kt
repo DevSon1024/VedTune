@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -219,8 +221,14 @@ class PlayerViewModel @Inject constructor(
         playbackConnection.skipToPrevious()
     }
 
+    private var seekJob: Job? = null
+
     fun seekTo(positionMs: Long) {
-        playbackConnection.seekTo(positionMs)
+        seekJob?.cancel()
+        seekJob = viewModelScope.launch {
+            delay(200)
+            playbackConnection.seekTo(positionMs)
+        }
     }
 
     fun setRepeatMode(repeatMode: Int) {

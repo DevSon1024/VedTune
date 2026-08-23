@@ -8,6 +8,7 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
@@ -95,9 +96,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -106,8 +110,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -630,41 +636,13 @@ private fun ArtworkCard(
     onSwipeNext: () -> Unit,
     onSwipePrevious: () -> Unit
 ) {
-    var swipeOffset by remember { mutableStateOf(0f) }
-    val dragOffset by animateFloatAsState(
-        targetValue = swipeOffset,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "SwipeOffsetAnim"
-    )
-
+    val dragOffset = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val swipeThreshold = with(density) { 100.dp.toPx() }
 
-    val swipeModifier = if (enableSwipeToSkip) {
-        Modifier.pointerInput(Unit) {
-            detectHorizontalDragGestures(
-                onDragEnd = {
-                    if (swipeOffset > swipeThreshold) {
-                        onSwipePrevious()
-                    } else if (swipeOffset < -swipeThreshold) {
-                        onSwipeNext()
-                    }
-                    swipeOffset = 0f
-                },
-                onDragCancel = {
-                    swipeOffset = 0f
-                },
-                onHorizontalDrag = { change, dragAmount ->
-                    change.consume()
-                    swipeOffset += dragAmount
-                }
-            )
-        }
-    } else {
-        Modifier
+    // Reset graphicsLayer states when the new track loads
+    LaunchedEffect(song.id) {
+        dragOffset.snapTo(0f)
     }
 
     val clickModifier = when (albumArtClickAction) {
@@ -674,24 +652,102 @@ private fun ArtworkCard(
         AlbumArtClickAction.VIEW_ALBUM_ART -> Modifier.clickable { onViewAlbumArt() }
     }
 
-    Box(
+    androidx.compose.foundation.layout.BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth(0.9f)
             .aspectRatio(1f)
-            .scale(artworkScale)
-            .graphicsLayer {
-                translationX = dragOffset
-            }
-            .clip(MaterialTheme.shapes.extraLarge)
-            .then(swipeModifier)
-            .then(clickModifier)
+            .scale(artworkScale),
+        contentAlignment = Alignment.Center
     ) {
-        SongArtwork(
-            albumId = song.albumId,
-            modifier = Modifier.fillMaxSize(),
-            showArtwork = showArtwork,
-            isPlaying = isPlaying
-        )
+        val widthPx = constraints.maxWidth.toFloat()
+        val swipeThreshold = widthPx * 0.40f
+
+        val swipeModifier = if (enableSwipeToSkip) {
+            Modifier.pointerInput(song.id) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        val current = dragOffset.value
+                        scope.launch {
+                            if (current > swipeThreshold) {
+                                dragOffset.animateTo(
+                                    targetValue = widthPx * 1.2f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    )
+                                )
+                                onSwipePrevious()
+                                dragOffset.snapTo(0f)
+                            } else if (current < -swipeThreshold) {
+                                dragOffset.animateTo(
+                                    targetValue = -widthPx * 1.2f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    )
+                                )
+                                onSwipeNext()
+                                dragOffset.snapTo(0f)
+                            } else {
+                                dragOffset.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    )
+                                )
+                            }
+                        }
+                    },
+                    onDragCancel = {
+                        scope.launch {
+                            dragOffset.animateTo(
+                                targetValue = 0f,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                )
+                            )
+                        }
+                    },
+                    onHorizontalDrag = { change, dragAmount ->
+                        change.consume()
+                        scope.launch {
+                            dragOffset.snapTo(dragOffset.value + dragAmount)
+                        }
+                    }
+                )
+            }
+        } else {
+            Modifier
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    val progress = if (widthPx > 0f) {
+                        (dragOffset.value / widthPx).coerceIn(-1f, 1f)
+                    } else 0f
+
+                    translationX = dragOffset.value
+                    rotationY = progress * 24f
+                    val scaleFactor = (1f - kotlin.math.abs(progress) * 0.12f).coerceIn(0.85f, 1f)
+                    scaleX = scaleFactor
+                    scaleY = scaleFactor
+                    cameraDistance = 16f * density.density
+                }
+                .clip(MaterialTheme.shapes.extraLarge)
+                .then(swipeModifier)
+                .then(clickModifier)
+        ) {
+            SongArtwork(
+                albumId = song.albumId,
+                modifier = Modifier.fillMaxSize(),
+                showArtwork = showArtwork,
+                isPlaying = isPlaying
+            )
+        }
     }
 }
 
@@ -929,6 +985,8 @@ private fun SeekBar(
     val position by positionState.collectAsStateWithLifecycle()
     var isDragging by remember { mutableStateOf(false) }
     var sliderValue by remember { mutableFloatStateOf(position.toFloat()) }
+    val hapticFeedback = LocalHapticFeedback.current
+    var lastHapticTime by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(position) {
         if (!isDragging) {
@@ -942,6 +1000,12 @@ private fun SeekBar(
             onValueChange = { value ->
                 isDragging = true
                 sliderValue = value
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastHapticTime > 40L) {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    lastHapticTime = currentTime
+                }
+                onSeek(value.toLong())
             },
             onValueChangeFinished = {
                 isDragging = false
