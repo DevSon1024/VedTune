@@ -26,6 +26,16 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
+import androidx.graphics.shapes.CornerRounding
+import androidx.graphics.shapes.RoundedPolygon
+import androidx.graphics.shapes.circle
+import androidx.graphics.shapes.pill
+import androidx.graphics.shapes.star
 import androidx.compose.runtime.collectAsState
 
 object ArtworkCache {
@@ -313,6 +323,34 @@ interface SongArtworkEntryPoint {
     fun settingsRepository(): com.devson.vedtune.domain.repository.SettingsRepository
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun ExpressiveArtworkFallback(
+    isPlaying: Boolean,
+    progress: Float = 0f,
+    modifier: Modifier = Modifier
+) {
+    val polygons = remember {
+        listOf(
+            RoundedPolygon.star(numVerticesPerRadius = 10, innerRadius = 0.65f, rounding = CornerRounding(0.2f)),
+            RoundedPolygon.circle(numVertices = 12),
+            RoundedPolygon.pill(width = 1f, height = 0.8f, smoothing = 0.3f)
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+        contentAlignment = Alignment.Center
+    ) {
+        LoadingIndicator(
+            polygons = polygons,
+            modifier = Modifier.size(56.dp),
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
 @Composable
 fun SongArtwork(
     albumId: Long,
@@ -321,7 +359,8 @@ fun SongArtwork(
     lastModified: Long = 0L,
     ignoreCustomArtwork: Boolean = false,
     blurRadius: Int = 0,
-    isPlaying: Boolean = false
+    isPlaying: Boolean = false,
+    playbackProgress: Float = 0f
 ) {
     val context = LocalContext.current
     var isError by remember(albumId, lastModified, ignoreCustomArtwork) { mutableStateOf(false) }
@@ -347,48 +386,50 @@ fun SongArtwork(
         }
     }
 
-    if (!showArtwork || isError) {
-        Box(
-            modifier = modifier,
-            contentAlignment = Alignment.Center
-        ) {
-            PlayingIndicator(
+    val model = remember(artworkData, blurRadius, lastModified, quality) {
+        val builder = ImageRequest.Builder(context)
+            .data(artworkData)
+            .memoryCacheKey("artwork_${albumId}_${lastModified}_blur_${blurRadius}_quality_${quality.name}")
+            .crossfade(true)
+        
+        when (quality) {
+            com.devson.vedtune.domain.model.AlbumArtQuality.SAVE_SPACE -> {
+                builder.size(150, 150)
+            }
+            com.devson.vedtune.domain.model.AlbumArtQuality.BALANCED -> {
+                builder.size(400, 400)
+            }
+            com.devson.vedtune.domain.model.AlbumArtQuality.HIGH_QUALITY -> {
+                // Full resolution / no restriction
+            }
+        }
+
+        if (blurRadius > 0) {
+            builder.transformations(BlurTransformation(context, blurRadius.toFloat()))
+        }
+        builder.build()
+    }
+
+    Crossfade(
+        targetState = (!showArtwork || isError),
+        label = "ArtworkCrossfade",
+        modifier = modifier
+    ) { fallbackActive ->
+        if (fallbackActive) {
+            ExpressiveArtworkFallback(
                 isPlaying = isPlaying,
-                modifier = Modifier.size(80.dp)
+                progress = playbackProgress.coerceIn(0f, 1f),
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            AsyncImage(
+                model = model,
+                contentDescription = "Album Artwork",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = if (forceSquare) ContentScale.Crop else ContentScale.Fit,
+                onError = { isError = true },
+                onSuccess = { isError = false }
             )
         }
-    } else {
-        val model = remember(artworkData, blurRadius, lastModified, quality) {
-            val builder = ImageRequest.Builder(context)
-                .data(artworkData)
-                .memoryCacheKey("artwork_${albumId}_${lastModified}_blur_${blurRadius}_quality_${quality.name}")
-                .crossfade(true)
-            
-            when (quality) {
-                com.devson.vedtune.domain.model.AlbumArtQuality.SAVE_SPACE -> {
-                    builder.size(150, 150)
-                }
-                com.devson.vedtune.domain.model.AlbumArtQuality.BALANCED -> {
-                    builder.size(400, 400)
-                }
-                com.devson.vedtune.domain.model.AlbumArtQuality.HIGH_QUALITY -> {
-                    // Full resolution / no restriction
-                }
-            }
-
-            if (blurRadius > 0) {
-                builder.transformations(BlurTransformation(context, blurRadius.toFloat()))
-            }
-            builder.build()
-        }
-
-        AsyncImage(
-            model = model,
-            contentDescription = "Album Artwork",
-            modifier = modifier,
-            contentScale = if (forceSquare) ContentScale.Crop else ContentScale.Fit,
-            onError = { isError = true },
-            onSuccess = { isError = false }
-        )
     }
 }
