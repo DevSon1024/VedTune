@@ -17,11 +17,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class AudioMetadataExtractor @Inject constructor(
+open class AudioMetadataExtractor @Inject constructor(
     @ApplicationContext private val context: Context,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) {
-    suspend fun extractMetadata(songId: Long): ExtractedMetadata = withContext(ioDispatcher) {
+    open suspend fun extractMetadata(songId: Long): ExtractedMetadata = withContext(ioDispatcher) {
         var tempFile: File? = null
         var fileSizeMb = 0.0
         var filePath = ""

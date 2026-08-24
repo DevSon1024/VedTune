@@ -1,39 +1,40 @@
 package com.devson.vedtune.ui.player
 
+import android.app.RecoverableSecurityException
+import android.content.ContentUris
+import android.os.Build
+import android.provider.MediaStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.devson.vedtune.domain.model.AlbumArtClickAction
+import com.devson.vedtune.domain.model.AudioDiagnostics
+import com.devson.vedtune.domain.model.AudioSettings
+import com.devson.vedtune.domain.model.Playlist
+import com.devson.vedtune.domain.model.SeekBarStyle
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.domain.repository.MediaRepository
+import com.devson.vedtune.domain.repository.SettingsRepository
 import com.devson.vedtune.player.PlaybackConnection
+import com.devson.vedtune.player.engine.diagnostics.AudioDiagnosticsProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-
-import com.devson.vedtune.domain.model.AlbumArtClickAction
-import com.devson.vedtune.domain.model.SeekBarStyle
-import com.devson.vedtune.domain.repository.SettingsRepository
-
-import android.content.ContentUris
-import android.provider.MediaStore
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import com.devson.vedtune.domain.model.Playlist
-import java.io.File
 import kotlinx.coroutines.withContext
-import android.app.RecoverableSecurityException
-import android.os.Build
+import java.io.File
+import javax.inject.Inject
 
 sealed interface PlayerUiEvent {
     data class ShowToast(val message: String) : PlayerUiEvent
@@ -46,8 +47,26 @@ class PlayerViewModel @Inject constructor(
     private val repository: MediaRepository,
     private val playbackConnection: PlaybackConnection,
     private val settingsRepository: SettingsRepository,
+    private val audioDiagnosticsProvider: AudioDiagnosticsProvider,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
+
+    val audioSettings: StateFlow<AudioSettings> = settingsRepository.audioSettings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AudioSettings.FactoryDefaults)
+
+    private val _audioDiagnostics = MutableStateFlow<AudioDiagnostics?>(null)
+    val audioDiagnostics: StateFlow<AudioDiagnostics?> = _audioDiagnostics.asStateFlow()
+
+    fun loadAudioDiagnostics() {
+        viewModelScope.launch {
+            val song = currentSong.value
+            val settings = audioSettings.value
+            _audioDiagnostics.value = audioDiagnosticsProvider.getDiagnostics(
+                song = song,
+                audioSettings = settings
+            )
+        }
+    }
 
     val showAlbumArt: StateFlow<Boolean> = settingsRepository.showAlbumArt
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)

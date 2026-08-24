@@ -57,6 +57,7 @@ import com.devson.vedtune.ui.player.components.OptionsSheetContent
 import com.devson.vedtune.ui.player.components.PlaybackControls
 import com.devson.vedtune.ui.player.components.PlayerHeader
 import com.devson.vedtune.ui.player.components.PlayerSeekBar
+import com.devson.vedtune.ui.components.AudioDiagnosticsDialog
 import com.devson.vedtune.ui.player.components.PlayerSettingsDialog
 import com.devson.vedtune.ui.player.components.SleepTimerDialog
 import com.devson.vedtune.ui.player.components.ViewAlbumArtOverlay
@@ -68,6 +69,7 @@ private sealed class PlayerSheetState {
     object Options : PlayerSheetState()
     object AddToPlaylist : PlayerSheetState()
     object SongInfo : PlayerSheetState()
+    object AudioDiagnostics : PlayerSheetState()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -453,6 +455,10 @@ fun PlayerScreen(
                         sheetState = PlayerSheetState.Hidden
                         onNavigateToLyricsEditor(activeSong.id)
                     },
+                    onAudioDiagnostics = {
+                        sheetState = PlayerSheetState.AudioDiagnostics
+                        viewModel.loadAudioDiagnostics()
+                    },
                     onShare = {
                         sheetState = PlayerSheetState.Hidden
                         val songUri = ContentUris.withAppendedId(
@@ -476,6 +482,17 @@ fun PlayerScreen(
                     }
                 )
             }
+        }
+    }
+
+    // Audio Diagnostics Dialog
+    if (sheetState == PlayerSheetState.AudioDiagnostics) {
+        val diagnostics by viewModel.audioDiagnostics.collectAsStateWithLifecycle()
+        diagnostics?.let { diag ->
+            AudioDiagnosticsDialog(
+                diagnostics = diag,
+                onDismiss = { sheetState = PlayerSheetState.Hidden }
+            )
         }
     }
 

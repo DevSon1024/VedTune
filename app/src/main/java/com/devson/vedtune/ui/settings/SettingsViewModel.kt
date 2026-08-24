@@ -17,11 +17,32 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import com.devson.vedtune.domain.model.AudioDiagnostics
+import com.devson.vedtune.player.engine.diagnostics.AudioDiagnosticsProvider
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
-    private val playbackConnection: PlaybackConnection
+    private val playbackConnection: PlaybackConnection,
+    private val audioDiagnosticsProvider: AudioDiagnosticsProvider
 ) : ViewModel() {
+
+    private val _audioDiagnostics = MutableStateFlow<AudioDiagnostics?>(null)
+    val audioDiagnostics: StateFlow<AudioDiagnostics?> = _audioDiagnostics.asStateFlow()
+
+    fun loadAudioDiagnostics() {
+        viewModelScope.launch {
+            val songId = playbackConnection.currentSongId.value
+            val currentSong = songId?.let { playbackConnection.queueSongMap.value[it] }
+            val currentSettings = audioSettings.value
+            _audioDiagnostics.value = audioDiagnosticsProvider.getDiagnostics(
+                song = currentSong,
+                audioSettings = currentSettings
+            )
+        }
+    }
 
     //  Existing settings 
 

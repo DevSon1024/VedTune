@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.TextFormat
@@ -37,6 +38,7 @@ fun OptionsSheetContent(
     showArtwork: Boolean,
     onEditTags: () -> Unit,
     onEditLyrics: () -> Unit,
+    onAudioDiagnostics: () -> Unit = {},
     onShare: () -> Unit,
     onDeletePermanently: () -> Unit,
     onPlayerSettings: () -> Unit,
@@ -82,6 +84,11 @@ fun OptionsSheetContent(
 
         HorizontalDivider()
 
+        BottomSheetOption(
+            icon = Icons.Rounded.GraphicEq,
+            title = "Audio Information & Diagnostics",
+            onClick = onAudioDiagnostics
+        )
         BottomSheetOption(
             icon = Icons.Rounded.Edit,
             title = "Edit Tags",

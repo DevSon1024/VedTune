@@ -83,6 +83,7 @@ import com.devson.vedtune.domain.model.AudioSettings
 import com.devson.vedtune.domain.model.ReplayGainMode
 import com.devson.vedtune.player.engine.equalizer.EqualizerPresets
 import com.devson.vedtune.player.engine.loudness.LoudnessTarget
+import com.devson.vedtune.ui.components.AudioDiagnosticsDialog
 import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -103,12 +104,23 @@ fun PlaybackSettingsScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val audioSettings by viewModel.audioSettings.collectAsState()
+    val diagnostics by viewModel.audioDiagnostics.collectAsState()
     var showResetAllDialog by remember { mutableStateOf(false) }
+    var showDiagnosticsDialog by remember { mutableStateOf(false) }
 
     fun showFeedback(message: String) {
         scope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
             snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    if (showDiagnosticsDialog) {
+        diagnostics?.let { diag ->
+            AudioDiagnosticsDialog(
+                diagnostics = diag,
+                onDismiss = { showDiagnosticsDialog = false }
+            )
         }
     }
 
@@ -238,6 +250,10 @@ fun PlaybackSettingsScreen(
 
             // 6. Advanced & System Control Panel Section
             AdvancedSectionCard(
+                onViewDiagnostics = {
+                    viewModel.loadAudioDiagnostics()
+                    showDiagnosticsDialog = true
+                },
                 onLaunchSystemPanel = {
                     try {
                         val intent = Intent(AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL).apply {
@@ -1120,19 +1136,48 @@ private fun SafetySectionCard(
 
 @Composable
 private fun AdvancedSectionCard(
+    onViewDiagnostics: () -> Unit,
     onLaunchSystemPanel: () -> Unit,
     onResetAll: () -> Unit
 ) {
     SettingsCard(
-        title = "Advanced & Architecture",
+        title = "Advanced & Diagnostics",
         icon = Icons.Default.Settings
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Audio Diagnostics / Info Button
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "Audio Stream Diagnostics",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "Inspect exact source file tags (codec, bitrate, sample rate, bit depth) vs. output AudioTrack pipeline and active DSP modules.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedButton(
+                    onClick = onViewDiagnostics,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Audio Information & Diagnostics")
+                }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
             Text(
-                text = "Audio Pipeline Flow",
+                text = "Audio Pipeline Architecture",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Medium
             )
