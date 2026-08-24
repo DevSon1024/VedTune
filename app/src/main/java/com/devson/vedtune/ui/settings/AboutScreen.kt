@@ -282,7 +282,7 @@ private fun AboutEngineCard() {
     AboutCard {
         InfoRow(label = "Media Engine", value = "AndroidX Media3 ExoPlayer")
         InfoRow(label = "Tag Engine", value = "jaudiotagger (3.0.1)")
-        InfoRow(label = "Loudness AGC", value = "DynamicsProcessing Limiter")
+        InfoRow(label = "Audio Pipeline", value = "Direct Bit-Perfect Output")
     }
 }
 

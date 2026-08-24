@@ -52,7 +52,7 @@ class PlaybackService : MediaSessionService() {
     lateinit var dataStore: DataStore<Preferences>
 
     @Inject
-    lateinit var volumeNormalizationManager: VolumeNormalizationManager
+    lateinit var audioPipelineManager: AudioPipelineManager
 
     private var mediaSession: MediaSession? = null
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -100,7 +100,7 @@ class PlaybackService : MediaSessionService() {
         super.onCreate()
 
         exoPlayer.addListener(playerListener)
-        volumeNormalizationManager.attachPlayer(exoPlayer)
+        audioPipelineManager.attachPlayer(exoPlayer)
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -348,7 +348,7 @@ class PlaybackService : MediaSessionService() {
     override fun onDestroy() {
         serviceScope.cancel()
         exoPlayer.removeListener(playerListener)
-        volumeNormalizationManager.release()
+        audioPipelineManager.release()
         mediaSession?.run {
             player.release()
             release()

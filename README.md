@@ -36,9 +36,7 @@
 ### 🎧 Core Playback & Audio Engine
 
 - **Media3 / ExoPlayer Engine**: Seamless gapless audio playback with MediaSession background service integration and lock screen controls.
-- **Loudness Normalization & ReplayGain**:
-  - _Tier 1_: Automatic ReplayGain tag extraction (`TXXX:REPLAYGAIN_TRACK_GAIN`, FLAC/OGG gain metadata) with linear gain scaling.
-  - _Tier 2 (Fallback)_: Real-time Android `DynamicsProcessing` Multi-Band Compressor (MBC) and Limiter targeting consistent ~-14 LUFS output.
+- **Transparent Audio Pipeline**: Bit-perfect offline audio reproduction directly from Media3/ExoPlayer decoder with zero unwanted DSP compression, dynamic limiting, or artificial coloration.
 - **Queue & Playback Persistence**: Remembers queue state, shuffle/repeat modes, and active position across app restarts.
 
 ### 🎙️ Complete Lyrics Suite
@@ -79,7 +77,7 @@
 ```
 com.devson.vedtune/
 ├── data/           # Repositories, MediaStore sync engine, Room DB, entities
-├── player/         # Media3 service, playback connection, volume normalization
+├── player/         # Media3 service, playback connection, transparent audio pipeline
 ├── ui/             # Jetpack Compose screens, components, theme & navigation
 │   ├── components/ # Reusable composable controls & bottom sheets
 │   ├── lyrics/     # Lyrics panel, syncer, editor, finder & converter screens

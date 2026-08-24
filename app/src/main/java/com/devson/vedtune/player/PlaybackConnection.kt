@@ -104,36 +104,6 @@ class PlaybackConnection @Inject constructor(
             _playbackPosition.value = 0L
             _playbackDuration.value = mediaController?.duration?.coerceAtLeast(0L) ?: 0L
 
-            // Trigger auto transition fade-in
-            if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
-                scope.launch {
-                    val preferences = dataStore.data.first()
-                    val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
-                    if (fadeIn) {
-                        fadeJob?.cancel()
-                        fadeJob = launch {
-                            val controller = mediaController ?: return@launch
-                            var waitCount = 0
-                            while (!controller.isPlaying && controller.playWhenReady && waitCount < 20) {
-                                delay(50)
-                                waitCount++
-                            }
-                            if (controller.isPlaying) {
-                                controller.volume = 0f
-                                var vol = 0f
-                                while (vol < 1.0f && controller.isPlaying) {
-                                    delay(25)
-                                    vol += 0.05f
-                                    controller.volume = vol.coerceAtMost(1f)
-                                }
-                                if (controller.isPlaying) {
-                                    controller.volume = 1f
-                                }
-                            }
-                        }
-                    }
-                }
-            }
 
             scope.launch {
                 dataStore.edit { preferences ->
