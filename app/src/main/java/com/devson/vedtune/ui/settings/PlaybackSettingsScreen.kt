@@ -286,6 +286,121 @@ fun PlaybackSettingsScreen(
                 }
             }
 
+            // Safety Limiter & Headroom Protection Card
+            SettingsCard(
+                title = "Safety Limiter & Headroom",
+                icon = Icons.Default.Tune
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Stage 1: Technical Anti-Clipping Prevention (Pre-attenuation)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Automatic Anti-Clipping Protection",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "Mathematically prevents clipping across active EQ/Bass Boost/ReplayGain without dynamic pumping or audible compression.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = audioSettings.preventClipping,
+                            onCheckedChange = { viewModel.setPreventClipping(it) }
+                        )
+                    }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    // Stage 2: User Peak Brickwall Limiter
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (audioSettings.limiterEnabled) "Peak Limiter Active" else "Peak Limiter Disabled",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "Enforces a hard ceiling limiter on dynamic audio peaks (Android 9.0+).",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = audioSettings.limiterEnabled,
+                            onCheckedChange = { viewModel.setLimiterEnabled(it) }
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = audioSettings.limiterEnabled,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Limiter Ceiling Threshold",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = String.format(java.util.Locale.US, "%.1f dB", audioSettings.limiterThresholdDb),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
+                            Slider(
+                                value = audioSettings.limiterThresholdDb,
+                                onValueChange = {
+                                    val snapped = ((it * 2).roundToInt() / 2f).coerceIn(-12f, 0f)
+                                    viewModel.setLimiterThresholdDb(snapped)
+                                },
+                                valueRange = -12.0f..0.0f,
+                                steps = 23,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = { viewModel.resetLimiter() },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.height(16.dp).width(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Reset Limiter")
+                    }
+                }
+            }
+
             // System Equalizer
             SettingsCard(
                 title = "System Equalizer",

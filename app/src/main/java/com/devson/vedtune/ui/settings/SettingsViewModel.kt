@@ -386,6 +386,14 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.setLimiterThresholdDb(thresholdDb) }
     }
 
+    fun setPreventClipping(prevent: Boolean) {
+        viewModelScope.launch { settingsRepository.setPreventClipping(prevent) }
+    }
+
+    fun resetLimiter() {
+        viewModelScope.launch { settingsRepository.resetLimiter() }
+    }
+
     fun setAudioProcessingEnabled(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setAudioProcessingEnabled(enabled) }
     }

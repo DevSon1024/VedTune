@@ -55,9 +55,10 @@ data class AudioSettings(
     val loudnessNormalizationEnabled: Boolean = false,
     val targetLufs: Float = -14.0f,
 
-    // Limiter
+    // Limiter & Safety Headroom
     val limiterEnabled: Boolean = false,
     val limiterThresholdDb: Float = -0.5f,
+    val preventClipping: Boolean = true,
 
     // Advanced
     val audioProcessingEnabled: Boolean = false

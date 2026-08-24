@@ -84,6 +84,7 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_AUDIO_TARGET_LUFS = floatPreferencesKey("audio_target_lufs")
         private val KEY_AUDIO_LIMITER_ENABLED = booleanPreferencesKey("audio_limiter_enabled")
         private val KEY_AUDIO_LIMITER_THRESHOLD_DB = floatPreferencesKey("audio_limiter_threshold_db")
+        private val KEY_AUDIO_PREVENT_CLIPPING = booleanPreferencesKey("audio_prevent_clipping")
         private val KEY_AUDIO_PROCESSING_ENABLED = booleanPreferencesKey("audio_processing_enabled")
 
         /** Delimiter used to serialise/deserialise folder sets as a single DataStore string. */
@@ -375,6 +376,7 @@ class SettingsRepositoryImpl @Inject constructor(
             targetLufs = prefs[KEY_AUDIO_TARGET_LUFS]?.takeIf { it.isFinite() } ?: default.targetLufs,
             limiterEnabled = prefs[KEY_AUDIO_LIMITER_ENABLED] ?: default.limiterEnabled,
             limiterThresholdDb = prefs[KEY_AUDIO_LIMITER_THRESHOLD_DB]?.takeIf { it.isFinite() } ?: default.limiterThresholdDb,
+            preventClipping = prefs[KEY_AUDIO_PREVENT_CLIPPING] ?: default.preventClipping,
             audioProcessingEnabled = prefs[KEY_AUDIO_PROCESSING_ENABLED] ?: default.audioProcessingEnabled
         )
     }
@@ -486,6 +488,18 @@ class SettingsRepositoryImpl @Inject constructor(
         dataStore.edit { it[KEY_AUDIO_LIMITER_THRESHOLD_DB] = thresholdDb }
     }
 
+    override suspend fun setPreventClipping(prevent: Boolean) {
+        dataStore.edit { it[KEY_AUDIO_PREVENT_CLIPPING] = prevent }
+    }
+
+    override suspend fun resetLimiter() {
+        dataStore.edit {
+            it[KEY_AUDIO_LIMITER_ENABLED] = false
+            it[KEY_AUDIO_LIMITER_THRESHOLD_DB] = -0.5f
+            it[KEY_AUDIO_PREVENT_CLIPPING] = true
+        }
+    }
+
     override suspend fun setAudioProcessingEnabled(enabled: Boolean) {
         dataStore.edit { it[KEY_AUDIO_PROCESSING_ENABLED] = enabled }
     }
@@ -539,6 +553,7 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[KEY_AUDIO_TARGET_LUFS] = updated.targetLufs
             prefs[KEY_AUDIO_LIMITER_ENABLED] = updated.limiterEnabled
             prefs[KEY_AUDIO_LIMITER_THRESHOLD_DB] = updated.limiterThresholdDb
+            prefs[KEY_AUDIO_PREVENT_CLIPPING] = updated.preventClipping
             prefs[KEY_AUDIO_PROCESSING_ENABLED] = updated.audioProcessingEnabled
         }
     }
@@ -565,6 +580,7 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs.remove(KEY_AUDIO_TARGET_LUFS)
             prefs.remove(KEY_AUDIO_LIMITER_ENABLED)
             prefs.remove(KEY_AUDIO_LIMITER_THRESHOLD_DB)
+            prefs.remove(KEY_AUDIO_PREVENT_CLIPPING)
             prefs.remove(KEY_AUDIO_PROCESSING_ENABLED)
         }
     }

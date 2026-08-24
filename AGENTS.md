@@ -204,9 +204,7 @@ After every completed task, error resolution, or feature addition, **append** an
 - **Issue:** (Briefly describe the exact issue or bottleneck that was solved)
 - **Type:** (Error | Bug | UI | Performance | Architecture | Feature)
 - **Solution:** (How it was solved — maximum 10 lines)
-- **Prompt:** add that given prompt as it is with proper notation like - **Pronmpt:** add that given prompt as it is with proper notation like e.g.:,
-```
----full prompt---
+
 ```
 
  in the file

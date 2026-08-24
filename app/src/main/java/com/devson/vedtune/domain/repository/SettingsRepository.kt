@@ -96,6 +96,8 @@ interface SettingsRepository {
     suspend fun resetLoudnessNormalization()
     suspend fun setLimiterEnabled(enabled: Boolean)
     suspend fun setLimiterThresholdDb(thresholdDb: Float)
+    suspend fun setPreventClipping(prevent: Boolean)
+    suspend fun resetLimiter()
     suspend fun setAudioProcessingEnabled(enabled: Boolean)
     suspend fun updateAudioSettings(transform: (com.devson.vedtune.domain.model.AudioSettings) -> com.devson.vedtune.domain.model.AudioSettings)
     suspend fun resetAudioSettings()
