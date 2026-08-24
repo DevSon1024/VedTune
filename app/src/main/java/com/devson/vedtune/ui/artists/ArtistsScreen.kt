@@ -36,6 +36,10 @@ import com.devson.vedtune.domain.model.Artist
 import com.devson.vedtune.ui.songs.SortOrder
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import com.devson.vedtune.ui.components.FastScroller
+import com.devson.vedtune.ui.components.buildAlphabeticalSectionIndices
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 
 @Composable
 fun ArtistsScreen(
@@ -53,6 +57,11 @@ fun ArtistsScreen(
     val sortBy by viewModel.sortBy.collectAsState()
     val sortOrder by viewModel.sortOrder.collectAsState()
     var showSortMenu by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    val lazyListState = rememberLazyListState()
+    val lazyGridState = rememberLazyGridState()
+
+    val artistSectionIndices by viewModel.scrollIndices.collectAsState()
 
     val currentSortLabel = when (sortBy) {
         ArtistSortBy.NAME -> "Name"
@@ -116,53 +125,77 @@ fun ArtistsScreen(
             }
         } else {
             if (isGridView) {
-                androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                    columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(viewPreferences.gridSpanCount),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 8.dp,
-                        bottom = contentPadding.calculateBottomPadding() + 88.dp
-                    ),
-                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp),
-                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
-                ) {
-                    items(
-                        items = artists,
-                        key = { it.name },
-                        contentType = { "artist_grid_item" }
-                    ) { artist ->
-                        ArtistGridItem(
-                            artist = artist,
-                            onClick = { onArtistClick(artist.name) },
-                            showArtwork = viewPreferences.showAlbumArt,
-                            gridCount = viewPreferences.gridSpanCount
-                        )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(viewPreferences.gridSpanCount),
+                        state = lazyGridState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 8.dp,
+                            bottom = contentPadding.calculateBottomPadding() + 88.dp
+                        ),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp),
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(
+                            items = artists,
+                            key = { it.name },
+                            contentType = { "artist_grid_item" }
+                        ) { artist ->
+                            ArtistGridItem(
+                                artist = artist,
+                                onClick = { onArtistClick(artist.name) },
+                                showArtwork = viewPreferences.showAlbumArt,
+                                gridCount = viewPreferences.gridSpanCount
+                            )
+                        }
                     }
+
+                    FastScroller(
+                        gridState = lazyGridState,
+                        sectionIndices = artistSectionIndices,
+                        contentPadding = PaddingValues(
+                            top = 8.dp,
+                            bottom = contentPadding.calculateBottomPadding() + 88.dp
+                        )
+                    )
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 8.dp,
-                        bottom = contentPadding.calculateBottomPadding() + 88.dp
-                    )
-                ) {
-                    items(
-                        items = artists,
-                        key = { it.name },
-                        contentType = { "artist_list_item" }
-                    ) { artist ->
-                        ArtistListItem(
-                            artist = artist,
-                            onClick = { onArtistClick(artist.name) },
-                            showArtwork = viewPreferences.showAlbumArt
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 8.dp,
+                            bottom = contentPadding.calculateBottomPadding() + 88.dp
                         )
+                    ) {
+                        items(
+                            items = artists,
+                            key = { it.name },
+                            contentType = { "artist_list_item" }
+                        ) { artist ->
+                            ArtistListItem(
+                                artist = artist,
+                                onClick = { onArtistClick(artist.name) },
+                                showArtwork = viewPreferences.showAlbumArt
+                            )
+                        }
                     }
+
+                    FastScroller(
+                        listState = lazyListState,
+                        sectionIndices = artistSectionIndices,
+                        contentPadding = PaddingValues(
+                            top = 8.dp,
+                            bottom = contentPadding.calculateBottomPadding() + 88.dp
+                        )
+                    )
                 }
             }
         }

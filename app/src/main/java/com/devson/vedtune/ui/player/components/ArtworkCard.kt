@@ -41,7 +41,8 @@ fun ArtworkCard(
     onViewAlbumArt: () -> Unit,
     onSwipeNext: () -> Unit,
     onSwipePrevious: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    playbackProgress: () -> Float = { 0f }
 ) {
     val dragOffset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
@@ -152,7 +153,8 @@ fun ArtworkCard(
                 albumId = song.albumId,
                 modifier = Modifier.fillMaxSize(),
                 showArtwork = showArtwork,
-                isPlaying = isPlaying
+                isPlaying = isPlaying,
+                playbackProgress = playbackProgress
             )
         }
     }

@@ -7,15 +7,18 @@ import com.devson.vedtune.domain.repository.MediaRepository
 import com.devson.vedtune.player.PlaybackConnection
 import com.devson.vedtune.ui.songs.SortOrder
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.devson.vedtune.ui.components.buildAlphabeticalSectionIndices
 
 enum class ArtistSortBy {
     NAME, SONG_COUNT, ALBUM_COUNT
@@ -39,7 +42,12 @@ class ArtistsViewModel @Inject constructor(
     private val _isGridView = MutableStateFlow(false)
     val isGridView: StateFlow<Boolean> = _isGridView
 
-    val artists: StateFlow<List<Artist>> = combine(
+    data class ProcessedArtists(
+        val artists: List<Artist>,
+        val scrollIndices: Map<String, Int>
+    )
+
+    private val processedArtistsFlow = combine(
         repository.getAllArtists(),
         _searchQuery,
         _sortBy,
@@ -51,7 +59,7 @@ class ArtistsViewModel @Inject constructor(
                 it.name.contains(query, ignoreCase = true)
             }
         }
-        when (sortBy) {
+        val sorted = when (sortBy) {
             ArtistSortBy.NAME -> {
                 if (sortOrder == SortOrder.ASCENDING) filtered.sortedBy { it.name.lowercase() }
                 else filtered.sortedByDescending { it.name.lowercase() }
@@ -65,7 +73,37 @@ class ArtistsViewModel @Inject constructor(
                 else filtered.sortedByDescending { it.albumCount }
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+        val indices = when (sortBy) {
+            ArtistSortBy.NAME -> sorted.buildAlphabeticalSectionIndices { it.name }
+            ArtistSortBy.SONG_COUNT -> {
+                val map = linkedMapOf<String, Int>()
+                sorted.forEachIndexed { index, artist ->
+                    val label = "${artist.songCount} songs"
+                    if (!map.containsKey(label)) map[label] = index
+                }
+                map
+            }
+            ArtistSortBy.ALBUM_COUNT -> {
+                val map = linkedMapOf<String, Int>()
+                sorted.forEachIndexed { index, artist ->
+                    val label = "${artist.albumCount} albums"
+                    if (!map.containsKey(label)) map[label] = index
+                }
+                map
+            }
+        }
+
+        ProcessedArtists(artists = sorted, scrollIndices = indices)
+    }.flowOn(Dispatchers.Default)
+
+    val artists: StateFlow<List<Artist>> = processedArtistsFlow
+        .map { it.artists }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val scrollIndices: StateFlow<Map<String, Int>> = processedArtistsFlow
+        .map { it.scrollIndices }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     val totalItemCount: StateFlow<Int> = artists
         .map { it.size }

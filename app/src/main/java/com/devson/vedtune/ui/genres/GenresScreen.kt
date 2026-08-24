@@ -22,6 +22,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.devson.vedtune.ui.components.FastScroller
+import com.devson.vedtune.ui.components.buildAlphabeticalSectionIndices
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.runtime.remember
 
 @Composable
 fun GenresScreen(
@@ -36,6 +41,13 @@ fun GenresScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val isGridView = viewPreferences.isGridView
     val sortOrder by viewModel.sortOrder.collectAsState()
+
+    val lazyListState = rememberLazyListState()
+    val lazyGridState = rememberLazyGridState()
+
+    val genreSectionIndices = remember(genres, sortOrder) {
+        genres.buildAlphabeticalSectionIndices { it }
+    }
 
     val currentSortLabel = "Name"
     val orderIcon = if (sortOrder == com.devson.vedtune.ui.songs.SortOrder.ASCENDING) "↑" else "↓"
@@ -70,51 +82,75 @@ fun GenresScreen(
                     }
                 } else {
                     if (isGridView) {
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(viewPreferences.gridSpanCount),
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(
-                                start = 16.dp,
-                                end = 16.dp,
-                                top = 8.dp,
-                                bottom = contentPadding.calculateBottomPadding() + 88.dp
-                            ),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            items(
-                                items = genres,
-                                key = { it }
-                            ) { genre ->
-                                GenreGridItem(
-                                    genreName = genre,
-                                    onClick = { onGenreClick(genre) },
-                                    showArtwork = viewPreferences.showAlbumArt,
-                                    gridCount = viewPreferences.gridSpanCount
-                                )
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(viewPreferences.gridSpanCount),
+                                state = lazyGridState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    top = 8.dp,
+                                    bottom = contentPadding.calculateBottomPadding() + 88.dp
+                                ),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                items(
+                                    items = genres,
+                                    key = { it }
+                                ) { genre ->
+                                    GenreGridItem(
+                                        genreName = genre,
+                                        onClick = { onGenreClick(genre) },
+                                        showArtwork = viewPreferences.showAlbumArt,
+                                        gridCount = viewPreferences.gridSpanCount
+                                    )
+                                }
                             }
+
+                            FastScroller(
+                                gridState = lazyGridState,
+                                sectionIndices = genreSectionIndices,
+                                contentPadding = PaddingValues(
+                                    top = 8.dp,
+                                    bottom = contentPadding.calculateBottomPadding() + 88.dp
+                                )
+                            )
                         }
                     } else {
-                        androidx.compose.foundation.lazy.LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(
-                                start = 16.dp,
-                                end = 16.dp,
-                                top = 8.dp,
-                                bottom = contentPadding.calculateBottomPadding() + 88.dp
-                            )
-                        ) {
-                            items(
-                                items = genres,
-                                key = { it }
-                            ) { genre ->
-                                GenreListItem(
-                                    genreName = genre,
-                                    onClick = { onGenreClick(genre) },
-                                    showArtwork = viewPreferences.showAlbumArt
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            androidx.compose.foundation.lazy.LazyColumn(
+                                state = lazyListState,
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                contentPadding = PaddingValues(
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    top = 8.dp,
+                                    bottom = contentPadding.calculateBottomPadding() + 88.dp
                                 )
+                            ) {
+                                items(
+                                    items = genres,
+                                    key = { it }
+                                ) { genre ->
+                                    GenreListItem(
+                                        genreName = genre,
+                                        onClick = { onGenreClick(genre) },
+                                        showArtwork = viewPreferences.showAlbumArt
+                                    )
+                                }
                             }
+
+                            FastScroller(
+                                listState = lazyListState,
+                                sectionIndices = genreSectionIndices,
+                                contentPadding = PaddingValues(
+                                    top = 8.dp,
+                                    bottom = contentPadding.calculateBottomPadding() + 88.dp
+                                )
+                            )
                         }
                     }
                 }

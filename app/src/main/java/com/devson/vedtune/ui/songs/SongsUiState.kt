@@ -16,6 +16,7 @@ enum class SortOrder {
 
 data class SongsUiState(
     val songs: List<Song> = emptyList(),
+    val scrollIndices: Map<String, Int> = emptyMap(),
     val searchQuery: String = "",
     val sortBy: SortBy = SortBy.TITLE,
     val sortOrder: SortOrder = SortOrder.ASCENDING,

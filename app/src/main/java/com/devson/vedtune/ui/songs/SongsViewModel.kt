@@ -17,6 +17,7 @@ import javax.inject.Inject
 import com.devson.vedtune.domain.model.Playlist
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import com.devson.vedtune.domain.repository.SettingsRepository
 import android.app.RecoverableSecurityException
@@ -78,6 +79,11 @@ class SongsViewModel @Inject constructor(
     private val _sortBy = MutableStateFlow(SortBy.TITLE)
     private val _sortOrder = MutableStateFlow(SortOrder.ASCENDING)
 
+    data class ProcessedSongs(
+        val songs: List<Song>,
+        val scrollIndices: Map<String, Int>
+    )
+
     private val songsFlow = combine(
         repository.getAllSongs(),
         _searchQuery,
@@ -93,22 +99,39 @@ class SongsViewModel @Inject constructor(
             }
         }
 
-        when (sortBy) {
+        val sorted = when (sortBy) {
             SortBy.TITLE -> if (sortOrder == SortOrder.ASCENDING) filtered.sortedBy { it.title.lowercase() } else filtered.sortedByDescending { it.title.lowercase() }
             SortBy.ARTIST -> if (sortOrder == SortOrder.ASCENDING) filtered.sortedBy { it.artist.lowercase() } else filtered.sortedByDescending { it.artist.lowercase() }
             SortBy.ALBUM -> if (sortOrder == SortOrder.ASCENDING) filtered.sortedBy { it.album.lowercase() } else filtered.sortedByDescending { it.album.lowercase() }
             SortBy.DATE_ADDED -> if (sortOrder == SortOrder.ASCENDING) filtered.sortedBy { it.dateAdded } else filtered.sortedByDescending { it.dateAdded }
         }
+
+        val indices = com.devson.vedtune.ui.components.computeSongSectionIndices(
+            songs = sorted,
+            sortBy = sortBy,
+            sortOrder = sortOrder
+        )
+
+        ProcessedSongs(songs = sorted, scrollIndices = indices)
     }.flowOn(Dispatchers.Default)
+
+    val scrollIndices: StateFlow<Map<String, Int>> = songsFlow
+        .map { it.scrollIndices }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyMap()
+        )
 
     init {
         viewModelScope.launch {
-            songsFlow.collect { filteredSongs ->
-                val totalCount = filteredSongs.size
-                val totalDuration = filteredSongs.sumOf { it.duration }
+            songsFlow.collect { processed ->
+                val totalCount = processed.songs.size
+                val totalDuration = processed.songs.sumOf { it.duration }
                 updateState {
                     it.copy(
-                        songs = filteredSongs,
+                        songs = processed.songs,
+                        scrollIndices = processed.scrollIndices,
                         isLoading = false,
                         totalItemCount = totalCount,
                         totalDurationMs = totalDuration

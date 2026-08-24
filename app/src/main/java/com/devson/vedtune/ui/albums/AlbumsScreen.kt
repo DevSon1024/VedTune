@@ -40,6 +40,10 @@ import androidx.compose.ui.unit.dp
 import com.devson.vedtune.domain.model.Album
 import com.devson.vedtune.ui.components.SongArtwork
 import com.devson.vedtune.ui.components.VedTuneTopAppBar
+import com.devson.vedtune.ui.components.FastScroller
+import com.devson.vedtune.ui.components.buildAlphabeticalSectionIndices
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 
 @Composable
 fun AlbumsScreen(
@@ -58,6 +62,11 @@ fun AlbumsScreen(
     val sortBy by viewModel.sortBy.collectAsState()
     val sortOrder by viewModel.sortOrder.collectAsState()
     var showSortMenu by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    val lazyListState = rememberLazyListState()
+    val lazyGridState = rememberLazyGridState()
+
+    val albumSectionIndices by viewModel.scrollIndices.collectAsState()
 
     val currentSortLabel = when (sortBy) {
         AlbumSortBy.TITLE -> "Title"
@@ -121,73 +130,97 @@ fun AlbumsScreen(
             }
         } else {
             if (isGridView) {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(viewPreferences.gridSpanCount),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 8.dp,
-                        bottom = contentPadding.calculateBottomPadding() + 88.dp
-                    ),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(
-                        items = albums,
-                        key = { it.id },
-                        contentType = { "album_grid_item" }
-                    ) { album ->
-                        AlbumGridItem(
-                            album = album,
-                            onClick = { onAlbumClick(album.id) },
-                            showArtwork = showArtwork,
-                            showArtist = viewPreferences.showArtist,
-                            gridCount = viewPreferences.gridSpanCount
-                        )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(viewPreferences.gridSpanCount),
+                        state = lazyGridState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 8.dp,
+                            bottom = contentPadding.calculateBottomPadding() + 88.dp
+                        ),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(
+                            items = albums,
+                            key = { it.id },
+                            contentType = { "album_grid_item" }
+                        ) { album ->
+                            AlbumGridItem(
+                                album = album,
+                                onClick = { onAlbumClick(album.id) },
+                                showArtwork = showArtwork,
+                                showArtist = viewPreferences.showArtist,
+                                gridCount = viewPreferences.gridSpanCount
+                            )
+                        }
                     }
+
+                    FastScroller(
+                        gridState = lazyGridState,
+                        sectionIndices = albumSectionIndices,
+                        contentPadding = PaddingValues(
+                            top = 8.dp,
+                            bottom = contentPadding.calculateBottomPadding() + 88.dp
+                        )
+                    )
                 }
             } else {
-                androidx.compose.foundation.lazy.LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 8.dp,
-                        bottom = contentPadding.calculateBottomPadding() + 88.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(
-                        items = albums,
-                        key = { it.id },
-                        contentType = { "album_list_item" }
-                    ) { album ->
-                        com.devson.vedtune.ui.components.VedTuneListItem(
-                            primaryText = album.title,
-                            secondaryText = buildString {
-                                val artistPart = if (viewPreferences.showArtist) album.artist else ""
-                                val songCountPart = "${album.songCount} ${if (album.songCount == 1) "song" else "songs"}"
-                                if (artistPart.isNotEmpty()) {
-                                    append(artistPart)
-                                    append(" • ")
-                                }
-                                append(songCountPart)
-                            },
-                            onClick = { onAlbumClick(album.id) },
-                            leadingContent = if (showArtwork) {
-                                {
-                                    SongArtwork(
-                                        albumId = album.id,
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
-                                        showArtwork = showArtwork
-                                    )
-                                }
-                            } else null
-                        )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 8.dp,
+                            bottom = contentPadding.calculateBottomPadding() + 88.dp
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(
+                            items = albums,
+                            key = { it.id },
+                            contentType = { "album_list_item" }
+                        ) { album ->
+                            com.devson.vedtune.ui.components.VedTuneListItem(
+                                primaryText = album.title,
+                                secondaryText = buildString {
+                                    val artistPart = if (viewPreferences.showArtist) album.artist else ""
+                                    val songCountPart = "${album.songCount} ${if (album.songCount == 1) "song" else "songs"}"
+                                    if (artistPart.isNotEmpty()) {
+                                        append(artistPart)
+                                        append(" • ")
+                                    }
+                                    append(songCountPart)
+                                },
+                                onClick = { onAlbumClick(album.id) },
+                                leadingContent = if (showArtwork) {
+                                    {
+                                        SongArtwork(
+                                            albumId = album.id,
+                                            modifier = Modifier
+                                                .size(48.dp)
+                                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
+                                            showArtwork = showArtwork
+                                        )
+                                    }
+                                } else null
+                            )
+                        }
                     }
+
+                    FastScroller(
+                        listState = lazyListState,
+                        sectionIndices = albumSectionIndices,
+                        contentPadding = PaddingValues(
+                            top = 8.dp,
+                            bottom = contentPadding.calculateBottomPadding() + 88.dp
+                        )
+                    )
                 }
             }
         }

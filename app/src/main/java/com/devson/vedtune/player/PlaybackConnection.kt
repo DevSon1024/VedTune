@@ -75,6 +75,9 @@ class PlaybackConnection @Inject constructor(
     private val _playlistQueue = MutableStateFlow<List<Song>>(emptyList())
     val playlistQueue: StateFlow<List<Song>> = _playlistQueue.asStateFlow()
 
+    private val _queueSongMap = MutableStateFlow<Map<Long, Song>>(emptyMap())
+    val queueSongMap: StateFlow<Map<Long, Song>> = _queueSongMap.asStateFlow()
+
     companion object {
         private val KEY_CURRENT_SON_ID = longPreferencesKey("current_song_id")
         private val KEY_PLAYBACK_POSITION = longPreferencesKey("playback_position")
@@ -491,6 +494,7 @@ class PlaybackConnection @Inject constructor(
                 _currentSongId.value = null
                 _playbackPosition.value = 0L
                 _playbackDuration.value = 0L
+                _queueSongMap.value = emptyMap()
                 originalQueue = emptyList()
                 repository.saveQueue(emptyList())
                 dataStore.edit { preferences ->
@@ -792,6 +796,7 @@ class PlaybackConnection @Inject constructor(
         val timeline = controller.currentTimeline
         if (timeline.isEmpty) {
             _playlistQueue.value = emptyList()
+            _queueSongMap.value = emptyMap()
             return
         }
         val window = androidx.media3.common.Timeline.Window()
@@ -804,12 +809,18 @@ class PlaybackConnection @Inject constructor(
             index = timeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, false)
         }
         
-        scope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers.Default) {
             try {
-                val songs = repository.getSongsByIds(songIds)
-                val songsMap = songs.associateBy { it.id }
-                val orderedSongs = songIds.mapNotNull { id -> songsMap[id] }
+                val songs = kotlinx.coroutines.withContext(Dispatchers.IO) { repository.getSongsByIds(songIds) }
+                val songsMap = HashMap<Long, Song>(songs.size).apply {
+                    songs.forEach { put(it.id, it) }
+                }
+                val orderedSongs = ArrayList<Song>(songIds.size)
+                for (id in songIds) {
+                    songsMap[id]?.let { orderedSongs.add(it) }
+                }
                 _playlistQueue.value = orderedSongs
+                _queueSongMap.value = songsMap
             } catch (e: Exception) {
                 e.printStackTrace()
             }

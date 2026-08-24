@@ -182,7 +182,8 @@ fun PlayerScreen(
                         modifier = Modifier.fillMaxSize(),
                         showArtwork = showArtworkState,
                         blurRadius = playerBackgroundBlurRadius.toInt(),
-                        isPlaying = isPlaying
+                        isPlaying = isPlaying,
+                        showFallbackAnimation = false
                     )
                     val background = MaterialTheme.colorScheme.background
                     val isDark = (background.red + background.green + background.blue) / 3f < 0.5f
@@ -223,6 +224,16 @@ fun PlayerScreen(
                 )
             }
         } else {
+            val progressProvider = remember(duration) {
+                {
+                    if (duration > 0) {
+                        (viewModel.playbackPosition.value.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                    } else {
+                        0f
+                    }
+                }
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -273,6 +284,7 @@ fun PlayerScreen(
                                     artworkScale = artworkScale,
                                     enableSwipeToSkip = enableSwipeToSkip,
                                     albumArtClickAction = albumArtClickAction,
+                                    playbackProgress = progressProvider,
                                     onToggleLyrics = { showLyrics = true },
                                     onPlayPause = { viewModel.togglePlayPause() },
                                     onViewAlbumArt = { showViewAlbumArtOverlay = true },

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -80,17 +81,22 @@ class PlayerViewModel @Inject constructor(
 
     val isPlaying: StateFlow<Boolean> = playbackConnection.isPlaying
 
-    val currentSong: StateFlow<Song?> = playbackConnection.currentSongId
-        .flatMapLatest { id ->
-            if (id != null) {
-                kotlinx.coroutines.flow.flow {
-                    emit(repository.getSongById(id))
-                }
-            } else {
-                flowOf<Song?>(null)
+    val queueSongMap: StateFlow<Map<Long, Song>> = playbackConnection.queueSongMap
+
+    val currentSong: StateFlow<Song?> = kotlinx.coroutines.flow.combine(
+        playbackConnection.currentSongId,
+        playbackConnection.queueSongMap
+    ) { id, songMap ->
+        if (id == null) {
+            null
+        } else {
+            // O(1) instant memory lookup from active queue map; fallback to DB on Dispatchers.IO if needed
+            songMap[id] ?: withContext(Dispatchers.IO) {
+                repository.getSongById(id)
             }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    }.flowOn(Dispatchers.Default)
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val playbackPosition: StateFlow<Long> = playbackConnection.playbackPosition
     val playbackDuration: StateFlow<Long> = playbackConnection.playbackDuration
@@ -357,10 +363,19 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    /**
+     * O(1) constant-time lookup for retrieving a song from the active queue.
+     */
+    fun getSongFromQueue(songId: Long): Song? {
+        return queueSongMap.value[songId]
+    }
+
     fun loadLyrics(songId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val songVal = currentSong.value?.takeIf { it.id == songId } ?: repository.getSongById(songId)
+                val songVal = queueSongMap.value[songId]
+                    ?: currentSong.value?.takeIf { it.id == songId }
+                    ?: repository.getSongById(songId)
                 val path = getFilePathFromUri(songId)
                 val lyricsText = com.devson.vedtune.core.LyricsStorageUtils.resolveLyricsForSong(
                     context = context,

@@ -326,9 +326,10 @@ interface SongArtworkEntryPoint {
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ExpressiveArtworkFallback(
-    isPlaying: Boolean,
-    progress: Float = 0f,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isPlaying: Boolean = false,
+    progress: (() -> Float)? = null,
+    showAnimation: Boolean = true
 ) {
     val polygons = remember {
         listOf(
@@ -343,11 +344,22 @@ fun ExpressiveArtworkFallback(
             .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         contentAlignment = Alignment.Center
     ) {
-        LoadingIndicator(
-            polygons = polygons,
-            modifier = Modifier.size(56.dp),
-            color = MaterialTheme.colorScheme.primary
-        )
+        if (showAnimation) {
+            if (progress != null) {
+                LoadingIndicator(
+                    progress = progress,
+                    modifier = Modifier.size(56.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    polygons = polygons
+                )
+            } else {
+                LoadingIndicator(
+                    modifier = Modifier.size(56.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    polygons = polygons
+                )
+            }
+        }
     }
 }
 
@@ -360,7 +372,8 @@ fun SongArtwork(
     ignoreCustomArtwork: Boolean = false,
     blurRadius: Int = 0,
     isPlaying: Boolean = false,
-    playbackProgress: Float = 0f
+    playbackProgress: (() -> Float)? = null,
+    showFallbackAnimation: Boolean = (blurRadius == 0)
 ) {
     val context = LocalContext.current
     var isError by remember(albumId, lastModified, ignoreCustomArtwork) { mutableStateOf(false) }
@@ -418,7 +431,8 @@ fun SongArtwork(
         if (fallbackActive) {
             ExpressiveArtworkFallback(
                 isPlaying = isPlaying,
-                progress = playbackProgress.coerceIn(0f, 1f),
+                progress = playbackProgress,
+                showAnimation = showFallbackAnimation,
                 modifier = Modifier.fillMaxSize()
             )
         } else {
