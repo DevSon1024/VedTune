@@ -70,4 +70,28 @@ interface SettingsRepository {
     suspend fun setBlacklistedFolders(folders: Set<String>)
     suspend fun setWhitelistedFolders(folders: Set<String>)
     suspend fun setIncludeSubfolders(include: Boolean)
+
+    // AudioSettings
+    val audioSettings: Flow<com.devson.vedtune.domain.model.AudioSettings>
+    suspend fun setMasterVolume(volume: Float)
+    suspend fun setGaplessPlaybackEnabled(enabled: Boolean)
+    suspend fun setCrossfadeEnabled(enabled: Boolean)
+    suspend fun setCrossfadeDurationMs(durationMs: Int)
+    suspend fun setReplayGainEnabled(enabled: Boolean)
+    suspend fun setReplayGainMode(mode: com.devson.vedtune.domain.model.ReplayGainMode)
+    suspend fun setReplayGainPreampDb(preampDb: Float)
+    suspend fun setReplayGainPreventClipping(prevent: Boolean)
+    suspend fun setEqualizerEnabled(enabled: Boolean)
+    suspend fun setEqualizerPreampDb(preampDb: Float)
+    suspend fun setEqualizerBandGains(bandGains: List<Float>)
+    suspend fun setEqualizerPreset(preset: String?)
+    suspend fun setBassBoostEnabled(enabled: Boolean)
+    suspend fun setBassBoostStrength(strength: Int)
+    suspend fun setLoudnessNormalizationEnabled(enabled: Boolean)
+    suspend fun setTargetLufs(targetLufs: Float)
+    suspend fun setLimiterEnabled(enabled: Boolean)
+    suspend fun setLimiterThresholdDb(thresholdDb: Float)
+    suspend fun setAudioProcessingEnabled(enabled: Boolean)
+    suspend fun updateAudioSettings(transform: (com.devson.vedtune.domain.model.AudioSettings) -> com.devson.vedtune.domain.model.AudioSettings)
+    suspend fun resetAudioSettings()
 }

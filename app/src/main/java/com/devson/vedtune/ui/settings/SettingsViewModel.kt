@@ -3,7 +3,10 @@ package com.devson.vedtune.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devson.vedtune.domain.model.AlbumArtClickAction
+import com.devson.vedtune.domain.model.AudioSettings
+import com.devson.vedtune.domain.model.AudioSettingsFactory
 import com.devson.vedtune.domain.model.FolderFilterMode
+import com.devson.vedtune.domain.model.ReplayGainMode
 import com.devson.vedtune.domain.model.SeekBarStyle
 import com.devson.vedtune.domain.repository.SettingsRepository
 import com.devson.vedtune.player.PlaybackConnection
@@ -98,6 +101,10 @@ class SettingsViewModel @Inject constructor(
 
     val includeSubfolders: StateFlow<Boolean> = settingsRepository.includeSubfolders
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    // AudioSettings
+    val audioSettings: StateFlow<AudioSettings> = settingsRepository.audioSettings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AudioSettingsFactory.defaults())
 
     //  Existing dispatchers 
 
@@ -236,5 +243,90 @@ class SettingsViewModel @Inject constructor(
 
     fun setIncludeSubfolders(include: Boolean) {
         viewModelScope.launch { settingsRepository.setIncludeSubfolders(include) }
+    }
+
+    // AudioSettings setters
+    fun setMasterVolume(volume: Float) {
+        viewModelScope.launch { settingsRepository.setMasterVolume(volume) }
+    }
+
+    fun setGaplessPlaybackEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setGaplessPlaybackEnabled(enabled) }
+    }
+
+    fun setCrossfadeEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setCrossfadeEnabled(enabled) }
+    }
+
+    fun setCrossfadeDurationMs(durationMs: Int) {
+        viewModelScope.launch { settingsRepository.setCrossfadeDurationMs(durationMs) }
+    }
+
+    fun setReplayGainEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setReplayGainEnabled(enabled) }
+    }
+
+    fun setReplayGainMode(mode: ReplayGainMode) {
+        viewModelScope.launch { settingsRepository.setReplayGainMode(mode) }
+    }
+
+    fun setReplayGainPreampDb(preampDb: Float) {
+        viewModelScope.launch { settingsRepository.setReplayGainPreampDb(preampDb) }
+    }
+
+    fun setReplayGainPreventClipping(prevent: Boolean) {
+        viewModelScope.launch { settingsRepository.setReplayGainPreventClipping(prevent) }
+    }
+
+    fun setEqualizerEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setEqualizerEnabled(enabled) }
+    }
+
+    fun setEqualizerPreampDb(preampDb: Float) {
+        viewModelScope.launch { settingsRepository.setEqualizerPreampDb(preampDb) }
+    }
+
+    fun setEqualizerBandGains(bandGains: List<Float>) {
+        viewModelScope.launch { settingsRepository.setEqualizerBandGains(bandGains) }
+    }
+
+    fun setEqualizerPreset(preset: String?) {
+        viewModelScope.launch { settingsRepository.setEqualizerPreset(preset) }
+    }
+
+    fun setBassBoostEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setBassBoostEnabled(enabled) }
+    }
+
+    fun setBassBoostStrength(strength: Int) {
+        viewModelScope.launch { settingsRepository.setBassBoostStrength(strength) }
+    }
+
+    fun setLoudnessNormalizationEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setLoudnessNormalizationEnabled(enabled) }
+    }
+
+    fun setTargetLufs(targetLufs: Float) {
+        viewModelScope.launch { settingsRepository.setTargetLufs(targetLufs) }
+    }
+
+    fun setLimiterEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setLimiterEnabled(enabled) }
+    }
+
+    fun setLimiterThresholdDb(thresholdDb: Float) {
+        viewModelScope.launch { settingsRepository.setLimiterThresholdDb(thresholdDb) }
+    }
+
+    fun setAudioProcessingEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setAudioProcessingEnabled(enabled) }
+    }
+
+    fun updateAudioSettings(transform: (AudioSettings) -> AudioSettings) {
+        viewModelScope.launch { settingsRepository.updateAudioSettings(transform) }
+    }
+
+    fun resetAudioSettings() {
+        viewModelScope.launch { settingsRepository.resetAudioSettings() }
     }
 }

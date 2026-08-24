@@ -9,7 +9,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import com.devson.vedtune.data.local.dao.QueueDao
 import com.devson.vedtune.domain.model.AlbumArtClickAction
+import com.devson.vedtune.domain.model.AudioSettings
 import com.devson.vedtune.domain.model.FolderFilterMode
+import com.devson.vedtune.domain.model.ReplayGainMode
 import com.devson.vedtune.domain.model.SeekBarStyle
 import com.devson.vedtune.domain.model.ViewPreferences
 import com.devson.vedtune.domain.repository.SettingsRepository
@@ -60,6 +62,27 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_BLACKLISTED_FOLDERS = stringPreferencesKey("blacklisted_folders")
         private val KEY_WHITELISTED_FOLDERS = stringPreferencesKey("whitelisted_folders")
         private val KEY_INCLUDE_SUBFOLDERS = booleanPreferencesKey("include_subfolders")
+
+        // AudioSettings Keys
+        private val KEY_AUDIO_MASTER_VOLUME = floatPreferencesKey("audio_master_volume")
+        private val KEY_AUDIO_GAPLESS_ENABLED = booleanPreferencesKey("audio_gapless_enabled")
+        private val KEY_AUDIO_CROSSFADE_ENABLED = booleanPreferencesKey("audio_crossfade_enabled")
+        private val KEY_AUDIO_CROSSFADE_DURATION_MS = intPreferencesKey("audio_crossfade_duration_ms")
+        private val KEY_AUDIO_REPLAYGAIN_ENABLED = booleanPreferencesKey("audio_replaygain_enabled")
+        private val KEY_AUDIO_REPLAYGAIN_MODE = stringPreferencesKey("audio_replaygain_mode")
+        private val KEY_AUDIO_REPLAYGAIN_PREAMP_DB = floatPreferencesKey("audio_replaygain_preamp_db")
+        private val KEY_AUDIO_REPLAYGAIN_PREVENT_CLIPPING = booleanPreferencesKey("audio_replaygain_prevent_clipping")
+        private val KEY_AUDIO_EQUALIZER_ENABLED = booleanPreferencesKey("audio_equalizer_enabled")
+        private val KEY_AUDIO_EQUALIZER_PREAMP_DB = floatPreferencesKey("audio_equalizer_preamp_db")
+        private val KEY_AUDIO_EQUALIZER_BAND_GAINS = stringPreferencesKey("audio_equalizer_band_gains")
+        private val KEY_AUDIO_EQUALIZER_PRESET = stringPreferencesKey("audio_equalizer_preset")
+        private val KEY_AUDIO_BASS_BOOST_ENABLED = booleanPreferencesKey("audio_bass_boost_enabled")
+        private val KEY_AUDIO_BASS_BOOST_STRENGTH = intPreferencesKey("audio_bass_boost_strength")
+        private val KEY_AUDIO_LOUDNESS_NORMALIZATION_ENABLED = booleanPreferencesKey("audio_loudness_normalization_enabled")
+        private val KEY_AUDIO_TARGET_LUFS = floatPreferencesKey("audio_target_lufs")
+        private val KEY_AUDIO_LIMITER_ENABLED = booleanPreferencesKey("audio_limiter_enabled")
+        private val KEY_AUDIO_LIMITER_THRESHOLD_DB = floatPreferencesKey("audio_limiter_threshold_db")
+        private val KEY_AUDIO_PROCESSING_ENABLED = booleanPreferencesKey("audio_processing_enabled")
 
         /** Delimiter used to serialise/deserialise folder sets as a single DataStore string. */
         private const val FOLDER_DELIMITER = "|||"
@@ -325,7 +348,213 @@ class SettingsRepositoryImpl @Inject constructor(
     }
 
 
+    //  AudioSettings implementation 
+
+    override val audioSettings: Flow<AudioSettings> = dataStore.data.map { prefs ->
+        val default = AudioSettings.FactoryDefaults
+        AudioSettings(
+            masterVolume = (prefs[KEY_AUDIO_MASTER_VOLUME]?.takeIf { it.isFinite() } ?: default.masterVolume).coerceIn(0.0f, 1.0f),
+            gaplessPlaybackEnabled = prefs[KEY_AUDIO_GAPLESS_ENABLED] ?: default.gaplessPlaybackEnabled,
+            crossfadeEnabled = prefs[KEY_AUDIO_CROSSFADE_ENABLED] ?: default.crossfadeEnabled,
+            crossfadeDurationMs = (prefs[KEY_AUDIO_CROSSFADE_DURATION_MS] ?: default.crossfadeDurationMs).coerceIn(0, 20000),
+            replayGainEnabled = prefs[KEY_AUDIO_REPLAYGAIN_ENABLED] ?: default.replayGainEnabled,
+            replayGainMode = decodeReplayGainMode(prefs[KEY_AUDIO_REPLAYGAIN_MODE]),
+            replayGainPreampDb = prefs[KEY_AUDIO_REPLAYGAIN_PREAMP_DB]?.takeIf { it.isFinite() } ?: default.replayGainPreampDb,
+            replayGainPreventClipping = prefs[KEY_AUDIO_REPLAYGAIN_PREVENT_CLIPPING] ?: default.replayGainPreventClipping,
+            equalizerEnabled = prefs[KEY_AUDIO_EQUALIZER_ENABLED] ?: default.equalizerEnabled,
+            equalizerPreampDb = prefs[KEY_AUDIO_EQUALIZER_PREAMP_DB]?.takeIf { it.isFinite() } ?: default.equalizerPreampDb,
+            equalizerBandGains = decodeBandGains(prefs[KEY_AUDIO_EQUALIZER_BAND_GAINS]),
+            equalizerPreset = prefs[KEY_AUDIO_EQUALIZER_PRESET],
+            bassBoostEnabled = prefs[KEY_AUDIO_BASS_BOOST_ENABLED] ?: default.bassBoostEnabled,
+            bassBoostStrength = (prefs[KEY_AUDIO_BASS_BOOST_STRENGTH] ?: default.bassBoostStrength).coerceIn(0, 1000),
+            loudnessNormalizationEnabled = prefs[KEY_AUDIO_LOUDNESS_NORMALIZATION_ENABLED] ?: default.loudnessNormalizationEnabled,
+            targetLufs = prefs[KEY_AUDIO_TARGET_LUFS]?.takeIf { it.isFinite() } ?: default.targetLufs,
+            limiterEnabled = prefs[KEY_AUDIO_LIMITER_ENABLED] ?: default.limiterEnabled,
+            limiterThresholdDb = prefs[KEY_AUDIO_LIMITER_THRESHOLD_DB]?.takeIf { it.isFinite() } ?: default.limiterThresholdDb,
+            audioProcessingEnabled = prefs[KEY_AUDIO_PROCESSING_ENABLED] ?: default.audioProcessingEnabled
+        )
+    }
+
+    override suspend fun setMasterVolume(volume: Float) {
+        dataStore.edit { it[KEY_AUDIO_MASTER_VOLUME] = volume.coerceIn(0.0f, 1.0f) }
+    }
+
+    override suspend fun setGaplessPlaybackEnabled(enabled: Boolean) {
+        dataStore.edit { it[KEY_AUDIO_GAPLESS_ENABLED] = enabled }
+    }
+
+    override suspend fun setCrossfadeEnabled(enabled: Boolean) {
+        dataStore.edit { it[KEY_AUDIO_CROSSFADE_ENABLED] = enabled }
+    }
+
+    override suspend fun setCrossfadeDurationMs(durationMs: Int) {
+        dataStore.edit { it[KEY_AUDIO_CROSSFADE_DURATION_MS] = durationMs.coerceIn(0, 20000) }
+    }
+
+    override suspend fun setReplayGainEnabled(enabled: Boolean) {
+        dataStore.edit { it[KEY_AUDIO_REPLAYGAIN_ENABLED] = enabled }
+    }
+
+    override suspend fun setReplayGainMode(mode: ReplayGainMode) {
+        dataStore.edit { it[KEY_AUDIO_REPLAYGAIN_MODE] = mode.name }
+    }
+
+    override suspend fun setReplayGainPreampDb(preampDb: Float) {
+        dataStore.edit { it[KEY_AUDIO_REPLAYGAIN_PREAMP_DB] = preampDb }
+    }
+
+    override suspend fun setReplayGainPreventClipping(prevent: Boolean) {
+        dataStore.edit { it[KEY_AUDIO_REPLAYGAIN_PREVENT_CLIPPING] = prevent }
+    }
+
+    override suspend fun setEqualizerEnabled(enabled: Boolean) {
+        dataStore.edit { it[KEY_AUDIO_EQUALIZER_ENABLED] = enabled }
+    }
+
+    override suspend fun setEqualizerPreampDb(preampDb: Float) {
+        dataStore.edit { it[KEY_AUDIO_EQUALIZER_PREAMP_DB] = preampDb }
+    }
+
+    override suspend fun setEqualizerBandGains(bandGains: List<Float>) {
+        dataStore.edit { it[KEY_AUDIO_EQUALIZER_BAND_GAINS] = encodeBandGains(bandGains) }
+    }
+
+    override suspend fun setEqualizerPreset(preset: String?) {
+        dataStore.edit {
+            if (preset != null) {
+                it[KEY_AUDIO_EQUALIZER_PRESET] = preset
+            } else {
+                it.remove(KEY_AUDIO_EQUALIZER_PRESET)
+            }
+        }
+    }
+
+    override suspend fun setBassBoostEnabled(enabled: Boolean) {
+        dataStore.edit { it[KEY_AUDIO_BASS_BOOST_ENABLED] = enabled }
+    }
+
+    override suspend fun setBassBoostStrength(strength: Int) {
+        dataStore.edit { it[KEY_AUDIO_BASS_BOOST_STRENGTH] = strength.coerceIn(0, 1000) }
+    }
+
+    override suspend fun setLoudnessNormalizationEnabled(enabled: Boolean) {
+        dataStore.edit { it[KEY_AUDIO_LOUDNESS_NORMALIZATION_ENABLED] = enabled }
+    }
+
+    override suspend fun setTargetLufs(targetLufs: Float) {
+        dataStore.edit { it[KEY_AUDIO_TARGET_LUFS] = targetLufs }
+    }
+
+    override suspend fun setLimiterEnabled(enabled: Boolean) {
+        dataStore.edit { it[KEY_AUDIO_LIMITER_ENABLED] = enabled }
+    }
+
+    override suspend fun setLimiterThresholdDb(thresholdDb: Float) {
+        dataStore.edit { it[KEY_AUDIO_LIMITER_THRESHOLD_DB] = thresholdDb }
+    }
+
+    override suspend fun setAudioProcessingEnabled(enabled: Boolean) {
+        dataStore.edit { it[KEY_AUDIO_PROCESSING_ENABLED] = enabled }
+    }
+
+    override suspend fun updateAudioSettings(transform: (AudioSettings) -> AudioSettings) {
+        dataStore.edit { prefs ->
+            val default = AudioSettings.FactoryDefaults
+            val current = AudioSettings(
+                masterVolume = (prefs[KEY_AUDIO_MASTER_VOLUME]?.takeIf { it.isFinite() } ?: default.masterVolume).coerceIn(0.0f, 1.0f),
+                gaplessPlaybackEnabled = prefs[KEY_AUDIO_GAPLESS_ENABLED] ?: default.gaplessPlaybackEnabled,
+                crossfadeEnabled = prefs[KEY_AUDIO_CROSSFADE_ENABLED] ?: default.crossfadeEnabled,
+                crossfadeDurationMs = (prefs[KEY_AUDIO_CROSSFADE_DURATION_MS] ?: default.crossfadeDurationMs).coerceIn(0, 20000),
+                replayGainEnabled = prefs[KEY_AUDIO_REPLAYGAIN_ENABLED] ?: default.replayGainEnabled,
+                replayGainMode = decodeReplayGainMode(prefs[KEY_AUDIO_REPLAYGAIN_MODE]),
+                replayGainPreampDb = prefs[KEY_AUDIO_REPLAYGAIN_PREAMP_DB]?.takeIf { it.isFinite() } ?: default.replayGainPreampDb,
+                replayGainPreventClipping = prefs[KEY_AUDIO_REPLAYGAIN_PREVENT_CLIPPING] ?: default.replayGainPreventClipping,
+                equalizerEnabled = prefs[KEY_AUDIO_EQUALIZER_ENABLED] ?: default.equalizerEnabled,
+                equalizerPreampDb = prefs[KEY_AUDIO_EQUALIZER_PREAMP_DB]?.takeIf { it.isFinite() } ?: default.equalizerPreampDb,
+                equalizerBandGains = decodeBandGains(prefs[KEY_AUDIO_EQUALIZER_BAND_GAINS]),
+                equalizerPreset = prefs[KEY_AUDIO_EQUALIZER_PRESET],
+                bassBoostEnabled = prefs[KEY_AUDIO_BASS_BOOST_ENABLED] ?: default.bassBoostEnabled,
+                bassBoostStrength = (prefs[KEY_AUDIO_BASS_BOOST_STRENGTH] ?: default.bassBoostStrength).coerceIn(0, 1000),
+                loudnessNormalizationEnabled = prefs[KEY_AUDIO_LOUDNESS_NORMALIZATION_ENABLED] ?: default.loudnessNormalizationEnabled,
+                targetLufs = prefs[KEY_AUDIO_TARGET_LUFS]?.takeIf { it.isFinite() } ?: default.targetLufs,
+                limiterEnabled = prefs[KEY_AUDIO_LIMITER_ENABLED] ?: default.limiterEnabled,
+                limiterThresholdDb = prefs[KEY_AUDIO_LIMITER_THRESHOLD_DB]?.takeIf { it.isFinite() } ?: default.limiterThresholdDb,
+                audioProcessingEnabled = prefs[KEY_AUDIO_PROCESSING_ENABLED] ?: default.audioProcessingEnabled
+            )
+            val updated = transform(current)
+            prefs[KEY_AUDIO_MASTER_VOLUME] = updated.masterVolume.coerceIn(0.0f, 1.0f)
+            prefs[KEY_AUDIO_GAPLESS_ENABLED] = updated.gaplessPlaybackEnabled
+            prefs[KEY_AUDIO_CROSSFADE_ENABLED] = updated.crossfadeEnabled
+            prefs[KEY_AUDIO_CROSSFADE_DURATION_MS] = updated.crossfadeDurationMs.coerceIn(0, 20000)
+            prefs[KEY_AUDIO_REPLAYGAIN_ENABLED] = updated.replayGainEnabled
+            prefs[KEY_AUDIO_REPLAYGAIN_MODE] = updated.replayGainMode.name
+            prefs[KEY_AUDIO_REPLAYGAIN_PREAMP_DB] = updated.replayGainPreampDb
+            prefs[KEY_AUDIO_REPLAYGAIN_PREVENT_CLIPPING] = updated.replayGainPreventClipping
+            prefs[KEY_AUDIO_EQUALIZER_ENABLED] = updated.equalizerEnabled
+            prefs[KEY_AUDIO_EQUALIZER_PREAMP_DB] = updated.equalizerPreampDb
+            prefs[KEY_AUDIO_EQUALIZER_BAND_GAINS] = encodeBandGains(updated.equalizerBandGains)
+            if (updated.equalizerPreset != null) {
+                prefs[KEY_AUDIO_EQUALIZER_PRESET] = updated.equalizerPreset
+            } else {
+                prefs.remove(KEY_AUDIO_EQUALIZER_PRESET)
+            }
+            prefs[KEY_AUDIO_BASS_BOOST_ENABLED] = updated.bassBoostEnabled
+            prefs[KEY_AUDIO_BASS_BOOST_STRENGTH] = updated.bassBoostStrength.coerceIn(0, 1000)
+            prefs[KEY_AUDIO_LOUDNESS_NORMALIZATION_ENABLED] = updated.loudnessNormalizationEnabled
+            prefs[KEY_AUDIO_TARGET_LUFS] = updated.targetLufs
+            prefs[KEY_AUDIO_LIMITER_ENABLED] = updated.limiterEnabled
+            prefs[KEY_AUDIO_LIMITER_THRESHOLD_DB] = updated.limiterThresholdDb
+            prefs[KEY_AUDIO_PROCESSING_ENABLED] = updated.audioProcessingEnabled
+        }
+    }
+
+    override suspend fun resetAudioSettings() {
+        dataStore.edit { prefs ->
+            prefs.remove(KEY_AUDIO_MASTER_VOLUME)
+            prefs.remove(KEY_AUDIO_GAPLESS_ENABLED)
+            prefs.remove(KEY_AUDIO_CROSSFADE_ENABLED)
+            prefs.remove(KEY_AUDIO_CROSSFADE_DURATION_MS)
+            prefs.remove(KEY_AUDIO_REPLAYGAIN_ENABLED)
+            prefs.remove(KEY_AUDIO_REPLAYGAIN_MODE)
+            prefs.remove(KEY_AUDIO_REPLAYGAIN_PREAMP_DB)
+            prefs.remove(KEY_AUDIO_REPLAYGAIN_PREVENT_CLIPPING)
+            prefs.remove(KEY_AUDIO_EQUALIZER_ENABLED)
+            prefs.remove(KEY_AUDIO_EQUALIZER_PREAMP_DB)
+            prefs.remove(KEY_AUDIO_EQUALIZER_BAND_GAINS)
+            prefs.remove(KEY_AUDIO_EQUALIZER_PRESET)
+            prefs.remove(KEY_AUDIO_BASS_BOOST_ENABLED)
+            prefs.remove(KEY_AUDIO_BASS_BOOST_STRENGTH)
+            prefs.remove(KEY_AUDIO_LOUDNESS_NORMALIZATION_ENABLED)
+            prefs.remove(KEY_AUDIO_TARGET_LUFS)
+            prefs.remove(KEY_AUDIO_LIMITER_ENABLED)
+            prefs.remove(KEY_AUDIO_LIMITER_THRESHOLD_DB)
+            prefs.remove(KEY_AUDIO_PROCESSING_ENABLED)
+        }
+    }
+
+
     //  Serialisation helpers 
+
+    private fun decodeReplayGainMode(raw: String?): ReplayGainMode {
+        if (raw.isNullOrBlank()) return AudioSettings.FactoryDefaults.replayGainMode
+        return try {
+            ReplayGainMode.valueOf(raw)
+        } catch (e: Exception) {
+            AudioSettings.FactoryDefaults.replayGainMode
+        }
+    }
+
+    private fun decodeBandGains(raw: String?): List<Float> {
+        if (raw.isNullOrBlank()) return emptyList()
+        return try {
+            raw.split(",").mapNotNull { it.trim().toFloatOrNull()?.takeIf { f -> f.isFinite() } }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun encodeBandGains(gains: List<Float>): String =
+        gains.filter { it.isFinite() }.joinToString(",") { it.toString() }
 
     private fun encodeFolderSet(folders: Set<String>): String =
         folders.filter { it.isNotBlank() }.joinToString(FOLDER_DELIMITER)
