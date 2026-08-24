@@ -350,6 +350,22 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.setBassBoostStrength(strength) }
     }
 
+    fun resetBassBoost() {
+        viewModelScope.launch { settingsRepository.resetBassBoost() }
+    }
+
+    fun setVirtualizerEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setVirtualizerEnabled(enabled) }
+    }
+
+    fun setVirtualizerStrength(strength: Int) {
+        viewModelScope.launch { settingsRepository.setVirtualizerStrength(strength) }
+    }
+
+    fun resetVirtualizer() {
+        viewModelScope.launch { settingsRepository.resetVirtualizer() }
+    }
+
     fun setLoudnessNormalizationEnabled(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setLoudnessNormalizationEnabled(enabled) }
     }

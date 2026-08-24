@@ -78,6 +78,8 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_AUDIO_EQUALIZER_PRESET = stringPreferencesKey("audio_equalizer_preset")
         private val KEY_AUDIO_BASS_BOOST_ENABLED = booleanPreferencesKey("audio_bass_boost_enabled")
         private val KEY_AUDIO_BASS_BOOST_STRENGTH = intPreferencesKey("audio_bass_boost_strength")
+        private val KEY_AUDIO_VIRTUALIZER_ENABLED = booleanPreferencesKey("audio_virtualizer_enabled")
+        private val KEY_AUDIO_VIRTUALIZER_STRENGTH = intPreferencesKey("audio_virtualizer_strength")
         private val KEY_AUDIO_LOUDNESS_NORMALIZATION_ENABLED = booleanPreferencesKey("audio_loudness_normalization_enabled")
         private val KEY_AUDIO_TARGET_LUFS = floatPreferencesKey("audio_target_lufs")
         private val KEY_AUDIO_LIMITER_ENABLED = booleanPreferencesKey("audio_limiter_enabled")
@@ -367,6 +369,8 @@ class SettingsRepositoryImpl @Inject constructor(
             equalizerPreset = prefs[KEY_AUDIO_EQUALIZER_PRESET],
             bassBoostEnabled = prefs[KEY_AUDIO_BASS_BOOST_ENABLED] ?: default.bassBoostEnabled,
             bassBoostStrength = (prefs[KEY_AUDIO_BASS_BOOST_STRENGTH] ?: default.bassBoostStrength).coerceIn(0, 1000),
+            virtualizerEnabled = prefs[KEY_AUDIO_VIRTUALIZER_ENABLED] ?: default.virtualizerEnabled,
+            virtualizerStrength = (prefs[KEY_AUDIO_VIRTUALIZER_STRENGTH] ?: default.virtualizerStrength).coerceIn(0, 1000),
             loudnessNormalizationEnabled = prefs[KEY_AUDIO_LOUDNESS_NORMALIZATION_ENABLED] ?: default.loudnessNormalizationEnabled,
             targetLufs = prefs[KEY_AUDIO_TARGET_LUFS]?.takeIf { it.isFinite() } ?: default.targetLufs,
             limiterEnabled = prefs[KEY_AUDIO_LIMITER_ENABLED] ?: default.limiterEnabled,
@@ -437,6 +441,28 @@ class SettingsRepositoryImpl @Inject constructor(
         dataStore.edit { it[KEY_AUDIO_BASS_BOOST_STRENGTH] = strength.coerceIn(0, 1000) }
     }
 
+    override suspend fun resetBassBoost() {
+        dataStore.edit {
+            it[KEY_AUDIO_BASS_BOOST_ENABLED] = false
+            it[KEY_AUDIO_BASS_BOOST_STRENGTH] = 0
+        }
+    }
+
+    override suspend fun setVirtualizerEnabled(enabled: Boolean) {
+        dataStore.edit { it[KEY_AUDIO_VIRTUALIZER_ENABLED] = enabled }
+    }
+
+    override suspend fun setVirtualizerStrength(strength: Int) {
+        dataStore.edit { it[KEY_AUDIO_VIRTUALIZER_STRENGTH] = strength.coerceIn(0, 1000) }
+    }
+
+    override suspend fun resetVirtualizer() {
+        dataStore.edit {
+            it[KEY_AUDIO_VIRTUALIZER_ENABLED] = false
+            it[KEY_AUDIO_VIRTUALIZER_STRENGTH] = 0
+        }
+    }
+
     override suspend fun setLoudnessNormalizationEnabled(enabled: Boolean) {
         dataStore.edit { it[KEY_AUDIO_LOUDNESS_NORMALIZATION_ENABLED] = enabled }
     }
@@ -500,6 +526,8 @@ class SettingsRepositoryImpl @Inject constructor(
             }
             prefs[KEY_AUDIO_BASS_BOOST_ENABLED] = updated.bassBoostEnabled
             prefs[KEY_AUDIO_BASS_BOOST_STRENGTH] = updated.bassBoostStrength.coerceIn(0, 1000)
+            prefs[KEY_AUDIO_VIRTUALIZER_ENABLED] = updated.virtualizerEnabled
+            prefs[KEY_AUDIO_VIRTUALIZER_STRENGTH] = updated.virtualizerStrength.coerceIn(0, 1000)
             prefs[KEY_AUDIO_LOUDNESS_NORMALIZATION_ENABLED] = updated.loudnessNormalizationEnabled
             prefs[KEY_AUDIO_TARGET_LUFS] = updated.targetLufs
             prefs[KEY_AUDIO_LIMITER_ENABLED] = updated.limiterEnabled
@@ -524,6 +552,8 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs.remove(KEY_AUDIO_EQUALIZER_PRESET)
             prefs.remove(KEY_AUDIO_BASS_BOOST_ENABLED)
             prefs.remove(KEY_AUDIO_BASS_BOOST_STRENGTH)
+            prefs.remove(KEY_AUDIO_VIRTUALIZER_ENABLED)
+            prefs.remove(KEY_AUDIO_VIRTUALIZER_STRENGTH)
             prefs.remove(KEY_AUDIO_LOUDNESS_NORMALIZATION_ENABLED)
             prefs.remove(KEY_AUDIO_TARGET_LUFS)
             prefs.remove(KEY_AUDIO_LIMITER_ENABLED)

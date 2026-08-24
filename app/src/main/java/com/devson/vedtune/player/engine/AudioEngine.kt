@@ -80,6 +80,7 @@ class AudioEngine @Inject constructor(
     private val replayGainProcessor = ReplayGainProcessor(replayGainExtractor, replayGainCache, masterVolumeProcessor)
     private val equalizerProcessor = EqualizerProcessor()
     private val bassBoostProcessor = BassBoostProcessor()
+    private val virtualizerProcessor = VirtualizerProcessor()
     private val loudnessProcessor = LoudnessProcessor()
     private val limiterProcessor = LimiterProcessor()
 
@@ -91,6 +92,7 @@ class AudioEngine @Inject constructor(
             replayGainProcessor,
             equalizerProcessor,
             bassBoostProcessor,
+            virtualizerProcessor,
             loudnessProcessor,
             limiterProcessor
         ) + customProcessors

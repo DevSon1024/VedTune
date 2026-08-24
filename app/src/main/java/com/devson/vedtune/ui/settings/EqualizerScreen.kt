@@ -276,6 +276,174 @@ fun EqualizerScreen(
                 }
             }
 
+            // Bass Boost Card
+            item {
+                SettingsCard(
+                    title = "Bass Boost",
+                    icon = Icons.Default.Tune
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (audioSettings.bassBoostEnabled) "Bass Boost Active" else "Bass Boost Disabled",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "Low-frequency sub-bass reinforcement",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = audioSettings.bassBoostEnabled,
+                                onCheckedChange = { viewModel.setBassBoostEnabled(it) }
+                            )
+                        }
+
+                        AnimatedVisibility(
+                            visible = audioSettings.bassBoostEnabled,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Bass Strength",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Text(
+                                        text = "${(audioSettings.bassBoostStrength / 10f).roundToInt()}%",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+
+                                Slider(
+                                    value = audioSettings.bassBoostStrength.toFloat(),
+                                    onValueChange = { viewModel.setBassBoostStrength(it.roundToInt()) },
+                                    valueRange = 0f..1000f,
+                                    steps = 19, // 5% increments
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                androidx.compose.material3.OutlinedButton(
+                                    onClick = { viewModel.resetBassBoost() },
+                                    modifier = Modifier.align(Alignment.End)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = null,
+                                        modifier = Modifier.height(16.dp).width(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Reset Bass Boost")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Virtualizer Card
+            item {
+                SettingsCard(
+                    title = "Virtualizer (3D Surround)",
+                    icon = Icons.Default.Tune
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (audioSettings.virtualizerEnabled) "Virtualizer Active" else "Virtualizer Disabled",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "Spatial soundstage widening and 3D acoustic simulation",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = audioSettings.virtualizerEnabled,
+                                onCheckedChange = { viewModel.setVirtualizerEnabled(it) }
+                            )
+                        }
+
+                        AnimatedVisibility(
+                            visible = audioSettings.virtualizerEnabled,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Surround Effect Strength",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Text(
+                                        text = "${(audioSettings.virtualizerStrength / 10f).roundToInt()}%",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+
+                                Slider(
+                                    value = audioSettings.virtualizerStrength.toFloat(),
+                                    onValueChange = { viewModel.setVirtualizerStrength(it.roundToInt()) },
+                                    valueRange = 0f..1000f,
+                                    steps = 19, // 5% increments
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                androidx.compose.material3.OutlinedButton(
+                                    onClick = { viewModel.resetVirtualizer() },
+                                    modifier = Modifier.align(Alignment.End)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = null,
+                                        modifier = Modifier.height(16.dp).width(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Reset Virtualizer")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             item {
                 Spacer(modifier = Modifier.height(16.dp))
             }

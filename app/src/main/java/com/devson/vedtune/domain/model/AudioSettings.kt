@@ -47,6 +47,10 @@ data class AudioSettings(
     val bassBoostEnabled: Boolean = false,
     val bassBoostStrength: Int = 0,
 
+    // Virtualizer
+    val virtualizerEnabled: Boolean = false,
+    val virtualizerStrength: Int = 0,
+
     // Loudness
     val loudnessNormalizationEnabled: Boolean = false,
     val targetLufs: Float = -14.0f,

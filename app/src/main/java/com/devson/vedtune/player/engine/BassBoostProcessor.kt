@@ -12,6 +12,7 @@ import com.devson.vedtune.domain.model.AudioSettings
 /**
  * Manages low-frequency BassBoost AudioEffect on supported devices.
  */
+@Suppress("DEPRECATION")
 class BassBoostProcessor : AudioProcessorModule {
     override val id: String = "bass_boost"
     override val name: String = "Bass Boost"
