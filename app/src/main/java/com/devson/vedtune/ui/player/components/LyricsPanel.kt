@@ -517,11 +517,7 @@ fun LyricsCopyDialog(
                     Button(
                         onClick = {
                             val formattedLyrics = parsedLines.joinToString("\n") { line ->
-                                val min = line.timestamp / (60 * 1000)
-                                val sec = (line.timestamp % (60 * 1000)) / 1000
-                                val ms = (line.timestamp % 1000) / 10
-                                val timeStr = String.format(Locale.getDefault(), "[%02d:%02d.%02d]", min, sec, ms)
-                                "$timeStr ${line.text}"
+                                "${com.devson.vedtune.core.formatLrcTime(line.timestamp)} ${line.text}"
                             }
                             onCopy(formattedLyrics)
                         },

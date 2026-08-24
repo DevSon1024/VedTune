@@ -29,9 +29,10 @@ import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.devson.vedtune.core.formatDuration
+import com.devson.vedtune.core.formatTimestamp
+import com.devson.vedtune.core.truncateMiddle
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 @EntryPoint
@@ -313,7 +314,7 @@ fun SongInfoBottomSheet(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp),
-                            border = ButtonDefaults.outlinedButtonBorder.copy(
+                            border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
                                 brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
                             )
                         ) {
@@ -439,28 +440,6 @@ fun TechSpecItem(
             color = MaterialTheme.colorScheme.onSurface
         )
     }
-}
-
-private fun formatDuration(durationMs: Long): String {
-    if (durationMs <= 0) return "0:00"
-    val totalSeconds = durationMs / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return String.format(Locale.US, "%d:%02d", minutes, seconds)
-}
-
-private fun formatTimestamp(timestamp: Long, isMediaStoreTime: Boolean): String {
-    if (timestamp <= 0) return "Unknown"
-    val millis = if (isMediaStoreTime) timestamp * 1000 else timestamp
-    val date = Date(millis)
-    val sdf = SimpleDateFormat("MMM dd, yyyy hh:mm a", Locale.getDefault())
-    return sdf.format(date)
-}
-
-private fun truncateMiddle(name: String, maxLength: Int = 36): String {
-    if (name.length <= maxLength) return name
-    val half = (maxLength - 3) / 2
-    return name.take(half) + "..." + name.takeLast(half)
 }
 
 private fun getLyricsStatus(context: android.content.Context, songId: Long, filePath: String): String {

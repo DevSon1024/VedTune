@@ -473,17 +473,7 @@ class LyricsEditorViewModel @Inject constructor(
     }
 
     fun formatLrcTime(ms: Long, includeBrackets: Boolean = true): String {
-        if (ms < 0) return if (includeBrackets) "[00:00.00]" else "00:00.00"
-        val hours = ms / 3600000L
-        val minutes = (ms % 3600000L) / 60000L
-        val seconds = (ms % 60000L) / 1000L
-        val hundredths = (ms % 1000L) / 10L
-        val formatted = if (hours > 0) {
-            String.format(Locale.US, "%02d:%02d:%02d.%02d", hours, minutes, seconds, hundredths)
-        } else {
-            String.format(Locale.US, "%02d:%02d.%02d", minutes, seconds, hundredths)
-        }
-        return if (includeBrackets) "[$formatted]" else formatted
+        return com.devson.vedtune.core.formatLrcTime(ms, includeBrackets)
     }
 
     // LRCLIB Search Handlers

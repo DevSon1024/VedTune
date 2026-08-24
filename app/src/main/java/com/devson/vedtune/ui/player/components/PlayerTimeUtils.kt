@@ -1,10 +1,6 @@
 package com.devson.vedtune.ui.player.components
 
-import java.util.Locale
-
-fun formatPlayerTime(ms: Long): String {
-    val totalSeconds = ms / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
-}
+/**
+ * Formats milliseconds to player time (delegates to core [com.devson.vedtune.core.formatPlayerTime]).
+ */
+fun formatPlayerTime(ms: Long): String = com.devson.vedtune.core.formatPlayerTime(ms)

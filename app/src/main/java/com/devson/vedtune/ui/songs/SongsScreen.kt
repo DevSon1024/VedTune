@@ -1,5 +1,6 @@
 package com.devson.vedtune.ui.songs
 
+import com.devson.vedtune.core.formatDuration
 import android.Manifest
 import androidx.compose.runtime.DisposableEffect
 import kotlinx.coroutines.launch
@@ -969,11 +970,4 @@ fun SongPreviewDialog(
             }
         }
     }
-}
-
-private fun formatDuration(durationMs: Long): String {
-    val totalSeconds = durationMs / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return String.format("%d:%02d", minutes, seconds)
 }

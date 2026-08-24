@@ -16,6 +16,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.devson.vedtune.core.formatLrcTime
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.domain.repository.MediaRepository
 import com.devson.vedtune.player.PlaybackConnection
@@ -322,7 +323,7 @@ class EditTagsViewModel @Inject constructor(
 
     fun captureTimestamp() {
         val pos = playbackPosition.value
-        val timestamp = formatLrcTimestamp(pos)
+        val timestamp = formatLrcTime(pos)
 
         val text = lyrics.text
         val selection = lyrics.selection
@@ -338,14 +339,6 @@ class EditTagsViewModel @Inject constructor(
             text = newText,
             selection = androidx.compose.ui.text.TextRange(newCursor)
         )
-    }
-
-    private fun formatLrcTimestamp(ms: Long): String {
-        val totalSeconds = ms / 1000
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        val hundredths = (ms % 1000) / 10
-        return String.format(Locale.US, "[%02d:%02d.%02d]", minutes, seconds, hundredths)
     }
 
     fun onSaveClick() {
