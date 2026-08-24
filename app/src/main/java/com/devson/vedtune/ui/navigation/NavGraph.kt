@@ -32,6 +32,7 @@ import com.devson.vedtune.ui.settings.FolderSettingsScreen
 import com.devson.vedtune.ui.settings.AppearanceSettingsScreen
 import com.devson.vedtune.ui.settings.PlayerInterfaceSettingScreen
 import com.devson.vedtune.ui.settings.PlaybackSettingsScreen
+import com.devson.vedtune.ui.settings.EqualizerScreen
 import com.devson.vedtune.ui.settings.LibrarySettingsScreen
 import com.devson.vedtune.ui.playlists.PlaylistDetailsScreen
 import com.devson.vedtune.ui.playlists.PlaylistDetailsViewModel
@@ -56,6 +57,7 @@ sealed class Screen(val route: String) {
     data object AppearanceSettings : Screen("appearance_settings")
     data object PlayerInterfaceSettings : Screen("player_interface_settings")
     data object PlaybackSettings : Screen("playback_settings")
+    data object EqualizerSettings : Screen("equalizer_settings")
     data object LibrarySettings : Screen("library_settings")
     data object Player : Screen("player")
     data object AlbumDetails : Screen("album_details/{albumId}") {
@@ -195,7 +197,21 @@ fun NavGraph(
             val viewModel: SettingsViewModel = hiltViewModel()
             PlaybackSettingsScreen(
                 viewModel = viewModel,
-                onNavigateBack = { navController.popBackStackSafe() }
+                onNavigateBack = { navController.popBackStackSafe() },
+                onNavigateToEqualizer = {
+                    navController.navigateSafe(Screen.EqualizerSettings.route)
+                }
+            )
+        }
+        composable(
+            route = Screen.EqualizerSettings.route,
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
+        ) {
+            val viewModel: SettingsViewModel = hiltViewModel()
+            EqualizerScreen(
+                viewModel = viewModel,
+                onBackClick = { navController.popBackStackSafe() }
             )
         }
         composable(

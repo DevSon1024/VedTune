@@ -294,6 +294,54 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.setEqualizerPreset(preset) }
     }
 
+    fun selectEqualizerPreset(presetName: String) {
+        val preset = com.devson.vedtune.player.engine.equalizer.EqualizerPresets.getPresetByName(presetName)
+        if (preset != null) {
+            viewModelScope.launch {
+                settingsRepository.updateAudioSettings { current ->
+                    current.copy(
+                        equalizerPreset = preset.name,
+                        equalizerBandGains = preset.bandGains,
+                        equalizerPreampDb = preset.preampDb
+                    )
+                }
+            }
+        }
+    }
+
+    fun updateEqualizerBand(bandIndex: Int, gainDb: Float) {
+        viewModelScope.launch {
+            settingsRepository.updateAudioSettings { current ->
+                val currentBands = current.equalizerBandGains.ifEmpty {
+                    com.devson.vedtune.player.engine.equalizer.EqualizerPresets.defaultBandGains()
+                }.toMutableList()
+
+                while (currentBands.size <= bandIndex) {
+                    currentBands.add(0.0f)
+                }
+                currentBands[bandIndex] = gainDb.coerceIn(-12.0f, 12.0f)
+
+                current.copy(
+                    equalizerBandGains = currentBands,
+                    equalizerPreset = com.devson.vedtune.player.engine.equalizer.EqualizerPresets.PRESET_CUSTOM
+                )
+            }
+        }
+    }
+
+    fun resetEqualizer() {
+        viewModelScope.launch {
+            settingsRepository.updateAudioSettings { current ->
+                current.copy(
+                    equalizerEnabled = false,
+                    equalizerPreampDb = 0.0f,
+                    equalizerBandGains = com.devson.vedtune.player.engine.equalizer.EqualizerPresets.defaultBandGains(),
+                    equalizerPreset = null
+                )
+            }
+        }
+    }
+
     fun setBassBoostEnabled(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setBassBoostEnabled(enabled) }
     }

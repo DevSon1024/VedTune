@@ -38,8 +38,10 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun PlaybackSettingsScreen(
     viewModel: SettingsViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToEqualizer: () -> Unit = {}
 ) {
+    val audioSettings by viewModel.audioSettings.collectAsState()
     val autoplayOnStartup by viewModel.autoplayOnStartup.collectAsState()
     val audioFadeInEnabled by viewModel.audioFadeInEnabled.collectAsState()
     val defaultStartScreen by viewModel.defaultStartScreen.collectAsState()
@@ -115,6 +117,39 @@ fun PlaybackSettingsScreen(
                 )
             }
 
+            // 10-Band Graphic Equalizer
+            SettingsCard(
+                title = "Equalizer",
+                icon = Icons.Default.Tune
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = if (audioSettings.equalizerEnabled) {
+                            "Status: Active (${audioSettings.equalizerPreset ?: "Custom"})"
+                        } else {
+                            "Status: Disabled (100% Transparent Bit-Perfect Output)"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = if (audioSettings.equalizerEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Customize 10-band frequency gains (-12 dB to +12 dB), user preamp, and frequency presets.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    androidx.compose.material3.Button(
+                        onClick = onNavigateToEqualizer,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Open 10-Band Equalizer")
+                    }
+                }
+            }
+
             // System Equalizer
             SettingsCard(
                 title = "System Equalizer",
@@ -125,7 +160,7 @@ fun PlaybackSettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Launch system audio equalizer control panel to adjust sound settings.",
+                        text = "Launch external OEM/system equalizer panel if installed.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -143,7 +178,7 @@ fun PlaybackSettingsScreen(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(text = "Open Equalizer")
+                        Text(text = "Launch System Control Panel")
                     }
                 }
             }
