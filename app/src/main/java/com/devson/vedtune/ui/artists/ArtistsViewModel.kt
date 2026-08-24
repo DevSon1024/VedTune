@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.devson.vedtune.ui.components.buildAlphabeticalSectionIndices
 
 enum class ArtistSortBy {
     NAME, SONG_COUNT, ALBUM_COUNT
@@ -42,12 +41,7 @@ class ArtistsViewModel @Inject constructor(
     private val _isGridView = MutableStateFlow(false)
     val isGridView: StateFlow<Boolean> = _isGridView
 
-    data class ProcessedArtists(
-        val artists: List<Artist>,
-        val scrollIndices: Map<String, Int>
-    )
-
-    private val processedArtistsFlow = combine(
+    val artists: StateFlow<List<Artist>> = combine(
         repository.getAllArtists(),
         _searchQuery,
         _sortBy,
@@ -74,36 +68,9 @@ class ArtistsViewModel @Inject constructor(
             }
         }
 
-        val indices = when (sortBy) {
-            ArtistSortBy.NAME -> sorted.buildAlphabeticalSectionIndices { it.name }
-            ArtistSortBy.SONG_COUNT -> {
-                val map = linkedMapOf<String, Int>()
-                sorted.forEachIndexed { index, artist ->
-                    val label = "${artist.songCount} songs"
-                    if (!map.containsKey(label)) map[label] = index
-                }
-                map
-            }
-            ArtistSortBy.ALBUM_COUNT -> {
-                val map = linkedMapOf<String, Int>()
-                sorted.forEachIndexed { index, artist ->
-                    val label = "${artist.albumCount} albums"
-                    if (!map.containsKey(label)) map[label] = index
-                }
-                map
-            }
-        }
-
-        ProcessedArtists(artists = sorted, scrollIndices = indices)
+        sorted
     }.flowOn(Dispatchers.Default)
-
-    val artists: StateFlow<List<Artist>> = processedArtistsFlow
-        .map { it.artists }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val scrollIndices: StateFlow<Map<String, Int>> = processedArtistsFlow
-        .map { it.scrollIndices }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     val totalItemCount: StateFlow<Int> = artists
         .map { it.size }

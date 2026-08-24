@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.devson.vedtune.ui.components.buildAlphabeticalSectionIndices
 import com.devson.vedtune.domain.repository.SettingsRepository
 
 enum class AlbumSortBy {
@@ -47,12 +46,7 @@ class AlbumsViewModel @Inject constructor(
     private val _isGridView = MutableStateFlow(true)
     val isGridView: StateFlow<Boolean> = _isGridView
 
-    data class ProcessedAlbums(
-        val albums: List<Album>,
-        val scrollIndices: Map<String, Int>
-    )
-
-    private val processedAlbumsFlow = combine(
+    val albums: StateFlow<List<Album>> = combine(
         repository.getAllAlbums(),
         _searchQuery,
         _sortBy,
@@ -80,29 +74,9 @@ class AlbumsViewModel @Inject constructor(
             }
         }
 
-        val indices = when (sortBy) {
-            AlbumSortBy.TITLE -> sorted.buildAlphabeticalSectionIndices { it.title }
-            AlbumSortBy.ARTIST -> sorted.buildAlphabeticalSectionIndices { it.artist }
-            AlbumSortBy.SONG_COUNT -> {
-                val map = linkedMapOf<String, Int>()
-                sorted.forEachIndexed { index, album ->
-                    val label = "${album.songCount} songs"
-                    if (!map.containsKey(label)) map[label] = index
-                }
-                map
-            }
-        }
-
-        ProcessedAlbums(albums = sorted, scrollIndices = indices)
+        sorted
     }.flowOn(Dispatchers.Default)
-
-    val albums: StateFlow<List<Album>> = processedAlbumsFlow
-        .map { it.albums }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val scrollIndices: StateFlow<Map<String, Int>> = processedAlbumsFlow
-        .map { it.scrollIndices }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     val totalItemCount: StateFlow<Int> = albums
         .map { it.size }

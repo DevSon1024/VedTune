@@ -79,11 +79,6 @@ class SongsViewModel @Inject constructor(
     private val _sortBy = MutableStateFlow(SortBy.TITLE)
     private val _sortOrder = MutableStateFlow(SortOrder.ASCENDING)
 
-    data class ProcessedSongs(
-        val songs: List<Song>,
-        val scrollIndices: Map<String, Int>
-    )
-
     private val songsFlow = combine(
         repository.getAllSongs(),
         _searchQuery,
@@ -106,32 +101,17 @@ class SongsViewModel @Inject constructor(
             SortBy.DATE_ADDED -> if (sortOrder == SortOrder.ASCENDING) filtered.sortedBy { it.dateAdded } else filtered.sortedByDescending { it.dateAdded }
         }
 
-        val indices = com.devson.vedtune.ui.components.computeSongSectionIndices(
-            songs = sorted,
-            sortBy = sortBy,
-            sortOrder = sortOrder
-        )
-
-        ProcessedSongs(songs = sorted, scrollIndices = indices)
+        sorted
     }.flowOn(Dispatchers.Default)
-
-    val scrollIndices: StateFlow<Map<String, Int>> = songsFlow
-        .map { it.scrollIndices }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyMap()
-        )
 
     init {
         viewModelScope.launch {
-            songsFlow.collect { processed ->
-                val totalCount = processed.songs.size
-                val totalDuration = processed.songs.sumOf { it.duration }
+            songsFlow.collect { sortedSongs ->
+                val totalCount = sortedSongs.size
+                val totalDuration = sortedSongs.sumOf { it.duration }
                 updateState {
                     it.copy(
-                        songs = processed.songs,
-                        scrollIndices = processed.scrollIndices,
+                        songs = sortedSongs,
                         isLoading = false,
                         totalItemCount = totalCount,
                         totalDurationMs = totalDuration
