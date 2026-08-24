@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -22,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,12 +41,17 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.devson.vedtune.player.engine.equalizer.EqualizerPresets
+import com.devson.vedtune.ui.components.AudioFeatureHelp
+import com.devson.vedtune.ui.components.AudioFeatureInfoDialog
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -55,6 +62,14 @@ fun EqualizerScreen(
     onBackClick: () -> Unit
 ) {
     val audioSettings by viewModel.audioSettings.collectAsState()
+    var activeHelpDialog by remember { mutableStateOf<AudioFeatureHelp?>(null) }
+
+    activeHelpDialog?.let { help ->
+        AudioFeatureInfoDialog(
+            help = help,
+            onDismiss = { activeHelpDialog = null }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -75,6 +90,12 @@ fun EqualizerScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { activeHelpDialog = AudioFeatureHelp.EQUALIZER }) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Learn about Equalizer"
+                        )
+                    }
                     IconButton(onClick = { viewModel.resetEqualizer() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
@@ -106,18 +127,36 @@ fun EqualizerScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (audioSettings.equalizerEnabled) "Equalizer Active" else "Equalizer Disabled",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = if (audioSettings.equalizerEnabled) "Applying customized 10-band profile" else "100% Transparent (Zero DSP active)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (audioSettings.equalizerEnabled) "Equalizer Active" else "Equalizer Disabled",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = if (audioSettings.equalizerEnabled) "Applying customized 10-band profile" else "100% Transparent (Zero DSP active)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            IconButton(
+                                onClick = { activeHelpDialog = AudioFeatureHelp.EQUALIZER },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = "Learn about Equalizer",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
+                        Spacer(modifier = Modifier.width(8.dp))
                         Switch(
                             checked = audioSettings.equalizerEnabled,
                             onCheckedChange = { viewModel.setEqualizerEnabled(it) }
@@ -193,12 +232,29 @@ fun EqualizerScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "Overall Equalizer Level",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = "Overall Equalizer Level",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    IconButton(
+                                        onClick = { activeHelpDialog = AudioFeatureHelp.PREAMP },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Info,
+                                            contentDescription = "Learn about Preamp",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
                                 Text(
                                     text = formatGainDb(audioSettings.equalizerPreampDb),
                                     style = MaterialTheme.typography.bodyMedium,
@@ -291,18 +347,36 @@ fun EqualizerScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = if (audioSettings.bassBoostEnabled) "Bass Boost Active" else "Bass Boost Disabled",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    text = "Low-frequency sub-bass reinforcement",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = if (audioSettings.bassBoostEnabled) "Bass Boost Active" else "Bass Boost Disabled",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = "Low-frequency sub-bass reinforcement",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { activeHelpDialog = AudioFeatureHelp.BASS_BOOST },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = "Learn about Bass Boost",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
+                            Spacer(modifier = Modifier.width(8.dp))
                             Switch(
                                 checked = audioSettings.bassBoostEnabled,
                                 onCheckedChange = { viewModel.setBassBoostEnabled(it) }
@@ -375,18 +449,36 @@ fun EqualizerScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = if (audioSettings.virtualizerEnabled) "Virtualizer Active" else "Virtualizer Disabled",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    text = "Spatial soundstage widening and 3D acoustic simulation",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = if (audioSettings.virtualizerEnabled) "Virtualizer Active" else "Virtualizer Disabled",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = "Spatial soundstage widening and 3D acoustic simulation",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { activeHelpDialog = AudioFeatureHelp.VIRTUALIZER },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = "Learn about Virtualizer",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
+                            Spacer(modifier = Modifier.width(8.dp))
                             Switch(
                                 checked = audioSettings.virtualizerEnabled,
                                 onCheckedChange = { viewModel.setVirtualizerEnabled(it) }
