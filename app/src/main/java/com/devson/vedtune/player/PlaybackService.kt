@@ -26,6 +26,7 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.devson.vedtune.MainActivity
 import com.devson.vedtune.domain.repository.MediaRepository
+import com.devson.vedtune.player.engine.AudioEngine
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
@@ -52,7 +53,7 @@ class PlaybackService : MediaSessionService() {
     lateinit var dataStore: DataStore<Preferences>
 
     @Inject
-    lateinit var audioPipelineManager: AudioPipelineManager
+    lateinit var audioEngine: AudioEngine
 
     private var mediaSession: MediaSession? = null
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -100,7 +101,7 @@ class PlaybackService : MediaSessionService() {
         super.onCreate()
 
         exoPlayer.addListener(playerListener)
-        audioPipelineManager.attachPlayer(exoPlayer)
+        audioEngine.attach(exoPlayer)
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -348,7 +349,7 @@ class PlaybackService : MediaSessionService() {
     override fun onDestroy() {
         serviceScope.cancel()
         exoPlayer.removeListener(playerListener)
-        audioPipelineManager.release()
+        audioEngine.release()
         mediaSession?.run {
             player.release()
             release()
