@@ -374,6 +374,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.setTargetLufs(targetLufs) }
     }
 
+    fun resetLoudnessNormalization() {
+        viewModelScope.launch { settingsRepository.resetLoudnessNormalization() }
+    }
+
     fun setLimiterEnabled(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setLimiterEnabled(enabled) }
     }

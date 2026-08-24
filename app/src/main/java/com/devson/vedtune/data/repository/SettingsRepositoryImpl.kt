@@ -471,6 +471,13 @@ class SettingsRepositoryImpl @Inject constructor(
         dataStore.edit { it[KEY_AUDIO_TARGET_LUFS] = targetLufs }
     }
 
+    override suspend fun resetLoudnessNormalization() {
+        dataStore.edit {
+            it[KEY_AUDIO_LOUDNESS_NORMALIZATION_ENABLED] = false
+            it[KEY_AUDIO_TARGET_LUFS] = -14.0f
+        }
+    }
+
     override suspend fun setLimiterEnabled(enabled: Boolean) {
         dataStore.edit { it[KEY_AUDIO_LIMITER_ENABLED] = enabled }
     }

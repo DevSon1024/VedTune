@@ -4,9 +4,10 @@ import android.net.Uri
 import androidx.media3.common.MediaMetadata
 import androidx.media3.exoplayer.ExoPlayer
 import com.devson.vedtune.domain.model.AudioSettings
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Manages master output volume and coordinates combined volume scaling with DSP modules (e.g. ReplayGain).
+ * Manages master output volume and coordinates combined volume scaling with DSP modules (e.g. ReplayGain, Loudness).
  */
 class MasterVolumeProcessor : AudioProcessorModule {
     override val id: String = "master_volume"
@@ -15,7 +16,7 @@ class MasterVolumeProcessor : AudioProcessorModule {
         private set
 
     private var currentMasterVolume: Float = 1.0f
-    private var dspVolumeMultiplier: Float = 1.0f
+    private val dspMultipliers = ConcurrentHashMap<String, Float>()
 
     override fun onAttach(audioSessionId: Int, player: ExoPlayer) {
         applyCombinedVolume(player)
@@ -31,14 +32,36 @@ class MasterVolumeProcessor : AudioProcessorModule {
     }
 
     /**
-     * Updates DSP volume multiplier (e.g. ReplayGain linear attenuation) in real time.
+     * Updates a named DSP volume multiplier (e.g. "replay_gain", "loudness") in real time.
      */
-    fun setDspVolumeMultiplier(multiplier: Float, player: ExoPlayer? = null) {
-        dspVolumeMultiplier = multiplier.coerceIn(0.0f, 2.0f)
+    fun setDspMultiplier(source: String, multiplier: Float, player: ExoPlayer? = null) {
+        dspMultipliers[source] = multiplier.coerceIn(0.0f, 4.0f)
         applyCombinedVolume(player)
     }
 
-    fun getEffectiveVolume(): Float = (currentMasterVolume * dspVolumeMultiplier).coerceIn(0.0f, 1.0f)
+    /**
+     * Clears a named DSP volume multiplier.
+     */
+    fun clearDspMultiplier(source: String, player: ExoPlayer? = null) {
+        dspMultipliers.remove(source)
+        applyCombinedVolume(player)
+    }
+
+    /**
+     * Legacy helper for single DSP multiplier.
+     */
+    fun setDspVolumeMultiplier(multiplier: Float, player: ExoPlayer? = null) {
+        setDspMultiplier("replay_gain", multiplier, player)
+    }
+
+    fun getEffectiveVolume(): Float {
+        val totalDspMultiplier = if (dspMultipliers.isEmpty()) {
+            1.0f
+        } else {
+            dspMultipliers.values.fold(1.0f) { acc, m -> (acc * m).coerceIn(0.0f, 4.0f) }
+        }
+        return (currentMasterVolume * totalDspMultiplier).coerceIn(0.0f, 1.0f)
+    }
 
     private fun applyCombinedVolume(player: ExoPlayer?) {
         val targetVolume = getEffectiveVolume()
@@ -50,6 +73,6 @@ class MasterVolumeProcessor : AudioProcessorModule {
     }
 
     override fun onRelease() {
-        dspVolumeMultiplier = 1.0f
+        dspMultipliers.clear()
     }
 }

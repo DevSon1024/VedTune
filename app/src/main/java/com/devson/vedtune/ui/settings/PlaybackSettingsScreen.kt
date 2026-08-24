@@ -3,36 +3,53 @@ package com.devson.vedtune.ui.settings
 import android.content.Intent
 import android.media.audiofx.AudioEffect
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.devson.vedtune.player.engine.loudness.LoudnessTarget
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -104,8 +121,6 @@ fun PlaybackSettingsScreen(
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
 
-
-
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 12.dp),
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
@@ -141,11 +156,132 @@ fun PlaybackSettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    androidx.compose.material3.Button(
+                    Button(
                         onClick = onNavigateToEqualizer,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(text = "Open 10-Band Equalizer")
+                    }
+                }
+            }
+
+            // Loudness Normalization (LUFS) Card
+            SettingsCard(
+                title = "Loudness Normalization",
+                icon = Icons.Default.Tune
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (audioSettings.loudnessNormalizationEnabled) {
+                                    "Target: ${audioSettings.targetLufs} LUFS"
+                                } else {
+                                    "Loudness Normalization Disabled"
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = if (audioSettings.loudnessNormalizationEnabled) {
+                                    "Linear volume matching via ReplayGain/LUFS tags"
+                                } else {
+                                    "100% Bit-Perfect Transparent Volume (Zero Compression)"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = audioSettings.loudnessNormalizationEnabled,
+                            onCheckedChange = { viewModel.setLoudnessNormalizationEnabled(it) }
+                        )
+                    }
+
+                    Text(
+                        text = "LUFS normalization applies clean linear volume scaling without altering dynamics. Dynamic limiting and compression are separate operations.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
+
+                    AnimatedVisibility(
+                        visible = audioSettings.loudnessNormalizationEnabled,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            // Target Presets Chips
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                for (target in LoudnessTarget.ALL_TARGETS) {
+                                    val isSelected = audioSettings.targetLufs == target.lufs
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = { viewModel.setTargetLufs(target.lufs) },
+                                        label = { Text(target.title) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    )
+                                }
+                            }
+
+                            // Fine Adjustment Slider
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Target Loudness",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "${audioSettings.targetLufs} LUFS",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
+                            Slider(
+                                value = audioSettings.targetLufs,
+                                onValueChange = {
+                                    val snapped = ((it * 2).roundToInt() / 2f).coerceIn(-24f, -8f)
+                                    viewModel.setTargetLufs(snapped)
+                                },
+                                valueRange = -24.0f..-8.0f,
+                                steps = 31,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedButton(
+                                onClick = { viewModel.resetLoudnessNormalization() },
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.height(16.dp).width(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Reset Loudness")
+                            }
+                        }
                     }
                 }
             }

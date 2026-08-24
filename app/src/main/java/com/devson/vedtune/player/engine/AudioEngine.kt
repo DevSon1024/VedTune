@@ -13,6 +13,7 @@ import com.devson.vedtune.domain.model.AudioSettings
 import com.devson.vedtune.domain.model.AudioSettingsFactory
 import com.devson.vedtune.domain.repository.SettingsRepository
 import com.devson.vedtune.player.engine.equalizer.EqualizerProcessor
+import com.devson.vedtune.player.engine.loudness.LoudnessProcessor
 import com.devson.vedtune.player.engine.replaygain.ReplayGainCache
 import com.devson.vedtune.player.engine.replaygain.ReplayGainExtractor
 import com.devson.vedtune.player.engine.replaygain.ReplayGainProcessor
@@ -81,7 +82,7 @@ class AudioEngine @Inject constructor(
     private val equalizerProcessor = EqualizerProcessor()
     private val bassBoostProcessor = BassBoostProcessor()
     private val virtualizerProcessor = VirtualizerProcessor()
-    private val loudnessProcessor = LoudnessProcessor()
+    private val loudnessProcessor = LoudnessProcessor(replayGainExtractor, replayGainCache, masterVolumeProcessor)
     private val limiterProcessor = LimiterProcessor()
 
     private val customProcessors = CopyOnWriteArrayList<AudioProcessorModule>()

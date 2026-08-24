@@ -93,6 +93,7 @@ interface SettingsRepository {
     suspend fun resetVirtualizer()
     suspend fun setLoudnessNormalizationEnabled(enabled: Boolean)
     suspend fun setTargetLufs(targetLufs: Float)
+    suspend fun resetLoudnessNormalization()
     suspend fun setLimiterEnabled(enabled: Boolean)
     suspend fun setLimiterThresholdDb(thresholdDb: Float)
     suspend fun setAudioProcessingEnabled(enabled: Boolean)

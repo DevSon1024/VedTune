@@ -182,7 +182,7 @@ class ReplayGainExtractor @Inject constructor(
     }
 
     private fun extractFromContentUri(uri: Uri): ReplayGainInfo {
-        val contentResolver = context.contentResolver
+        val contentResolver = context?.contentResolver ?: return ReplayGainInfo.EMPTY
 
         // Safe resolution of filesystem path via MediaStore ContentResolver query
         var directFilePath: String? = null
