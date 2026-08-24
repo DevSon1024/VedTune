@@ -94,8 +94,6 @@ import com.devson.vedtune.ui.components.SongArtwork
 import com.devson.vedtune.ui.components.AddToPlaylistDialog
 import com.devson.vedtune.ui.components.VedTuneTopAppBar
 import com.devson.vedtune.ui.components.PlayingIndicator
-import com.devson.vedtune.ui.components.FastScroller
-import com.devson.vedtune.ui.components.computeSongSectionIndices
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,8 +120,6 @@ fun SongsScreen(
     var highlightedSongId by remember { mutableStateOf<Long?>(null) }
     val highlightAlpha = remember { Animatable(0f) }
     val highlightColor = MaterialTheme.colorScheme.primaryContainer
-
-    val songSectionIndices = uiState.scrollIndices
 
     LaunchedEffect(navigateToLocationEvent) {
         navigateToLocationEvent?.collect { songId ->
@@ -377,10 +373,10 @@ fun SongsScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             contentPadding = PaddingValues(
-                                start = 16.dp,
-                                end = 16.dp,
+                                start = 8.dp,
+                                end = 8.dp,
                                 top = 8.dp,
-                                bottom = contentPadding.calculateBottomPadding() + 16.dp
+                                bottom = contentPadding.calculateBottomPadding() + 88.dp
                             )
                         ) {
                             items(
@@ -389,9 +385,14 @@ fun SongsScreen(
                                 contentType = { "song_grid_item" }
                             ) { song ->
                                 val isCurrentSong = song.id == currentSongId
+                                val subtitle = if (song.album.isNotBlank() && song.album != "Unknown Album") {
+                                    "${song.artist} - ${song.album}"
+                                } else {
+                                    song.artist
+                                }
                                 com.devson.vedtune.ui.components.VedTuneGridCard(
                                     primaryText = song.title,
-                                    secondaryText = if (uiState.viewPreferences.showArtist) song.artist else "",
+                                    secondaryText = subtitle,
                                     onClick = { viewModel.playSong(song) },
                                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                                     gridCount = uiState.viewPreferences.gridSpanCount,
@@ -417,6 +418,8 @@ fun SongsScreen(
                                             SongArtwork(
                                                 albumId = song.albumId,
                                                 lastModified = song.dateModified,
+                                                fallbackIcon = Icons.Default.MusicNote,
+                                                showFallbackAnimation = false,
                                                 modifier = Modifier
                                                     .fillMaxSize()
                                                     .clip(RoundedCornerShape(12.dp))
@@ -442,15 +445,6 @@ fun SongsScreen(
                                 }
                             }
                         }
-
-                        FastScroller(
-                            gridState = lazyGridState,
-                            sectionIndices = songSectionIndices,
-                            contentPadding = PaddingValues(
-                                top = 8.dp,
-                                bottom = contentPadding.calculateBottomPadding() + 16.dp
-                            )
-                        )
                     }
                 }
                 else -> {
@@ -458,12 +452,12 @@ fun SongsScreen(
                         LazyColumn(
                             state = lazyListState,
                             modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
                             contentPadding = PaddingValues(
-                                start = 16.dp,
-                                end = 16.dp,
+                                start = 0.dp,
+                                end = 0.dp,
                                 top = 8.dp,
-                                bottom = contentPadding.calculateBottomPadding() + 16.dp
+                                bottom = contentPadding.calculateBottomPadding() + 88.dp
                             )
                         ) {
                             items(
@@ -472,9 +466,14 @@ fun SongsScreen(
                                 contentType = { "song_list_item" }
                             ) { song ->
                                 val isCurrentSong = song.id == currentSongId
+                                val subtitle = if (song.album.isNotBlank() && song.album != "Unknown Album") {
+                                    "${song.artist} - ${song.album}"
+                                } else {
+                                    song.artist
+                                }
                                 com.devson.vedtune.ui.components.VedTuneListItem(
                                     primaryText = song.title,
-                                    secondaryText = if (uiState.viewPreferences.showArtist) song.artist else "",
+                                    secondaryText = subtitle,
                                     onClick = { viewModel.playSong(song) },
                                     containerColor = MaterialTheme.colorScheme.surface,
                                     modifier = Modifier.drawBehind {
@@ -488,11 +487,13 @@ fun SongsScreen(
                                     leadingContent = {
                                         if (uiState.viewPreferences.showAlbumArt) {
                                             Box(
-                                                modifier = Modifier.size(56.dp)
+                                                modifier = Modifier.size(52.dp)
                                             ) {
                                                 SongArtwork(
                                                     albumId = song.albumId,
                                                     lastModified = song.dateModified,
+                                                    fallbackIcon = Icons.Default.MusicNote,
+                                                    showFallbackAnimation = false,
                                                     modifier = Modifier
                                                         .fillMaxSize()
                                                         .clip(RoundedCornerShape(8.dp))
@@ -517,34 +518,13 @@ fun SongsScreen(
                                         }
                                     },
                                     trailingContent = {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            if (uiState.viewPreferences.showDuration) {
-                                                Text(
-                                                    text = formatDuration(song.duration),
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                            }
-                                            IconButton(onClick = { selectedSongForOptions = song }) {
-                                                Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
-                                            }
+                                        IconButton(onClick = { selectedSongForOptions = song }) {
+                                            Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
                                         }
                                     }
                                 )
                             }
                         }
-
-                        FastScroller(
-                            listState = lazyListState,
-                            sectionIndices = songSectionIndices,
-                            contentPadding = PaddingValues(
-                                top = 8.dp,
-                                bottom = contentPadding.calculateBottomPadding() + 16.dp
-                            )
-                        )
                     }
                 }
             }
@@ -566,8 +546,7 @@ fun SongsScreen(
         )
     }
 
-    if (selectedSongForOptions != null) {
-        val song = selectedSongForOptions!!
+    selectedSongForOptions?.let { song ->
         ModalBottomSheet(
             onDismissRequest = { selectedSongForOptions = null }
         ) {
@@ -585,6 +564,8 @@ fun SongsScreen(
                     SongArtwork(
                         albumId = song.albumId,
                         lastModified = song.dateModified,
+                        fallbackIcon = Icons.Default.MusicNote,
+                        showFallbackAnimation = false,
                         modifier = Modifier
                             .size(64.dp)
                             .clip(MaterialTheme.shapes.medium)

@@ -132,7 +132,8 @@ fun PlayerArtworkPager(
                 modifier = Modifier.fillMaxSize(),
                 showArtwork = showArtwork,
                 isPlaying = isPlaying && isCenter,
-                playbackProgress = if (isCenter) playbackProgress else { { 0f } }
+                playbackProgress = if (isCenter) playbackProgress else { { 0f } },
+                showFallbackAnimation = true
             )
         }
     }

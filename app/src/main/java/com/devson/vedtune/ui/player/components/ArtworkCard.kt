@@ -154,7 +154,8 @@ fun ArtworkCard(
                 modifier = Modifier.fillMaxSize(),
                 showArtwork = showArtwork,
                 isPlaying = isPlaying,
-                playbackProgress = playbackProgress
+                playbackProgress = playbackProgress,
+                showFallbackAnimation = true
             )
         }
     }

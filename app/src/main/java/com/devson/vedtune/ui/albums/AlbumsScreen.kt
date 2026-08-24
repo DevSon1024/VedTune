@@ -21,6 +21,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Album
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
@@ -40,8 +42,6 @@ import androidx.compose.ui.unit.dp
 import com.devson.vedtune.domain.model.Album
 import com.devson.vedtune.ui.components.SongArtwork
 import com.devson.vedtune.ui.components.VedTuneTopAppBar
-import com.devson.vedtune.ui.components.FastScroller
-import com.devson.vedtune.ui.components.buildAlphabeticalSectionIndices
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 
@@ -65,8 +65,6 @@ fun AlbumsScreen(
 
     val lazyListState = rememberLazyListState()
     val lazyGridState = rememberLazyGridState()
-
-    val albumSectionIndices by viewModel.scrollIndices.collectAsState()
 
     val currentSortLabel = when (sortBy) {
         AlbumSortBy.TITLE -> "Title"
@@ -136,13 +134,13 @@ fun AlbumsScreen(
                         state = lazyGridState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
+                            start = 8.dp,
+                            end = 8.dp,
                             top = 8.dp,
                             bottom = contentPadding.calculateBottomPadding() + 88.dp
                         ),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(
                             items = albums,
@@ -158,15 +156,6 @@ fun AlbumsScreen(
                             )
                         }
                     }
-
-                    FastScroller(
-                        gridState = lazyGridState,
-                        sectionIndices = albumSectionIndices,
-                        contentPadding = PaddingValues(
-                            top = 8.dp,
-                            bottom = contentPadding.calculateBottomPadding() + 88.dp
-                        )
-                    )
                 }
             } else {
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -174,12 +163,12 @@ fun AlbumsScreen(
                         state = lazyListState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
+                            start = 0.dp,
+                            end = 0.dp,
                             top = 8.dp,
                             bottom = contentPadding.calculateBottomPadding() + 88.dp
                         ),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         items(
                             items = albums,
@@ -202,8 +191,10 @@ fun AlbumsScreen(
                                     {
                                         SongArtwork(
                                             albumId = album.id,
+                                            fallbackIcon = Icons.Default.Album,
+                                            showFallbackAnimation = false,
                                             modifier = Modifier
-                                                .size(48.dp)
+                                                .size(52.dp)
                                                 .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
                                             showArtwork = showArtwork
                                         )
@@ -212,15 +203,6 @@ fun AlbumsScreen(
                             )
                         }
                     }
-
-                    FastScroller(
-                        listState = lazyListState,
-                        sectionIndices = albumSectionIndices,
-                        contentPadding = PaddingValues(
-                            top = 8.dp,
-                            bottom = contentPadding.calculateBottomPadding() + 88.dp
-                        )
-                    )
                 }
             }
         }
@@ -255,6 +237,8 @@ fun AlbumGridItem(
     ) {
         SongArtwork(
             albumId = album.id,
+            fallbackIcon = Icons.Default.Album,
+            showFallbackAnimation = false,
             modifier = Modifier.fillMaxSize(),
             showArtwork = showArtwork
         )

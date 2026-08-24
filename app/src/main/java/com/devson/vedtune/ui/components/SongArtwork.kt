@@ -29,6 +29,9 @@ import dagger.hilt.components.SingletonComponent
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
 import androidx.graphics.shapes.CornerRounding
@@ -373,7 +376,8 @@ fun SongArtwork(
     blurRadius: Int = 0,
     isPlaying: Boolean = false,
     playbackProgress: (() -> Float)? = null,
-    showFallbackAnimation: Boolean = (blurRadius == 0)
+    fallbackIcon: androidx.compose.ui.graphics.vector.ImageVector = androidx.compose.material.icons.Icons.Default.MusicNote,
+    showFallbackAnimation: Boolean = false
 ) {
     val context = LocalContext.current
     var isError by remember(albumId, lastModified, ignoreCustomArtwork) { mutableStateOf(false) }
@@ -429,12 +433,28 @@ fun SongArtwork(
         modifier = modifier
     ) { fallbackActive ->
         if (fallbackActive) {
-            ExpressiveArtworkFallback(
-                isPlaying = isPlaying,
-                progress = playbackProgress,
-                showAnimation = showFallbackAnimation,
-                modifier = Modifier.fillMaxSize()
-            )
+            if (showFallbackAnimation) {
+                ExpressiveArtworkFallback(
+                    isPlaying = isPlaying,
+                    progress = playbackProgress,
+                    showAnimation = true,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.material3.Icon(
+                        imageVector = fallbackIcon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
         } else {
             AsyncImage(
                 model = model,

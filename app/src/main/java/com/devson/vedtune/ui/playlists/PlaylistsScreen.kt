@@ -50,8 +50,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.devson.vedtune.domain.model.Playlist
-import com.devson.vedtune.ui.components.FastScroller
-import com.devson.vedtune.ui.components.buildAlphabeticalSectionIndices
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 
@@ -74,31 +72,6 @@ fun PlaylistsScreen(
 
     val sortBy by viewModel.sortBy.collectAsState()
     val sortOrder by viewModel.sortOrder.collectAsState()
-
-    val playlistSectionIndices = remember(playlists, sortBy, sortOrder) {
-        when (sortBy) {
-            PlaylistSortBy.NAME -> playlists.buildAlphabeticalSectionIndices { it.name }
-            PlaylistSortBy.SONG_COUNT -> {
-                val map = linkedMapOf<String, Int>()
-                playlists.forEachIndexed { index, playlist ->
-                    val label = "${playlist.songCount} songs"
-                    if (!map.containsKey(label)) map[label] = index
-                }
-                map
-            }
-            PlaylistSortBy.DATE_CREATED -> {
-                val map = linkedMapOf<String, Int>()
-                playlists.forEachIndexed { index, playlist ->
-                    val label = if (playlist.createdAt > 0) {
-                        val calendar = java.util.Calendar.getInstance().apply { timeInMillis = playlist.createdAt }
-                        calendar.get(java.util.Calendar.YEAR).toString()
-                    } else "Unknown"
-                    if (!map.containsKey(label)) map[label] = index
-                }
-                map
-            }
-        }
-    }
 
     Box(
         modifier = modifier.fillMaxSize()
@@ -174,13 +147,13 @@ fun PlaylistsScreen(
                             state = lazyGridState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(
-                                start = 16.dp,
-                                end = 16.dp,
+                                start = 8.dp,
+                                end = 8.dp,
                                 top = 8.dp,
                                 bottom = contentPadding.calculateBottomPadding() + 88.dp
                             ),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(
                                 items = playlists,
@@ -196,25 +169,16 @@ fun PlaylistsScreen(
                                 )
                             }
                         }
-
-                        FastScroller(
-                            gridState = lazyGridState,
-                            sectionIndices = playlistSectionIndices,
-                            contentPadding = PaddingValues(
-                                top = 8.dp,
-                                bottom = contentPadding.calculateBottomPadding() + 88.dp
-                            )
-                        )
                     }
                 } else {
                     Box(modifier = Modifier.fillMaxSize()) {
                         LazyColumn(
                             state = lazyListState,
                             modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
                             contentPadding = PaddingValues(
-                                start = 16.dp,
-                                end = 16.dp,
+                                start = 0.dp,
+                                end = 0.dp,
                                 top = 8.dp,
                                 bottom = contentPadding.calculateBottomPadding() + 88.dp
                             )
@@ -232,15 +196,6 @@ fun PlaylistsScreen(
                                 )
                             }
                         }
-
-                        FastScroller(
-                            listState = lazyListState,
-                            sectionIndices = playlistSectionIndices,
-                            contentPadding = PaddingValues(
-                                top = 8.dp,
-                                bottom = contentPadding.calculateBottomPadding() + 88.dp
-                            )
-                        )
                     }
                 }
             }

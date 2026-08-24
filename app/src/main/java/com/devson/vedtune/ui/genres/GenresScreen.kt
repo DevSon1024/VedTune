@@ -22,8 +22,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.devson.vedtune.ui.components.FastScroller
-import com.devson.vedtune.ui.components.buildAlphabeticalSectionIndices
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.remember
@@ -44,10 +42,6 @@ fun GenresScreen(
 
     val lazyListState = rememberLazyListState()
     val lazyGridState = rememberLazyGridState()
-
-    val genreSectionIndices = remember(genres, sortOrder) {
-        genres.buildAlphabeticalSectionIndices { it }
-    }
 
     val currentSortLabel = "Name"
     val orderIcon = if (sortOrder == com.devson.vedtune.ui.songs.SortOrder.ASCENDING) "↑" else "↓"
@@ -88,13 +82,13 @@ fun GenresScreen(
                                 state = lazyGridState,
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(
-                                    start = 16.dp,
-                                    end = 16.dp,
+                                    start = 8.dp,
+                                    end = 8.dp,
                                     top = 8.dp,
                                     bottom = contentPadding.calculateBottomPadding() + 88.dp
                                 ),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 items(
                                     items = genres,
@@ -108,25 +102,16 @@ fun GenresScreen(
                                     )
                                 }
                             }
-
-                            FastScroller(
-                                gridState = lazyGridState,
-                                sectionIndices = genreSectionIndices,
-                                contentPadding = PaddingValues(
-                                    top = 8.dp,
-                                    bottom = contentPadding.calculateBottomPadding() + 88.dp
-                                )
-                            )
                         }
                     } else {
                         Box(modifier = Modifier.fillMaxSize()) {
                             androidx.compose.foundation.lazy.LazyColumn(
                                 state = lazyListState,
                                 modifier = Modifier.fillMaxSize(),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(2.dp),
                                 contentPadding = PaddingValues(
-                                    start = 16.dp,
-                                    end = 16.dp,
+                                    start = 0.dp,
+                                    end = 0.dp,
                                     top = 8.dp,
                                     bottom = contentPadding.calculateBottomPadding() + 88.dp
                                 )
@@ -142,15 +127,6 @@ fun GenresScreen(
                                     )
                                 }
                             }
-
-                            FastScroller(
-                                listState = lazyListState,
-                                sectionIndices = genreSectionIndices,
-                                contentPadding = PaddingValues(
-                                    top = 8.dp,
-                                    bottom = contentPadding.calculateBottomPadding() + 88.dp
-                                )
-                            )
                         }
                     }
                 }

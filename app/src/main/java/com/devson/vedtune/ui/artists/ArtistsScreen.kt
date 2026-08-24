@@ -36,8 +36,6 @@ import com.devson.vedtune.domain.model.Artist
 import com.devson.vedtune.ui.songs.SortOrder
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import com.devson.vedtune.ui.components.FastScroller
-import com.devson.vedtune.ui.components.buildAlphabeticalSectionIndices
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 
@@ -60,8 +58,6 @@ fun ArtistsScreen(
 
     val lazyListState = rememberLazyListState()
     val lazyGridState = rememberLazyGridState()
-
-    val artistSectionIndices by viewModel.scrollIndices.collectAsState()
 
     val currentSortLabel = when (sortBy) {
         ArtistSortBy.NAME -> "Name"
@@ -131,13 +127,13 @@ fun ArtistsScreen(
                         state = lazyGridState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
+                            start = 8.dp,
+                            end = 8.dp,
                             top = 8.dp,
                             bottom = contentPadding.calculateBottomPadding() + 88.dp
                         ),
-                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp),
-                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
                     ) {
                         items(
                             items = artists,
@@ -152,25 +148,16 @@ fun ArtistsScreen(
                             )
                         }
                     }
-
-                    FastScroller(
-                        gridState = lazyGridState,
-                        sectionIndices = artistSectionIndices,
-                        contentPadding = PaddingValues(
-                            top = 8.dp,
-                            bottom = contentPadding.calculateBottomPadding() + 88.dp
-                        )
-                    )
                 }
             } else {
                 Box(modifier = Modifier.fillMaxSize()) {
                     LazyColumn(
                         state = lazyListState,
                         modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp),
                         contentPadding = PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
+                            start = 0.dp,
+                            end = 0.dp,
                             top = 8.dp,
                             bottom = contentPadding.calculateBottomPadding() + 88.dp
                         )
@@ -187,15 +174,6 @@ fun ArtistsScreen(
                             )
                         }
                     }
-
-                    FastScroller(
-                        listState = lazyListState,
-                        sectionIndices = artistSectionIndices,
-                        contentPadding = PaddingValues(
-                            top = 8.dp,
-                            bottom = contentPadding.calculateBottomPadding() + 88.dp
-                        )
-                    )
                 }
             }
         }
