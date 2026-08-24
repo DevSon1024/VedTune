@@ -492,6 +492,42 @@ class SettingsRepositoryImpl @Inject constructor(
         dataStore.edit { it[KEY_AUDIO_PREVENT_CLIPPING] = prevent }
     }
 
+    override suspend fun resetPlaybackSettings() {
+        dataStore.edit {
+            it[KEY_AUDIO_MASTER_VOLUME] = 1.0f
+            it[KEY_AUDIO_GAPLESS_ENABLED] = true
+            it[KEY_AUDIO_CROSSFADE_ENABLED] = false
+            it[KEY_AUDIO_CROSSFADE_DURATION_MS] = 2000
+        }
+    }
+
+    override suspend fun resetReplayGain() {
+        dataStore.edit {
+            it[KEY_AUDIO_REPLAYGAIN_ENABLED] = false
+            it[KEY_AUDIO_REPLAYGAIN_MODE] = com.devson.vedtune.domain.model.ReplayGainMode.TRACK.name
+            it[KEY_AUDIO_REPLAYGAIN_PREAMP_DB] = 0.0f
+            it[KEY_AUDIO_REPLAYGAIN_PREVENT_CLIPPING] = true
+        }
+    }
+
+    override suspend fun resetEqualizer() {
+        dataStore.edit {
+            it[KEY_AUDIO_EQUALIZER_ENABLED] = false
+            it[KEY_AUDIO_EQUALIZER_PREAMP_DB] = 0.0f
+            it[KEY_AUDIO_EQUALIZER_BAND_GAINS] = encodeBandGains(com.devson.vedtune.player.engine.equalizer.EqualizerPresets.defaultBandGains())
+            it.remove(KEY_AUDIO_EQUALIZER_PRESET)
+        }
+    }
+
+    override suspend fun resetBassAndEffects() {
+        dataStore.edit {
+            it[KEY_AUDIO_BASS_BOOST_ENABLED] = false
+            it[KEY_AUDIO_BASS_BOOST_STRENGTH] = 0
+            it[KEY_AUDIO_VIRTUALIZER_ENABLED] = false
+            it[KEY_AUDIO_VIRTUALIZER_STRENGTH] = 0
+        }
+    }
+
     override suspend fun resetLimiter() {
         dataStore.edit {
             it[KEY_AUDIO_LIMITER_ENABLED] = false

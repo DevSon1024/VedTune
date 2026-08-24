@@ -366,6 +366,18 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.resetVirtualizer() }
     }
 
+    fun resetPlaybackSettings() {
+        viewModelScope.launch { settingsRepository.resetPlaybackSettings() }
+    }
+
+    fun resetReplayGain() {
+        viewModelScope.launch { settingsRepository.resetReplayGain() }
+    }
+
+    fun resetBassAndEffects() {
+        viewModelScope.launch { settingsRepository.resetBassAndEffects() }
+    }
+
     fun setLoudnessNormalizationEnabled(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setLoudnessNormalizationEnabled(enabled) }
     }

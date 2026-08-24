@@ -8,8 +8,10 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,15 +19,31 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SurroundSound
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -36,20 +54,37 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.devson.vedtune.domain.model.AudioSettings
+import com.devson.vedtune.domain.model.ReplayGainMode
+import com.devson.vedtune.player.engine.equalizer.EqualizerPresets
 import com.devson.vedtune.player.engine.loudness.LoudnessTarget
+import java.util.Locale
 import kotlin.math.roundToInt
+
+private val EQ_FREQUENCIES = listOf(
+    "31 Hz", "62 Hz", "125 Hz", "250 Hz", "500 Hz",
+    "1 kHz", "2 kHz", "4 kHz", "8 kHz", "16 kHz"
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,18 +93,41 @@ fun PlaybackSettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToEqualizer: () -> Unit = {}
 ) {
-    val audioSettings by viewModel.audioSettings.collectAsState()
-    val autoplayOnStartup by viewModel.autoplayOnStartup.collectAsState()
-    val audioFadeInEnabled by viewModel.audioFadeInEnabled.collectAsState()
-    val defaultStartScreen by viewModel.defaultStartScreen.collectAsState()
     val context = LocalContext.current
+    val audioSettings by viewModel.audioSettings.collectAsState()
+    var showResetAllDialog by remember { mutableStateOf(false) }
+
+    if (showResetAllDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetAllDialog = false },
+            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Reset All Audio Settings?") },
+            text = { Text("This will restore master volume, gapless playback, crossfade, ReplayGain, Equalizer, Bass Boost, Virtualizer, and Limiter to factory defaults (100% transparent bit-perfect mode).") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.resetAudioSettings()
+                        showResetAllDialog = false
+                        Toast.makeText(context, "All audio settings reset to defaults", Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Text("Reset All", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetAllDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Playback Preferences",
+                        text = "Audio & Playback",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -82,359 +140,1019 @@ fun PlaybackSettingsScreen(
                         )
                     }
                 },
+                actions = {
+                    IconButton(onClick = { showResetAllDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Reset All Audio Settings"
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         }
-    ) { innerPadding ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(innerPadding)
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            SettingsCard(
-                title = "Playback Preferences",
-                icon = Icons.Default.PlayArrow
-            ) {
-                SettingSwitchRow(
-                    title = "Auto-resume on Startup",
-                    description = "Automatically resume playback when app is restarted.",
-                    checked = autoplayOnStartup,
-                    onCheckedChange = { viewModel.setAutoplayOnStartup(it) },
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
+            // Engine Status Banner
+            AudioEngineStatusCard(audioSettings = audioSettings)
 
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
+            // 1. Playback Section
+            PlaybackSectionCard(
+                audioSettings = audioSettings,
+                viewModel = viewModel
+            )
 
-                SettingSwitchRow(
-                    title = "Audio Fade-in on Play/Resume",
-                    description = "Gradually fade in sound when starting or resuming playback.",
-                    checked = audioFadeInEnabled,
-                    onCheckedChange = { viewModel.setAudioFadeInEnabled(it) },
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
+            // 2. Loudness Section (ReplayGain & LUFS Normalization)
+            LoudnessSectionCard(
+                audioSettings = audioSettings,
+                viewModel = viewModel
+            )
 
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
+            // 3. Equalizer Section
+            EqualizerSectionCard(
+                audioSettings = audioSettings,
+                viewModel = viewModel,
+                onNavigateToEqualizer = onNavigateToEqualizer
+            )
 
-                DefaultStartScreenSelector(
-                    currentScreen = defaultStartScreen,
-                    onScreenSelected = { viewModel.setDefaultStartScreen(it) }
-                )
-            }
+            // 4. Bass & Effects Section
+            BassAndEffectsSectionCard(
+                audioSettings = audioSettings,
+                viewModel = viewModel
+            )
 
-            // 10-Band Graphic Equalizer
-            SettingsCard(
-                title = "Equalizer",
-                icon = Icons.Default.Tune
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = if (audioSettings.equalizerEnabled) {
-                            "Status: Active (${audioSettings.equalizerPreset ?: "Custom"})"
-                        } else {
-                            "Status: Disabled (100% Transparent Bit-Perfect Output)"
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = if (audioSettings.equalizerEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Customize 10-band frequency gains (-12 dB to +12 dB), user preamp, and frequency presets.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Button(
-                        onClick = onNavigateToEqualizer,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(text = "Open 10-Band Equalizer")
+            // 5. Safety & Limiter Section
+            SafetySectionCard(
+                audioSettings = audioSettings,
+                viewModel = viewModel
+            )
+
+            // 6. Advanced & System Control Panel Section
+            AdvancedSectionCard(
+                onLaunchSystemPanel = {
+                    try {
+                        val intent = Intent(AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL).apply {
+                            putExtra(AudioEffect.EXTRA_PACKAGE_NAME, context.packageName)
+                            putExtra(AudioEffect.EXTRA_CONTENT_TYPE, AudioEffect.CONTENT_TYPE_MUSIC)
+                        }
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "System Equalizer not supported on this device.", Toast.LENGTH_SHORT).show()
                     }
                 }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+// ENGINE STATUS BANNER
+// -------------------------------------------------------------------------------------------------
+
+@Composable
+private fun AudioEngineStatusCard(audioSettings: AudioSettings) {
+    val activeDSPs = buildList {
+        if (audioSettings.equalizerEnabled) add("10-Band EQ (${audioSettings.equalizerPreset ?: "Custom"})")
+        if (audioSettings.bassBoostEnabled && audioSettings.bassBoostStrength > 0) add("Bass Boost (${audioSettings.bassBoostStrength / 10}%)")
+        if (audioSettings.virtualizerEnabled && audioSettings.virtualizerStrength > 0) add("Virtualizer (${audioSettings.virtualizerStrength / 10}%)")
+        if (audioSettings.replayGainEnabled && audioSettings.replayGainMode != ReplayGainMode.OFF) add("ReplayGain (${audioSettings.replayGainMode.name})")
+        if (audioSettings.loudnessNormalizationEnabled) add("LUFS Normalization (${audioSettings.targetLufs} LUFS)")
+        if (audioSettings.limiterEnabled) add("Peak Limiter (${audioSettings.limiterThresholdDb} dB)")
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (activeDSPs.isEmpty()) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+            } else {
+                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
+            }
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (activeDSPs.isEmpty()) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        else MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (activeDSPs.isEmpty()) Icons.Default.GraphicEq else Icons.Default.Tune,
+                    contentDescription = null,
+                    tint = if (activeDSPs.isEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                )
             }
 
-            // Loudness Normalization (LUFS) Card
-            SettingsCard(
-                title = "Loudness Normalization",
-                icon = Icons.Default.Tune
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (audioSettings.loudnessNormalizationEnabled) {
-                                    "Target: ${audioSettings.targetLufs} LUFS"
-                                } else {
-                                    "Loudness Normalization Disabled"
-                                },
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = if (audioSettings.loudnessNormalizationEnabled) {
-                                    "Linear volume matching via ReplayGain/LUFS tags"
-                                } else {
-                                    "100% Bit-Perfect Transparent Volume (Zero Compression)"
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = audioSettings.loudnessNormalizationEnabled,
-                            onCheckedChange = { viewModel.setLoudnessNormalizationEnabled(it) }
-                        )
-                    }
-
-                    Text(
-                        text = "LUFS normalization applies clean linear volume scaling without altering dynamics. Dynamic limiting and compression are separate operations.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                    )
-
-                    AnimatedVisibility(
-                        visible = audioSettings.loudnessNormalizationEnabled,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically()
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            // Target Presets Chips
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                for (target in LoudnessTarget.ALL_TARGETS) {
-                                    val isSelected = audioSettings.targetLufs == target.lufs
-                                    FilterChip(
-                                        selected = isSelected,
-                                        onClick = { viewModel.setTargetLufs(target.lufs) },
-                                        label = { Text(target.title) },
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
-                                    )
-                                }
-                            }
-
-                            // Fine Adjustment Slider
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Target Loudness",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = "${audioSettings.targetLufs} LUFS",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-
-                            Slider(
-                                value = audioSettings.targetLufs,
-                                onValueChange = {
-                                    val snapped = ((it * 2).roundToInt() / 2f).coerceIn(-24f, -8f)
-                                    viewModel.setTargetLufs(snapped)
-                                },
-                                valueRange = -24.0f..-8.0f,
-                                steps = 31,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            OutlinedButton(
-                                onClick = { viewModel.resetLoudnessNormalization() },
-                                modifier = Modifier.align(Alignment.End)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = null,
-                                    modifier = Modifier.height(16.dp).width(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Reset Loudness")
-                            }
-                        }
-                    }
-                }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (activeDSPs.isEmpty()) "Bit-Perfect Transparent Mode" else "${activeDSPs.size} DSP Modules Active",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = if (activeDSPs.isEmpty()) {
+                        "Zero audio alteration. Studio-pure playback directly from MediaStore source."
+                    } else {
+                        activeDSPs.joinToString(", ")
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
+        }
+    }
+}
 
-            // Safety Limiter & Headroom Protection Card
-            SettingsCard(
-                title = "Safety Limiter & Headroom",
-                icon = Icons.Default.Tune
-            ) {
-                Column(
+// -------------------------------------------------------------------------------------------------
+// 1. PLAYBACK SECTION
+// -------------------------------------------------------------------------------------------------
+
+@Composable
+private fun PlaybackSectionCard(
+    audioSettings: AudioSettings,
+    viewModel: SettingsViewModel
+) {
+    SettingsCard(
+        title = "Playback",
+        icon = Icons.Default.PlayArrow
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Master Volume
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Stage 1: Technical Anti-Clipping Prevention (Pre-attenuation)
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Automatic Anti-Clipping Protection",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = "Mathematically prevents clipping across active EQ/Bass Boost/ReplayGain without dynamic pumping or audible compression.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = audioSettings.preventClipping,
-                            onCheckedChange = { viewModel.setPreventClipping(it) }
-                        )
-                    }
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 4.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-
-                    // Stage 2: User Peak Brickwall Limiter
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (audioSettings.limiterEnabled) "Peak Limiter Active" else "Peak Limiter Disabled",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = "Enforces a hard ceiling limiter on dynamic audio peaks (Android 9.0+).",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = audioSettings.limiterEnabled,
-                            onCheckedChange = { viewModel.setLimiterEnabled(it) }
-                        )
-                    }
-
-                    AnimatedVisibility(
-                        visible = audioSettings.limiterEnabled,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically()
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Limiter Ceiling Threshold",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = String.format(java.util.Locale.US, "%.1f dB", audioSettings.limiterThresholdDb),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-
-                            Slider(
-                                value = audioSettings.limiterThresholdDb,
-                                onValueChange = {
-                                    val snapped = ((it * 2).roundToInt() / 2f).coerceIn(-12f, 0f)
-                                    viewModel.setLimiterThresholdDb(snapped)
-                                },
-                                valueRange = -12.0f..0.0f,
-                                steps = 23,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-
-                    OutlinedButton(
-                        onClick = { viewModel.resetLimiter() },
-                        modifier = Modifier.align(Alignment.End)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Refresh,
+                            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                             contentDescription = null,
-                            modifier = Modifier.height(16.dp).width(16.dp)
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Reset Limiter")
+                        Text(
+                            text = "Master Volume",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
+                    Text(
+                        text = "${(audioSettings.masterVolume * 100).roundToInt()}%",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
+                Slider(
+                    value = audioSettings.masterVolume,
+                    onValueChange = { viewModel.setMasterVolume(it) },
+                    valueRange = 0.0f..1.0f,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
-            // System Equalizer
-            SettingsCard(
-                title = "System Equalizer",
-                icon = Icons.Default.Tune
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+            // Gapless Playback
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Launch external OEM/system equalizer panel if installed.",
+                        text = "Gapless Playback",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Eliminates silence between consecutive tracks for seamless albums and live recordings.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    OutlinedButton(
-                        onClick = {
-                            try {
-                                val intent = Intent(AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL).apply {
-                                    putExtra(AudioEffect.EXTRA_PACKAGE_NAME, context.packageName)
-                                    putExtra(AudioEffect.EXTRA_CONTENT_TYPE, AudioEffect.CONTENT_TYPE_MUSIC)
-                                }
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                Toast.makeText(context, "System Equalizer not supported on this device.", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
+                }
+                Switch(
+                    checked = audioSettings.gaplessPlaybackEnabled,
+                    onCheckedChange = { viewModel.setGaplessPlaybackEnabled(it) }
+                )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+            // Crossfade
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (audioSettings.crossfadeEnabled) "Crossfade Active" else "Crossfade Disabled",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Smoothly blends the ending track into the beginning of the next track.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = audioSettings.crossfadeEnabled,
+                    onCheckedChange = { viewModel.setCrossfadeEnabled(it) }
+                )
+            }
+
+            AnimatedVisibility(
+                visible = audioSettings.crossfadeEnabled,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(text = "Launch System Control Panel")
+                        Text(
+                            text = "Crossfade Duration",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "${audioSettings.crossfadeDurationMs / 1000} seconds",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Slider(
+                        value = (audioSettings.crossfadeDurationMs / 1000).toFloat(),
+                        onValueChange = { viewModel.setCrossfadeDurationMs((it * 1000).toInt()) },
+                        valueRange = 1.0f..20.0f,
+                        steps = 18,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            OutlinedButton(
+                onClick = { viewModel.resetPlaybackSettings() },
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Reset Playback")
+            }
+        }
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+// 2. LOUDNESS SECTION
+// -------------------------------------------------------------------------------------------------
+
+@Composable
+private fun LoudnessSectionCard(
+    audioSettings: AudioSettings,
+    viewModel: SettingsViewModel
+) {
+    SettingsCard(
+        title = "Loudness & Normalization",
+        icon = Icons.Default.GraphicEq
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // ReplayGain Subsystem
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (audioSettings.replayGainEnabled) "ReplayGain Active" else "ReplayGain Disabled",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Applies loudness tags (track/album) without dynamic compression.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = audioSettings.replayGainEnabled,
+                    onCheckedChange = { viewModel.setReplayGainEnabled(it) }
+                )
+            }
+
+            AnimatedVisibility(
+                visible = audioSettings.replayGainEnabled,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "ReplayGain Mode",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = audioSettings.replayGainMode == ReplayGainMode.TRACK,
+                            onClick = { viewModel.setReplayGainMode(ReplayGainMode.TRACK) },
+                            label = { Text("Track Mode") },
+                            leadingIcon = if (audioSettings.replayGainMode == ReplayGainMode.TRACK) {
+                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            } else null
+                        )
+                        FilterChip(
+                            selected = audioSettings.replayGainMode == ReplayGainMode.ALBUM,
+                            onClick = { viewModel.setReplayGainMode(ReplayGainMode.ALBUM) },
+                            label = { Text("Album Mode") },
+                            leadingIcon = if (audioSettings.replayGainMode == ReplayGainMode.ALBUM) {
+                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            } else null
+                        )
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("ReplayGain Preamp", style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                text = String.format(Locale.US, "%+.1f dB", audioSettings.replayGainPreampDb),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Slider(
+                            value = audioSettings.replayGainPreampDb,
+                            onValueChange = { viewModel.setReplayGainPreampDb(((it * 2).roundToInt() / 2f).coerceIn(-12f, 12f)) },
+                            valueRange = -12.0f..12.0f,
+                            steps = 47,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+            // LUFS Loudness Normalization Subsystem
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (audioSettings.loudnessNormalizationEnabled) "LUFS Normalization Active" else "LUFS Normalization Disabled",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Pure linear volume scaling matching your perceptual loudness target.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = audioSettings.loudnessNormalizationEnabled,
+                    onCheckedChange = { viewModel.setLoudnessNormalizationEnabled(it) }
+                )
+            }
+
+            AnimatedVisibility(
+                visible = audioSettings.loudnessNormalizationEnabled,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Loudness Target Preset",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        LoudnessTarget.values().forEach { target ->
+                            val isSelected = target.lufs == audioSettings.targetLufs
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { viewModel.setTargetLufs(target.lufs) },
+                                label = { Text(target.title) },
+                                leadingIcon = if (isSelected) {
+                                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                } else null
+                            )
+                        }
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Target Level", style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                text = String.format(Locale.US, "%.1f LUFS", audioSettings.targetLufs),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Slider(
+                            value = audioSettings.targetLufs,
+                            onValueChange = { viewModel.setTargetLufs(((it * 2).roundToInt() / 2f).coerceIn(-24f, -8f)) },
+                            valueRange = -24.0f..-8.0f,
+                            steps = 31,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        viewModel.resetReplayGain()
+                        viewModel.resetLoudnessNormalization()
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Reset Loudness")
+                }
+            }
+        }
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+// 3. EQUALIZER SECTION
+// -------------------------------------------------------------------------------------------------
+
+@Composable
+private fun EqualizerSectionCard(
+    audioSettings: AudioSettings,
+    viewModel: SettingsViewModel,
+    onNavigateToEqualizer: () -> Unit
+) {
+    SettingsCard(
+        title = "10-Band Graphic Equalizer",
+        icon = Icons.Default.Equalizer
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Master EQ Switch
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (audioSettings.equalizerEnabled) "Equalizer Active" else "Equalizer Disabled",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = if (audioSettings.equalizerEnabled) {
+                            "Preset: ${audioSettings.equalizerPreset ?: "Custom"}"
+                        } else {
+                            "100% Bit-Perfect Transparent (Zero DSP active)"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = audioSettings.equalizerEnabled,
+                    onCheckedChange = { viewModel.setEqualizerEnabled(it) }
+                )
+            }
+
+            AnimatedVisibility(
+                visible = audioSettings.equalizerEnabled,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Presets Selection Chips
+                    Text(
+                        text = "Presets",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        EqualizerPresets.ALL_PRESETS.forEach { preset ->
+                            val isSelected = audioSettings.equalizerPreset == preset.name
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { viewModel.selectEqualizerPreset(preset.name) },
+                                label = { Text(preset.name) },
+                                leadingIcon = if (isSelected) {
+                                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                } else null
+                            )
+                        }
+                    }
+
+                    // Preamp Slider
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("EQ Preamp", style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                text = String.format(Locale.US, "%+.1f dB", audioSettings.equalizerPreampDb),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Slider(
+                            value = audioSettings.equalizerPreampDb,
+                            onValueChange = { viewModel.setEqualizerPreampDb(((it * 2).roundToInt() / 2f).coerceIn(-12f, 12f)) },
+                            valueRange = -12.0f..12.0f,
+                            steps = 47,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    // 10 Frequency Band Sliders
+                    Text(
+                        text = "Frequency Bands",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    val bandGains = audioSettings.equalizerBandGains.ifEmpty { EqualizerPresets.defaultBandGains() }
+                    bandGains.take(10).forEachIndexed { index, gain ->
+                        val freqLabel = EQ_FREQUENCIES.getOrElse(index) { "Band ${index + 1}" }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = freqLabel,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.width(54.dp)
+                            )
+                            Slider(
+                                value = gain,
+                                onValueChange = {
+                                    val snapped = ((it * 2).roundToInt() / 2f).coerceIn(-12f, 12f)
+                                    viewModel.updateEqualizerBand(index, snapped)
+                                },
+                                valueRange = -12.0f..12.0f,
+                                steps = 47,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                text = String.format(Locale.US, "%+.1f dB", gain),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.End,
+                                modifier = Modifier.width(54.dp),
+                                color = if (gain != 0f) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(onClick = onNavigateToEqualizer) {
+                    Icon(
+                        imageVector = Icons.Default.OpenInFull,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Fullscreen EQ")
+                }
+
+                OutlinedButton(onClick = { viewModel.resetEqualizer() }) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Reset EQ")
+                }
+            }
+        }
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+// 4. BASS & EFFECTS SECTION
+// -------------------------------------------------------------------------------------------------
+
+@Composable
+private fun BassAndEffectsSectionCard(
+    audioSettings: AudioSettings,
+    viewModel: SettingsViewModel
+) {
+    SettingsCard(
+        title = "Bass & Audio Effects",
+        icon = Icons.Default.SurroundSound
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Bass Boost
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (audioSettings.bassBoostEnabled) "Bass Boost Active" else "Bass Boost Disabled",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Hardware-accelerated low frequency amplification.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = audioSettings.bassBoostEnabled,
+                    onCheckedChange = { viewModel.setBassBoostEnabled(it) }
+                )
+            }
+
+            AnimatedVisibility(
+                visible = audioSettings.bassBoostEnabled,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Bass Strength", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            text = "${audioSettings.bassBoostStrength / 10}%",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Slider(
+                        value = audioSettings.bassBoostStrength.toFloat(),
+                        onValueChange = { viewModel.setBassBoostStrength(it.roundToInt()) },
+                        valueRange = 0f..1000f,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+            // Virtualizer
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (audioSettings.virtualizerEnabled) "Virtualizer Active" else "Virtualizer Disabled",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Spatial soundstage widening for headphones and stereo speakers.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = audioSettings.virtualizerEnabled,
+                    onCheckedChange = { viewModel.setVirtualizerEnabled(it) }
+                )
+            }
+
+            AnimatedVisibility(
+                visible = audioSettings.virtualizerEnabled,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Spatial Strength", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            text = "${audioSettings.virtualizerStrength / 10}%",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Slider(
+                        value = audioSettings.virtualizerStrength.toFloat(),
+                        onValueChange = { viewModel.setVirtualizerStrength(it.roundToInt()) },
+                        valueRange = 0f..1000f,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            OutlinedButton(
+                onClick = { viewModel.resetBassAndEffects() },
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Reset Effects")
+            }
+        }
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+// 5. SAFETY & LIMITER SECTION
+// -------------------------------------------------------------------------------------------------
+
+@Composable
+private fun SafetySectionCard(
+    audioSettings: AudioSettings,
+    viewModel: SettingsViewModel
+) {
+    SettingsCard(
+        title = "Safety & Headroom Protection",
+        icon = Icons.Default.Security
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Stage 1: Technical Anti-Clipping Headroom Pre-attenuation
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Automatic Anti-Clipping Protection",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Mathematically prevents clipping across active EQ/Bass Boost without dynamic pumping or distortion.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = audioSettings.preventClipping,
+                    onCheckedChange = { viewModel.setPreventClipping(it) }
+                )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+            // Stage 2: Peak Brickwall Limiter
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (audioSettings.limiterEnabled) "Peak Limiter Active" else "Peak Limiter Disabled",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Enforces a hard ceiling limiter on dynamic audio peaks (Android 9.0+).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = audioSettings.limiterEnabled,
+                    onCheckedChange = { viewModel.setLimiterEnabled(it) }
+                )
+            }
+
+            AnimatedVisibility(
+                visible = audioSettings.limiterEnabled,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Limiter Ceiling Threshold", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            text = String.format(Locale.US, "%.1f dB", audioSettings.limiterThresholdDb),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Slider(
+                        value = audioSettings.limiterThresholdDb,
+                        onValueChange = {
+                            val snapped = ((it * 2).roundToInt() / 2f).coerceIn(-12f, 0f)
+                            viewModel.setLimiterThresholdDb(snapped)
+                        },
+                        valueRange = -12.0f..0.0f,
+                        steps = 23,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            OutlinedButton(
+                onClick = { viewModel.resetLimiter() },
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Reset Safety")
+            }
+        }
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+// 6. ADVANCED & PIPELINE INFORMATION SECTION
+// -------------------------------------------------------------------------------------------------
+
+@Composable
+private fun AdvancedSectionCard(
+    onLaunchSystemPanel: () -> Unit
+) {
+    SettingsCard(
+        title = "Advanced & Architecture",
+        icon = Icons.Default.Settings
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Audio Pipeline Flow",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium
+            )
+
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "MediaStore Source (content://) → ExoPlayer (Media3) → VedTune AudioEngine → Android AudioTrack Output",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "VedTune uses non-destructive linear processing with zero multi-band compression or fake volume boosters.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "System Equalizer",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "Launch external OEM/system audio control panel if installed by your device manufacturer.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedButton(
+                    onClick = onLaunchSystemPanel,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Launch System Control Panel")
+                }
+            }
         }
     }
 }
