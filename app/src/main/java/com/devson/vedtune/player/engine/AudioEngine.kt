@@ -12,6 +12,9 @@ import com.devson.vedtune.BuildConfig
 import com.devson.vedtune.domain.model.AudioSettings
 import com.devson.vedtune.domain.model.AudioSettingsFactory
 import com.devson.vedtune.domain.repository.SettingsRepository
+import com.devson.vedtune.player.engine.replaygain.ReplayGainCache
+import com.devson.vedtune.player.engine.replaygain.ReplayGainExtractor
+import com.devson.vedtune.player.engine.replaygain.ReplayGainProcessor
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -54,7 +57,9 @@ import kotlin.math.log10
 @Singleton
 class AudioEngine @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val replayGainExtractor: ReplayGainExtractor,
+    private val replayGainCache: ReplayGainCache
 ) {
 
     companion object {
@@ -71,7 +76,7 @@ class AudioEngine @Inject constructor(
 
     // Core Audio Processors
     private val masterVolumeProcessor = MasterVolumeProcessor()
-    private val replayGainProcessor = ReplayGainProcessor(context, masterVolumeProcessor)
+    private val replayGainProcessor = ReplayGainProcessor(replayGainExtractor, replayGainCache, masterVolumeProcessor)
     private val equalizerProcessor = EqualizerProcessor()
     private val bassBoostProcessor = BassBoostProcessor()
     private val loudnessProcessor = LoudnessProcessor()
