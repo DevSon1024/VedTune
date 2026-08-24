@@ -145,41 +145,14 @@ class LyricsEditorViewModel @Inject constructor(
                 _searchQuery.value = getFieldValueForSong(_selectedSearchField.value, songData)
 
 
-                val lrcText = withContext(Dispatchers.IO) {
-
-                    // 1. Check internal lrc file
-                    val internalFile = File(context.filesDir, "custom_lyrics/$songId.lrc")
-                    if (internalFile.exists()) {
-                        val text = internalFile.readText(Charsets.UTF_8)
-                        if (text.isNotBlank()) return@withContext text
-                    }
-
-                    // 2. Check external lrc file in song directory
-                    val path = getFilePathFromUri(songId)
-                    if (path != null) {
-                        val audioFile = File(path)
-                        val parentDir = audioFile.parentFile
-                        val baseName = audioFile.nameWithoutExtension
-                        val lrcFile = File(parentDir, "$baseName.lrc")
-                        if (lrcFile.exists()) {
-                            val text = lrcFile.readText(Charsets.UTF_8)
-                            if (text.isNotBlank()) return@withContext text
-                        }
-
-                        // 3. Check embedded lyrics
-                        try {
-                            val jAudioFile = org.jaudiotagger.audio.AudioFileIO.read(audioFile)
-                            val tag = jAudioFile.tag
-                            if (tag != null) {
-                                val embedded = tag.getFirst(org.jaudiotagger.tag.FieldKey.LYRICS)
-                                if (!embedded.isNullOrBlank()) return@withContext embedded
-                            }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
-                    ""
-                }
+                val path = getFilePathFromUri(songId)
+                val lrcText = com.devson.vedtune.core.LyricsStorageUtils.resolveLyricsForSong(
+                    context = context,
+                    songId = songData.id,
+                    songTitle = songData.title,
+                    songArtist = songData.artist,
+                    filePath = path
+                ) ?: ""
 
                 _rawLyrics.value = lrcText
                 _parsedLines.value = parseRawLyricsToLines(lrcText)
@@ -342,7 +315,15 @@ class LyricsEditorViewModel @Inject constructor(
         // 1. Save internally (done in saveLyrics, but ensure here too)
         saveInternalLrcOnly(lrcText)
 
-        // 2. Save external lrc file next to song if possible
+        // 2. Save to Documents/VedTune/Lyrics public directory
+        try {
+            val fileName = "${songVal.title} - ${songVal.artist}.lrc"
+            com.devson.vedtune.core.LyricsStorageUtils.saveLyricsToDocuments(context, fileName, lrcText)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // 3. Save external lrc file next to song if possible
         try {
             val path = getFilePathFromUri(songVal.id)
             if (path != null) {
@@ -524,7 +505,15 @@ class LyricsEditorViewModel @Inject constructor(
         if (lyricsText.isNotBlank()) {
             _rawLyrics.value = lyricsText
             _parsedLines.value = parseRawLyricsToLines(lyricsText)
-            viewModelScope.launch {
+            viewModelScope.launch(Dispatchers.IO) {
+                _song.value?.let { currentSong ->
+                    val fileName = "${currentSong.title} - ${currentSong.artist}.lrc"
+                    try {
+                        com.devson.vedtune.core.LyricsStorageUtils.saveLyricsToDocuments(context, fileName, lyricsText)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
                 _uiEvent.emit(LyricsEditorUiEvent.ShowToast("Applied lyrics for \"${item.trackName}\""))
             }
         } else {

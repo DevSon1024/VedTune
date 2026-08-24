@@ -71,7 +71,7 @@ fun SongInfoBottomSheet(
         withContext(Dispatchers.IO) {
             val meta = extractor.extractMetadata(song.id)
             metadata = meta
-            lyricsStatus = getLyricsStatus(context, song.id, meta?.filePath ?: "")
+            lyricsStatus = getLyricsStatus(context, song, meta?.filePath ?: "")
         }
         isLoading = false
     }
@@ -442,8 +442,20 @@ fun TechSpecItem(
     }
 }
 
-private fun getLyricsStatus(context: android.content.Context, songId: Long, filePath: String): String {
-    val internalFile = File(context.filesDir, "custom_lyrics/$songId.lrc")
+private suspend fun getLyricsStatus(context: android.content.Context, song: Song, filePath: String): String {
+    val baseName = if (filePath.isNotEmpty()) File(filePath).nameWithoutExtension else null
+    val docLyrics = com.devson.vedtune.core.LyricsStorageUtils.findLyricsInDocuments(
+        context = context,
+        songTitle = song.title,
+        songArtist = song.artist,
+        baseFileName = baseName,
+        songId = song.id
+    )
+    if (!docLyrics.isNullOrBlank()) {
+        return "External (Documents)"
+    }
+
+    val internalFile = File(context.filesDir, "custom_lyrics/${song.id}.lrc")
     if (internalFile.exists() && internalFile.length() > 0) {
         return "External (Imported)"
     }
@@ -453,8 +465,7 @@ private fun getLyricsStatus(context: android.content.Context, songId: Long, file
             val audioFile = File(filePath)
             val parentDir = audioFile.parentFile
             if (parentDir != null && parentDir.exists()) {
-                val baseName = audioFile.nameWithoutExtension
-                val externalLrcFile = File(parentDir, "$baseName.lrc")
+                val externalLrcFile = File(parentDir, "${audioFile.nameWithoutExtension}.lrc")
                 if (externalLrcFile.exists() && externalLrcFile.length() > 0) {
                     return "External (LRC)"
                 }

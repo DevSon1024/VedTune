@@ -368,7 +368,7 @@ class EditTagsViewModel @Inject constructor(
         val path = filePath ?: return@withContext
         val targetSong = song ?: return@withContext
         val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, targetSong.id)
-        val ext = File(path).extension.ifEmpty { "mp3" }
+        val ext = File(path).extension.lowercase(Locale.US).ifEmpty { "mp3" }
         val tempFile = File(context.cacheDir, "temp_tag_edit_${targetSong.id}.$ext")
 
         try {

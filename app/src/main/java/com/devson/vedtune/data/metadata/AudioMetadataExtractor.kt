@@ -77,7 +77,7 @@ class AudioMetadataExtractor @Inject constructor(
             } catch (e: Exception) {
                 // Fallback to temp file with dynamic extension
                 try {
-                    val ext = actualFile.extension.ifEmpty { "mp3" }
+                    val ext = actualFile.extension.lowercase(java.util.Locale.US).ifEmpty { "mp3" }
                     tempFile = File(context.cacheDir, "temp_metadata_extract_${songId}.$ext")
                     val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, songId)
                     context.contentResolver.openInputStream(uri)?.use { input ->

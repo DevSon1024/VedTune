@@ -332,16 +332,22 @@ class PlayerViewModel @Inject constructor(
         val song = currentSong.value ?: return
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                val content = context.contentResolver.openInputStream(uri)?.use { input ->
+                    input.bufferedReader(Charsets.UTF_8).readText()
+                } ?: throw java.io.IOException("Unable to read selected lyrics file")
+
+                // Save to Documents/VedTune/Lyrics
+                val safeFileName = "${song.title} - ${song.artist}.lrc"
+                com.devson.vedtune.core.LyricsStorageUtils.saveLyricsToDocuments(context, safeFileName, content)
+
+                // Also save to internal cache as backup
                 val dir = File(context.filesDir, "custom_lyrics")
                 if (!dir.exists()) {
                     dir.mkdirs()
                 }
                 val file = File(dir, "${song.id}.lrc")
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    file.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
-                }
+                file.writeText(content, Charsets.UTF_8)
+
                 _uiEvent.emit(PlayerUiEvent.ShowToast("Lyrics imported successfully"))
                 loadLyrics(song.id)
             } catch (e: Exception) {
@@ -354,47 +360,16 @@ class PlayerViewModel @Inject constructor(
     fun loadLyrics(songId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // 1. Check app's internal custom lyrics directory
-                val internalLrcFile = File(context.filesDir, "custom_lyrics/$songId.lrc")
-                if (internalLrcFile.exists()) {
-                    val lrcText = internalLrcFile.readText(Charsets.UTF_8)
-                    if (lrcText.isNotBlank()) {
-                        _currentLyrics.value = lrcText
-                        return@launch
-                    }
-                }
-
-                // 2. Check the media folder where the song is located
+                val songVal = currentSong.value?.takeIf { it.id == songId } ?: repository.getSongById(songId)
                 val path = getFilePathFromUri(songId)
-                if (path != null) {
-                    val audioFile = File(path)
-                    val parentDir = audioFile.parentFile
-                    val baseName = audioFile.nameWithoutExtension
-                    val lrcFile = File(parentDir, "$baseName.lrc")
-                    if (lrcFile.exists()) {
-                        val lrcText = lrcFile.readText(Charsets.UTF_8)
-                        if (lrcText.isNotBlank()) {
-                            _currentLyrics.value = lrcText
-                            return@launch
-                        }
-                    }
-
-                    // 3. Fallback to reading embedded lyrics tags via jaudiotagger
-                    try {
-                        val jAudioFile = org.jaudiotagger.audio.AudioFileIO.read(audioFile)
-                        val tag = jAudioFile.tag
-                        if (tag != null) {
-                            val embeddedLyrics = tag.getFirst(org.jaudiotagger.tag.FieldKey.LYRICS)
-                            if (!embeddedLyrics.isNullOrBlank()) {
-                                _currentLyrics.value = embeddedLyrics
-                                return@launch
-                            }
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-                _currentLyrics.value = ""
+                val lyricsText = com.devson.vedtune.core.LyricsStorageUtils.resolveLyricsForSong(
+                    context = context,
+                    songId = songId,
+                    songTitle = songVal?.title ?: "",
+                    songArtist = songVal?.artist ?: "",
+                    filePath = path
+                )
+                _currentLyrics.value = lyricsText ?: ""
             } catch (e: Exception) {
                 e.printStackTrace()
                 _currentLyrics.value = ""

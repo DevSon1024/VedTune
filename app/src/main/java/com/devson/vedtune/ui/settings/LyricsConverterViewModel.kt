@@ -159,11 +159,11 @@ class LyricsConverterViewModel : ViewModel() {
                     val baseName = originalName.substringBeforeLast(".", originalName)
                     val lrcFileName = "$baseName.lrc"
 
-                    val savedPath = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        saveToMediaStoreQ(context, lrcFileName, lrcContent)
-                    } else {
-                        saveToLegacyStorage(lrcFileName, lrcContent)
-                    }
+                    val savedPath = com.devson.vedtune.core.LyricsStorageUtils.saveLyricsToDocuments(
+                        context,
+                        lrcFileName,
+                        lrcContent
+                    )
 
                     lrcFileName to savedPath
                 }
