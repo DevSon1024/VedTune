@@ -133,6 +133,15 @@ fun HomeScreen(
                     val viewModel: HomeViewModel = hiltViewModel()
                     HomeTabScreen(
                         viewModel = viewModel,
+                        onNavigateToAlbum = onNavigateToAlbum,
+                        onNavigateToArtist = onNavigateToArtist,
+                        onNavigateToPlaylist = onNavigateToPlaylist,
+                        onNavigateToGenre = onNavigateToGenre,
+                        onNavigateToLibraryTab = { tabIndex ->
+                            scope.launch {
+                                pagerState.animateScrollToPage(2)
+                            }
+                        },
                         contentPadding = innerPadding,
                         modifier = Modifier.fillMaxSize()
                     )

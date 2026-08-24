@@ -50,6 +50,7 @@ import com.devson.vedtune.ui.components.AddToPlaylistDialog
 import com.devson.vedtune.ui.components.SongArtwork
 import com.devson.vedtune.ui.player.components.ActionControlsStrip
 import com.devson.vedtune.ui.player.components.ArtworkCard
+import com.devson.vedtune.ui.player.components.PlayerArtworkPager
 import com.devson.vedtune.ui.player.components.ClickableMetadata
 import com.devson.vedtune.ui.player.components.LyricsPanel
 import com.devson.vedtune.ui.player.components.OptionsSheetContent
@@ -90,6 +91,8 @@ fun PlayerScreen(
     val shuffleModeEnabled by viewModel.shuffleModeEnabled.collectAsStateWithLifecycle()
     val sleepTimerRemaining by viewModel.sleepTimerRemaining.collectAsStateWithLifecycle()
     val isFav by viewModel.isFavorite.collectAsStateWithLifecycle()
+    val playlistQueue by viewModel.playlistQueue.collectAsStateWithLifecycle()
+    val currentQueueIndex by viewModel.currentQueueIndex.collectAsStateWithLifecycle()
     val showArtworkState by viewModel.showAlbumArt.collectAsStateWithLifecycle()
     val showRemainingTimeState by viewModel.showRemainingTime.collectAsStateWithLifecycle()
     val seekbarStyle by viewModel.seekbarStyle.collectAsStateWithLifecycle()
@@ -277,20 +280,36 @@ fun PlayerScreen(
                                     onEditLyricsClick = { onNavigateToLyricsEditor(displayedSong.id) }
                                 )
                             } else {
-                                ArtworkCard(
-                                    song = displayedSong,
-                                    showArtwork = showArtworkState,
-                                    isPlaying = isPlaying,
-                                    artworkScale = artworkScale,
-                                    enableSwipeToSkip = enableSwipeToSkip,
-                                    albumArtClickAction = albumArtClickAction,
-                                    playbackProgress = progressProvider,
-                                    onToggleLyrics = { showLyrics = true },
-                                    onPlayPause = { viewModel.togglePlayPause() },
-                                    onViewAlbumArt = { showViewAlbumArtOverlay = true },
-                                    onSwipeNext = { viewModel.skipToNext() },
-                                    onSwipePrevious = { viewModel.skipToPrevious() }
-                                )
+                                if (playlistQueue.isNotEmpty()) {
+                                    PlayerArtworkPager(
+                                        queue = playlistQueue,
+                                        currentQueueIndex = currentQueueIndex,
+                                        isPlaying = isPlaying,
+                                        artworkScale = artworkScale,
+                                        showArtwork = showArtworkState,
+                                        albumArtClickAction = albumArtClickAction,
+                                        playbackProgress = progressProvider,
+                                        onSkipToQueueItem = { newIndex -> viewModel.skipToQueueItem(newIndex) },
+                                        onToggleLyrics = { showLyrics = true },
+                                        onPlayPause = { viewModel.togglePlayPause() },
+                                        onViewAlbumArt = { showViewAlbumArtOverlay = true }
+                                    )
+                                } else {
+                                    ArtworkCard(
+                                        song = displayedSong,
+                                        showArtwork = showArtworkState,
+                                        isPlaying = isPlaying,
+                                        artworkScale = artworkScale,
+                                        enableSwipeToSkip = enableSwipeToSkip,
+                                        albumArtClickAction = albumArtClickAction,
+                                        playbackProgress = progressProvider,
+                                        onToggleLyrics = { showLyrics = true },
+                                        onPlayPause = { viewModel.togglePlayPause() },
+                                        onViewAlbumArt = { showViewAlbumArtOverlay = true },
+                                        onSwipeNext = { viewModel.skipToNext() },
+                                        onSwipePrevious = { viewModel.skipToPrevious() }
+                                    )
+                                }
                             }
                         }
 

@@ -105,6 +105,18 @@ class PlayerViewModel @Inject constructor(
     val sleepTimerRemaining: StateFlow<Long> = playbackConnection.sleepTimerRemaining
     val playlistQueue: StateFlow<List<Song>> = playbackConnection.playlistQueue
 
+    val currentQueueIndex: StateFlow<Int> = kotlinx.coroutines.flow.combine(
+        playbackConnection.currentSongId,
+        playbackConnection.playlistQueue
+    ) { currentId, queue ->
+        if (currentId == null || queue.isEmpty()) 0
+        else {
+            val idx = queue.indexOfFirst { it.id == currentId }
+            if (idx != -1) idx else 0
+        }
+    }.flowOn(Dispatchers.Default)
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     val isFavorite: StateFlow<Boolean> = currentSong
         .flatMapLatest { song ->
             if (song != null) {
@@ -255,6 +267,14 @@ class PlayerViewModel @Inject constructor(
 
     fun playQueueItemById(songId: Long) {
         playbackConnection.playQueueItemById(songId)
+    }
+
+    fun skipToQueueItem(index: Int) {
+        val queue = playlistQueue.value
+        if (index in queue.indices) {
+            val song = queue[index]
+            playbackConnection.playQueueItemById(song.id)
+        }
     }
 
     fun moveQueueItem(fromIndex: Int, toIndex: Int) {
