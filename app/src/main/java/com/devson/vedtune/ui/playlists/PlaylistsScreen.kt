@@ -198,24 +198,11 @@ fun PlaylistItemRow(
     var showMenu by remember { mutableStateOf(false) }
     val isFavorite = playlist.id == Playlist.FAVORITES_PLAYLIST_ID
 
-    ListItem(
-        headlineContent = {
-            Text(
-                text = playlist.name,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        },
-        supportingContent = {
-            Text(
-                text = "${playlist.songCount} ${if (playlist.songCount == 1) "track" else "tracks"}",
-                style = VedTuneTextStyles.Metadata,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
+    com.devson.vedtune.ui.components.VedTuneListItem(
+        primaryText = playlist.name,
+        secondaryText = "${playlist.songCount} ${if (playlist.songCount == 1) "track" else "tracks"}",
+        onClick = onClick,
+        modifier = modifier,
         leadingContent = {
             PlaylistArtworkCollage(
                 albumIds = previewAlbumIds,
@@ -250,14 +237,7 @@ fun PlaylistItemRow(
                     }
                 }
             }
-        },
-        colors = ListItemDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(VedTuneShapeTokens.Medium)
-            .clickable(onClick = onClick)
+        }
     )
 }
 

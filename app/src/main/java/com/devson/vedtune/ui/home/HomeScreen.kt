@@ -121,7 +121,7 @@ fun HomeScreen(
                         val index = tabRoutes.indexOf(route)
                         if (index != -1) {
                             scope.launch {
-                                pagerState.animateScrollToPage(index)
+                                pagerState.scrollToPage(index)
                             }
                         }
                     }
@@ -145,17 +145,17 @@ fun HomeScreen(
                         onNavigateToGenre = onNavigateToGenre,
                         onNavigateToLibraryTab = { tabIndex ->
                             scope.launch {
-                                pagerState.animateScrollToPage(2)
+                                pagerState.scrollToPage(2)
                             }
                         },
                         onNavigateToSearch = {
                             scope.launch {
-                                pagerState.animateScrollToPage(1)
+                                pagerState.scrollToPage(1)
                             }
                         },
                         onNavigateToSettings = {
                             scope.launch {
-                                pagerState.animateScrollToPage(3)
+                                pagerState.scrollToPage(3)
                             }
                         },
                         onNavigateToFolderSettings = onNavigateToFolderSettings,

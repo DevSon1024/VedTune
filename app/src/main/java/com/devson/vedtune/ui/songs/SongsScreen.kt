@@ -1,10 +1,6 @@
 package com.devson.vedtune.ui.songs
 
-import com.devson.vedtune.core.formatDuration
 import android.Manifest
-import androidx.compose.runtime.DisposableEffect
-import kotlinx.coroutines.launch
-import androidx.media3.common.Player
 import android.content.ContentUris
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -12,11 +8,13 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.IntentSenderRequest
-import androidx.core.content.ContextCompat
-import androidx.compose.material3.Button
-import androidx.compose.ui.text.style.TextAlign
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.repeatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,83 +23,84 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.repeatable
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.RepeatMode
-import com.devson.vedtune.ui.theme.VedTuneMotion
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.QueuePlayNext
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.AssistChip
-import androidx.compose.material.icons.filled.Sort
-import androidx.compose.material.icons.filled.GridView
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat
+import com.devson.vedtune.core.formatDuration
 import com.devson.vedtune.domain.model.Song
-import com.devson.vedtune.ui.components.SongArtwork
 import com.devson.vedtune.ui.components.AddToPlaylistDialog
-import com.devson.vedtune.ui.components.VedTuneTopAppBar
+import com.devson.vedtune.ui.components.ArtworkThumbnailSize
 import com.devson.vedtune.ui.components.PlayingIndicator
-import com.devson.vedtune.ui.components.VedTuneSongRow
+import com.devson.vedtune.ui.components.SongArtwork
+import com.devson.vedtune.ui.components.VedTuneConfirmDialog
 import com.devson.vedtune.ui.components.VedTuneEmptyState
-import com.devson.vedtune.ui.components.VedTuneBottomSheetHeader
+import com.devson.vedtune.ui.components.VedTuneGridCard
+import com.devson.vedtune.ui.components.VedTuneLibraryView
+import com.devson.vedtune.ui.components.VedTuneSongRow
+import com.devson.vedtune.ui.theme.VedTuneIconSizes
+import com.devson.vedtune.ui.theme.VedTuneMotion
 import com.devson.vedtune.ui.theme.VedTuneShapeTokens
-import com.devson.vedtune.ui.theme.VedTuneTextStyles
 import com.devson.vedtune.ui.theme.spacing
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -113,21 +112,29 @@ fun SongsScreen(
     onLayoutToggleClick: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
-    navigateToLocationEvent: kotlinx.coroutines.flow.SharedFlow<Long>? = null
+    navigateToLocationEvent: SharedFlow<Long>? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val currentSongId by viewModel.currentSongId.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()
-    var showSortMenu by remember { mutableStateOf(false) }
     val playlists by viewModel.playlists.collectAsState()
-    var songForPlaylist by remember { mutableStateOf<Song?>(null) }
 
     val lazyListState = rememberLazyListState()
     val lazyGridState = rememberLazyGridState()
     val scope = rememberCoroutineScope()
+
     var highlightedSongId by remember { mutableStateOf<Long?>(null) }
     val highlightAlpha = remember { Animatable(0f) }
     val highlightColor = MaterialTheme.colorScheme.primaryContainer
+
+    // Dialog and bottom sheet states
+    var songForPlaylist by remember { mutableStateOf<Song?>(null) }
+    var selectedSongForOptions by remember { mutableStateOf<Song?>(null) }
+    var showInfoDialogSong by remember { mutableStateOf<Song?>(null) }
+    var showPreviewDialogSong by remember { mutableStateOf<Song?>(null) }
+    var showDeleteConfirmDialogSong by remember { mutableStateOf<Song?>(null) }
+
+    val context = LocalContext.current
 
     LaunchedEffect(navigateToLocationEvent) {
         navigateToLocationEvent?.collect { songId ->
@@ -154,14 +161,6 @@ fun SongsScreen(
         }
     }
 
-    // Dialog and bottom sheet states
-    var selectedSongForOptions by remember { mutableStateOf<Song?>(null) }
-    var showInfoDialogSong by remember { mutableStateOf<Song?>(null) }
-    var showPreviewDialogSong by remember { mutableStateOf<Song?>(null) }
-    var showDeleteConfirmDialogSong by remember { mutableStateOf<Song?>(null) }
-
-    val context = LocalContext.current
-
     val intentSenderLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
@@ -171,7 +170,7 @@ fun SongsScreen(
         }
     }
 
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
             when (event) {
                 is SongsUiEvent.ShowError -> {
@@ -209,7 +208,6 @@ fun SongsScreen(
     Column(
         modifier = modifier.fillMaxSize()
     ) {
-        // 3. Songs List or Grid with Pull-to-refresh
         PullToRefreshBox(
             isRefreshing = uiState.isRefreshing,
             onRefresh = { viewModel.refresh() },
@@ -219,8 +217,7 @@ fun SongsScreen(
                 !hasPermission -> "PERMISSION_DENIED"
                 uiState.isLoading -> "LOADING"
                 uiState.songs.isEmpty() -> "EMPTY"
-                uiState.isGridView -> "GRID"
-                else -> "LIST"
+                else -> "CONTENT"
             }
 
             Crossfade(
@@ -275,128 +272,104 @@ fun SongsScreen(
                             modifier = Modifier.fillMaxSize()
                         )
                     }
-                    "GRID" -> {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            LazyVerticalGrid(
-                                columns = GridCells.Fixed(uiState.viewPreferences.gridSpanCount),
-                                state = lazyGridState,
-                                modifier = Modifier.fillMaxSize(),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                contentPadding = PaddingValues(
-                                    start = 8.dp,
-                                    end = 8.dp,
-                                    top = 8.dp,
-                                    bottom = contentPadding.calculateBottomPadding() + 88.dp
-                                )
-                            ) {
-                                items(
-                                    items = uiState.songs,
-                                    key = { it.id },
-                                    contentType = { "song_grid_item" }
-                                ) { song ->
-                                    val isCurrentSong = song.id == currentSongId
-                                    val subtitle = if (song.album.isNotBlank() && song.album != "Unknown Album") {
-                                        "${song.artist} • ${song.album}"
-                                    } else {
-                                        song.artist
-                                    }
-                                    com.devson.vedtune.ui.components.VedTuneGridCard(
-                                        primaryText = song.title,
-                                        secondaryText = subtitle,
-                                        onClick = { viewModel.playSong(song) },
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                        gridCount = uiState.viewPreferences.gridSpanCount,
-                                        showArtwork = uiState.viewPreferences.showAlbumArt,
-                                        trailingContent = {
-                                            IconButton(onClick = { selectedSongForOptions = song }) {
-                                                Icon(
-                                                    imageVector = Icons.Default.MoreVert,
-                                                    contentDescription = "Options"
-                                                )
-                                            }
-                                        },
-                                        modifier = Modifier.drawBehind {
-                                            if (highlightedSongId == song.id) {
-                                                drawRect(
-                                                    color = highlightColor,
-                                                    alpha = highlightAlpha.value
-                                                )
-                                            }
+                    "CONTENT" -> {
+                        VedTuneLibraryView(
+                            items = uiState.songs,
+                            isGridView = uiState.isGridView,
+                            gridSpanCount = uiState.viewPreferences.gridSpanCount,
+                            key = { it.id },
+                            contentType = { "song_item" },
+                            lazyListState = lazyListState,
+                            lazyGridState = lazyGridState,
+                            contentPadding = PaddingValues(
+                                start = if (uiState.isGridView) MaterialTheme.spacing.s else 0.dp,
+                                end = if (uiState.isGridView) MaterialTheme.spacing.s else 0.dp,
+                                top = MaterialTheme.spacing.s,
+                                bottom = contentPadding.calculateBottomPadding() + 88.dp
+                            ),
+                            listItemContent = { song ->
+                                val isCurrent = song.id == currentSongId
+                                VedTuneSongRow(
+                                    song = song,
+                                    isCurrentSong = isCurrent,
+                                    isPlaying = isPlaying && isCurrent,
+                                    showArtwork = uiState.viewPreferences.showAlbumArt,
+                                    onClick = { viewModel.playSong(song) },
+                                    onOptionsClick = { selectedSongForOptions = song },
+                                    modifier = Modifier.drawBehind {
+                                        if (highlightedSongId == song.id) {
+                                            drawRect(
+                                                color = highlightColor,
+                                                alpha = highlightAlpha.value
+                                            )
                                         }
-                                    ) {
-                                        if (uiState.viewPreferences.showAlbumArt) {
-                                            Box(modifier = Modifier.fillMaxSize()) {
-                                                SongArtwork(
-                                                    albumId = song.albumId,
-                                                    lastModified = song.dateModified,
-                                                    fallbackIcon = Icons.Default.MusicNote,
-                                                    showFallbackAnimation = false,
+                                    }
+                                )
+                            },
+                            gridItemContent = { song ->
+                                val isCurrentSong = song.id == currentSongId
+                                val subtitle = if (song.album.isNotBlank() && song.album != "Unknown Album") {
+                                    "${song.artist} • ${song.album}"
+                                } else {
+                                    song.artist
+                                }
+                                VedTuneGridCard(
+                                    primaryText = song.title,
+                                    secondaryText = subtitle,
+                                    onClick = { viewModel.playSong(song) },
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                    gridCount = uiState.viewPreferences.gridSpanCount,
+                                    showArtwork = uiState.viewPreferences.showAlbumArt,
+                                    trailingContent = {
+                                        IconButton(onClick = { selectedSongForOptions = song }) {
+                                            Icon(
+                                                imageVector = Icons.Default.MoreVert,
+                                                contentDescription = "Options"
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier.drawBehind {
+                                        if (highlightedSongId == song.id) {
+                                            drawRect(
+                                                color = highlightColor,
+                                                alpha = highlightAlpha.value
+                                            )
+                                        }
+                                    }
+                                ) {
+                                    if (uiState.viewPreferences.showAlbumArt) {
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                            SongArtwork(
+                                                albumId = song.albumId,
+                                                lastModified = song.dateModified,
+                                                fallbackIcon = Icons.Default.MusicNote,
+                                                showFallbackAnimation = false,
+                                                thumbnailSize = ArtworkThumbnailSize.MEDIUM,
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .clip(VedTuneShapeTokens.Medium)
+                                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                                showArtwork = uiState.viewPreferences.showAlbumArt
+                                            )
+                                            if (isCurrentSong) {
+                                                Box(
                                                     modifier = Modifier
                                                         .fillMaxSize()
-                                                        .clip(RoundedCornerShape(12.dp))
-                                                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                                                    showArtwork = uiState.viewPreferences.showAlbumArt
-                                                )
-                                                if (isCurrentSong) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxSize()
-                                                            .clip(RoundedCornerShape(12.dp))
-                                                            .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.4f)),
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        PlayingIndicator(
-                                                            isPlaying = isPlaying,
-                                                            modifier = Modifier.size(32.dp)
-                                                        )
-                                                    }
+                                                        .clip(VedTuneShapeTokens.Medium)
+                                                        .background(Color.Black.copy(alpha = 0.45f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    PlayingIndicator(
+                                                        isPlaying = isPlaying,
+                                                        modifier = Modifier.size(VedTuneIconSizes.ExtraLarge)
+                                                    )
                                                 }
                                             }
                                         }
                                     }
                                 }
                             }
-                        }
-                    }
-                    else -> {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            LazyColumn(
-                                state = lazyListState,
-                                modifier = Modifier.fillMaxSize(),
-                                verticalArrangement = Arrangement.spacedBy(2.dp),
-                                contentPadding = PaddingValues(
-                                    start = 0.dp,
-                                    end = 0.dp,
-                                    top = 8.dp,
-                                    bottom = contentPadding.calculateBottomPadding() + 88.dp
-                                )
-                            ) {
-                                items(
-                                    items = uiState.songs,
-                                    key = { it.id },
-                                    contentType = { "song_list_item" }
-                                ) { song ->
-                                    val isCurrent = song.id == currentSongId
-                                    VedTuneSongRow(
-                                        song = song,
-                                        isCurrentSong = isCurrent,
-                                        isPlaying = isPlaying && isCurrent,
-                                        showArtwork = uiState.viewPreferences.showAlbumArt,
-                                        onClick = { viewModel.playSong(song) },
-                                        onOptionsClick = { selectedSongForOptions = song },
-                                        modifier = Modifier.drawBehind {
-                                            if (highlightedSongId == song.id) {
-                                                drawRect(
-                                                    color = highlightColor,
-                                                    alpha = highlightAlpha.value
-                                                )
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-                        }
+                        )
                     }
                 }
             }
@@ -655,7 +628,7 @@ fun SongsScreen(
     }
 
     showDeleteConfirmDialogSong?.let { song ->
-        com.devson.vedtune.ui.components.VedTuneConfirmDialog(
+        VedTuneConfirmDialog(
             title = "Delete Permanently",
             message = "Are you sure you want to permanently delete \"${song.title}\" from your device? This action cannot be undone.",
             confirmText = "Delete",
@@ -670,11 +643,9 @@ fun SongsScreen(
     }
 }
 
-
-
 @Composable
 fun BottomSheetOption(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     title: String,
     tint: Color = MaterialTheme.colorScheme.onSurface,
     onClick: () -> Unit
@@ -724,7 +695,7 @@ fun SongPreviewDialog(
         }
     }
 
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+    Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -830,7 +801,7 @@ fun SongPreviewDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                androidx.compose.material3.TextButton(onClick = onDismiss) {
+                TextButton(onClick = onDismiss) {
                     Text("Close")
                 }
             }

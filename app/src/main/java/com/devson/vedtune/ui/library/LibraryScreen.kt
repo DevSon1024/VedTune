@@ -284,7 +284,7 @@ fun LibraryScreen(
                         iconColor = MaterialTheme.colorScheme.error,
                         modifier = Modifier.weight(1f),
                         onClick = {
-                            scope.launch { pagerState.animateScrollToPage(5) }
+                            scope.launch { pagerState.scrollToPage(5) }
                         }
                     )
                     LibraryQuickCard(
@@ -295,7 +295,7 @@ fun LibraryScreen(
                         modifier = Modifier.weight(1f),
                         onClick = {
                             songsViewModel.setSortBy(SortBy.DATE_ADDED)
-                            scope.launch { pagerState.animateScrollToPage(0) }
+                            scope.launch { pagerState.scrollToPage(0) }
                         }
                     )
                     LibraryQuickCard(
@@ -305,7 +305,7 @@ fun LibraryScreen(
                         iconColor = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f),
                         onClick = {
-                            scope.launch { pagerState.animateScrollToPage(4) }
+                            scope.launch { pagerState.scrollToPage(4) }
                         }
                     )
                     LibraryQuickCard(
@@ -315,7 +315,7 @@ fun LibraryScreen(
                         iconColor = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f),
                         onClick = {
-                            scope.launch { pagerState.animateScrollToPage(5) }
+                            scope.launch { pagerState.scrollToPage(5) }
                         }
                     )
                 }
@@ -385,7 +385,7 @@ fun LibraryScreen(
                             selected = isSelected,
                             onClick = {
                                 scope.launch {
-                                    pagerState.animateScrollToPage(index)
+                                    pagerState.scrollToPage(index)
                                 }
                             },
                             modifier = Modifier

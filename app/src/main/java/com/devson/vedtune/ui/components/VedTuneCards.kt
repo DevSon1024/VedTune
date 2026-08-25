@@ -44,6 +44,7 @@ import com.devson.vedtune.ui.theme.spacing
 
 /**
  * Standard Song list row for VedTune with high performance and accessibility.
+ * Powered by VedTuneListItem.
  */
 @Composable
 fun VedTuneSongRow(
@@ -63,87 +64,71 @@ fun VedTuneSongRow(
         song.artist
     }
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(VedTuneShapeTokens.Medium)
-            .background(containerColor)
-            .clickable(onClick = onClick)
-            .padding(horizontal = MaterialTheme.spacing.l, vertical = MaterialTheme.spacing.s),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (showArtwork) {
-            Box(
-                modifier = Modifier.size(48.dp)
-            ) {
-                SongArtwork(
-                    albumId = song.albumId,
-                    lastModified = song.dateModified,
-                    fallbackIcon = Icons.Default.MusicNote,
-                    showFallbackAnimation = false,
-                    thumbnailSize = ArtworkThumbnailSize.SMALL,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(VedTuneShapeTokens.Small)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    showArtwork = showArtwork
-                )
-                if (isCurrentSong) {
-                    Box(
+    VedTuneListItem(
+        primaryText = song.title,
+        secondaryText = subtitle,
+        onClick = onClick,
+        modifier = modifier,
+        containerColor = containerColor,
+        isHighlighted = isCurrentSong,
+        leadingContent = if (showArtwork) {
+            {
+                Box(
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    SongArtwork(
+                        albumId = song.albumId,
+                        lastModified = song.dateModified,
+                        fallbackIcon = Icons.Default.MusicNote,
+                        showFallbackAnimation = false,
+                        thumbnailSize = ArtworkThumbnailSize.SMALL,
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(VedTuneShapeTokens.Small)
-                            .background(Color.Black.copy(alpha = 0.45f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        PlayingIndicator(
-                            isPlaying = isPlaying,
-                            modifier = Modifier.size(VedTuneIconSizes.Standard)
-                        )
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        showArtwork = showArtwork
+                    )
+                    if (isCurrentSong) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(VedTuneShapeTokens.Small)
+                                .background(Color.Black.copy(alpha = 0.45f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            PlayingIndicator(
+                                isPlaying = isPlaying,
+                                modifier = Modifier.size(VedTuneIconSizes.Standard)
+                            )
+                        }
                     }
                 }
             }
-            Spacer(modifier = Modifier.width(MaterialTheme.spacing.m))
+        } else null,
+        trailingContent = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs)
+            ) {
+                if (showDuration && song.duration > 0) {
+                    Text(
+                        text = song.duration.toFormattedSongDuration(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
+                }
+                if (onOptionsClick != null) {
+                    VedTuneIconButton(
+                        icon = Icons.Default.MoreVert,
+                        contentDescription = "Song options for ${song.title}",
+                        onClick = onOptionsClick,
+                        iconSize = VedTuneIconSizes.Medium,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = song.title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (isCurrentSong) FontWeight.Bold else FontWeight.SemiBold,
-                color = if (isCurrentSong) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(MaterialTheme.spacing.xxs))
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        if (showDuration && song.duration > 0) {
-            Spacer(modifier = Modifier.width(MaterialTheme.spacing.s))
-            Text(
-                text = song.duration.toFormattedSongDuration(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-            )
-        }
-
-        if (onOptionsClick != null) {
-            VedTuneIconButton(
-                icon = Icons.Default.MoreVert,
-                contentDescription = "Song options for ${song.title}",
-                onClick = onOptionsClick,
-                iconSize = VedTuneIconSizes.Medium,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
+    )
 }
 
 /**

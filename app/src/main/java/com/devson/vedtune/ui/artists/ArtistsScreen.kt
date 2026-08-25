@@ -155,26 +155,11 @@ fun ArtistListItem(
         }
     }
 
-    ListItem(
-        headlineContent = {
-            Text(
-                text = artist.name,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        },
-        supportingContent = {
-            Text(
-                text = subtitle,
-                style = VedTuneTextStyles.Metadata,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        },
+    com.devson.vedtune.ui.components.VedTuneListItem(
+        primaryText = artist.name,
+        secondaryText = subtitle,
+        onClick = onClick,
+        modifier = modifier,
         leadingContent = {
             Box(
                 modifier = Modifier
@@ -190,13 +175,6 @@ fun ArtistListItem(
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             }
-        },
-        colors = ListItemDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(VedTuneShapeTokens.Medium)
-            .clickable(onClick = onClick)
+        }
     )
 }
