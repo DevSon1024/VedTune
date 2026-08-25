@@ -1,11 +1,29 @@
 package com.devson.vedtune.ui.library
 
+import android.content.ContentUris
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.MediaStore
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,13 +31,33 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,33 +69,43 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.devson.vedtune.domain.model.Song
+import com.devson.vedtune.ui.albums.AlbumSortBy
+import com.devson.vedtune.ui.albums.AlbumsScreen
+import com.devson.vedtune.ui.albums.AlbumsViewModel
+import com.devson.vedtune.ui.artists.ArtistSortBy
+import com.devson.vedtune.ui.artists.ArtistsScreen
+import com.devson.vedtune.ui.artists.ArtistsViewModel
+import com.devson.vedtune.ui.components.AddToPlaylistDialog
+import com.devson.vedtune.ui.components.LibraryUtilityRow
+import com.devson.vedtune.ui.components.VedTuneConfirmDialog
+import com.devson.vedtune.ui.components.VedTuneIconButton
+import com.devson.vedtune.ui.folders.FolderSortBy
+import com.devson.vedtune.ui.folders.FolderSortOrder
+import com.devson.vedtune.ui.folders.FoldersScreen
+import com.devson.vedtune.ui.folders.FoldersViewModel
+import com.devson.vedtune.ui.genres.GenresScreen
+import com.devson.vedtune.ui.genres.GenresViewModel
+import com.devson.vedtune.ui.player.components.OptionsSheetContent
+import com.devson.vedtune.ui.playlists.PlaylistSortBy
+import com.devson.vedtune.ui.playlists.PlaylistsScreen
+import com.devson.vedtune.ui.playlists.PlaylistsViewModel
 import com.devson.vedtune.ui.songs.SongsScreen
 import com.devson.vedtune.ui.songs.SongsViewModel
 import com.devson.vedtune.ui.songs.SortBy
-import com.devson.vedtune.ui.albums.AlbumsScreen
-import com.devson.vedtune.ui.albums.AlbumsViewModel
-import com.devson.vedtune.ui.artists.ArtistsScreen
-import com.devson.vedtune.ui.artists.ArtistsViewModel
-import com.devson.vedtune.ui.genres.GenresScreen
-import com.devson.vedtune.ui.genres.GenresViewModel
-import com.devson.vedtune.ui.playlists.PlaylistsScreen
-import com.devson.vedtune.ui.playlists.PlaylistsViewModel
-import kotlinx.coroutines.launch
-
-import com.devson.vedtune.ui.components.LibraryUtilityRow
 import com.devson.vedtune.ui.songs.SortOrder
-import com.devson.vedtune.ui.albums.AlbumSortBy
-import com.devson.vedtune.ui.artists.ArtistSortBy
-import com.devson.vedtune.ui.playlists.PlaylistSortBy
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import com.devson.vedtune.ui.theme.VedTuneIconSizes
+import com.devson.vedtune.ui.theme.VedTuneShapeTokens
+import com.devson.vedtune.ui.theme.spacing
+import kotlinx.coroutines.launch
 
 data class LibraryTabItem(
     val label: String,
@@ -80,6 +128,7 @@ fun LibraryScreen(
     val albumsViewModel: AlbumsViewModel = hiltViewModel()
     val artistsViewModel: ArtistsViewModel = hiltViewModel()
     val genresViewModel: GenresViewModel = hiltViewModel()
+    val foldersViewModel: FoldersViewModel = hiltViewModel()
     val playlistsViewModel: PlaylistsViewModel = hiltViewModel()
 
     val uiState by songsViewModel.uiState.collectAsState()
@@ -88,17 +137,25 @@ fun LibraryScreen(
     val artistSortBy by artistsViewModel.sortBy.collectAsState()
     val artistSortOrder by artistsViewModel.sortOrder.collectAsState()
     val genreSortOrder by genresViewModel.sortOrder.collectAsState()
+    val folderSortBy by foldersViewModel.sortBy.collectAsState()
+    val folderSortOrder by foldersViewModel.sortOrder.collectAsState()
     val playlistSortBy by playlistsViewModel.sortBy.collectAsState()
     val playlistSortOrder by playlistsViewModel.sortOrder.collectAsState()
 
     var showSortMenu by remember { mutableStateOf(false) }
+    var songForOptions by remember { mutableStateOf<Song?>(null) }
+    var songForPlaylist by remember { mutableStateOf<Song?>(null) }
+    var songToDeletePermanently by remember { mutableStateOf<Song?>(null) }
+    val playlists by playlistsViewModel.playlists.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     val tabs = listOf(
         LibraryTabItem("Songs", Icons.AutoMirrored.Filled.List),
         LibraryTabItem("Albums", Icons.Default.Album),
         LibraryTabItem("Artists", Icons.Default.Person),
         LibraryTabItem("Genres", Icons.Default.MusicNote),
-        LibraryTabItem("Playlists", Icons.Default.Favorite)
+        LibraryTabItem("Folders", Icons.Default.Folder),
+        LibraryTabItem("Playlists", Icons.AutoMirrored.Filled.QueueMusic)
     )
 
     val pagerState = rememberPagerState(
@@ -108,7 +165,7 @@ fun LibraryScreen(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    // Collapsible header height math
+    // Collapsible header height calculation
     val fullHeaderHeight = 120.dp
     val fullHeaderHeightPx = with(density) { fullHeaderHeight.toPx() }
     var headerOffsetPx by remember { mutableFloatStateOf(0f) }
@@ -134,6 +191,7 @@ fun LibraryScreen(
             SortBy.ARTIST -> "Artist"
             SortBy.ALBUM -> "Album"
             SortBy.DATE_ADDED -> "Date Added"
+            SortBy.DURATION -> "Duration"
         }
         1 -> when (albumSortBy) {
             AlbumSortBy.TITLE -> "Title"
@@ -146,7 +204,12 @@ fun LibraryScreen(
             ArtistSortBy.ALBUM_COUNT -> "Album Count"
         }
         3 -> "Name"
-        4 -> when (playlistSortBy) {
+        4 -> when (folderSortBy) {
+            FolderSortBy.NAME -> "Name"
+            FolderSortBy.TRACK_COUNT -> "Track Count"
+            FolderSortBy.PATH -> "Path"
+        }
+        5 -> when (playlistSortBy) {
             PlaylistSortBy.NAME -> "Name"
             PlaylistSortBy.SONG_COUNT -> "Song Count"
             PlaylistSortBy.DATE_CREATED -> "Date Created"
@@ -159,7 +222,8 @@ fun LibraryScreen(
         1 -> if (albumSortOrder == SortOrder.ASCENDING) "↑" else "↓"
         2 -> if (artistSortOrder == SortOrder.ASCENDING) "↑" else "↓"
         3 -> if (genreSortOrder == SortOrder.ASCENDING) "↑" else "↓"
-        4 -> if (playlistSortOrder == SortOrder.ASCENDING) "↑" else "↓"
+        4 -> if (folderSortOrder == FolderSortOrder.ASCENDING) "↑" else "↓"
+        5 -> if (playlistSortOrder == SortOrder.ASCENDING) "↑" else "↓"
         else -> "↑"
     }
 
@@ -169,7 +233,7 @@ fun LibraryScreen(
             .statusBarsPadding()
             .nestedScroll(nestedScrollConnection)
     ) {
-        // Collapsible Header Section (Library Title + Quick Category Cards)
+        // Collapsible Header Section
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -182,7 +246,7 @@ fun LibraryScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                    .padding(horizontal = MaterialTheme.spacing.l, vertical = 4.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 // Header Title & Action Row
@@ -197,25 +261,21 @@ fun LibraryScreen(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    IconButton(
+                    VedTuneIconButton(
+                        icon = Icons.Default.Tune,
+                        contentDescription = "View Settings",
                         onClick = { songsViewModel.toggleLayoutView() },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Tune,
-                            contentDescription = "View Settings",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                        iconSize = VedTuneIconSizes.Medium,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
-                // Quick Shortcut Cards Row (Favorites, Recent, Playlists, Genres)
+                // Quick Shortcut Cards Row (Favorites, Recent, Folders, Playlists)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     LibraryQuickCard(
                         title = "Favorites",
@@ -224,7 +284,7 @@ fun LibraryScreen(
                         iconColor = MaterialTheme.colorScheme.error,
                         modifier = Modifier.weight(1f),
                         onClick = {
-                            scope.launch { pagerState.animateScrollToPage(4) }
+                            scope.launch { pagerState.animateScrollToPage(5) }
                         }
                     )
                     LibraryQuickCard(
@@ -239,8 +299,8 @@ fun LibraryScreen(
                         }
                     )
                     LibraryQuickCard(
-                        title = "Playlists",
-                        icon = Icons.AutoMirrored.Filled.QueueMusic,
+                        title = "Folders",
+                        icon = Icons.Default.Folder,
                         containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                         iconColor = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f),
@@ -249,20 +309,20 @@ fun LibraryScreen(
                         }
                     )
                     LibraryQuickCard(
-                        title = "Genres",
-                        icon = Icons.Default.MusicNote,
+                        title = "Playlists",
+                        icon = Icons.AutoMirrored.Filled.QueueMusic,
                         containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
                         iconColor = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f),
                         onClick = {
-                            scope.launch { pagerState.animateScrollToPage(3) }
+                            scope.launch { pagerState.animateScrollToPage(5) }
                         }
                     )
                 }
             }
         }
 
-        // Tab bar container - Sleek modern pill design with smooth sliding active background
+        // Tab bar container - Sleek modern pill design
         Surface(
             color = MaterialTheme.colorScheme.surface,
             modifier = Modifier.fillMaxWidth()
@@ -270,7 +330,7 @@ fun LibraryScreen(
             Column {
                 ScrollableTabRow(
                     selectedTabIndex = pagerState.currentPage,
-                    edgePadding = 16.dp,
+                    edgePadding = MaterialTheme.spacing.l,
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.primary,
                     divider = {},
@@ -295,12 +355,12 @@ fun LibraryScreen(
                                     .offset(x = left + 4.dp)
                                     .width((currentTabWidth - 8.dp).coerceAtLeast(0.dp))
                                     .height(38.dp)
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
+                                    .clip(VedTuneShapeTokens.Pill)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
                                     .border(
                                         width = 1.5.dp,
                                         color = MaterialTheme.colorScheme.primary,
-                                        shape = RoundedCornerShape(20.dp)
+                                        shape = VedTuneShapeTokens.Pill
                                     )
                             )
                         }
@@ -329,7 +389,7 @@ fun LibraryScreen(
                                 }
                             },
                             modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
+                                .clip(VedTuneShapeTokens.Pill)
                                 .height(40.dp)
                                 .padding(horizontal = 2.dp),
                             selectedContentColor = MaterialTheme.colorScheme.primary,
@@ -367,7 +427,7 @@ fun LibraryScreen(
             }
         }
 
-        // Sticky Utility Row (Sort, Shuffle, Layout Toggle) - Stays persistent and does not animate on tab change
+        // Sticky Utility Row (Sort, Shuffle, Layout Toggle)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -391,7 +451,8 @@ fun LibraryScreen(
                         1 -> albumsViewModel.playShuffleAll()
                         2 -> artistsViewModel.playShuffleAll()
                         3 -> genresViewModel.playShuffleAll()
-                        4 -> playlistsViewModel.playShuffleAll()
+                        4 -> foldersViewModel.playShuffleAll()
+                        5 -> playlistsViewModel.playShuffleAll()
                     }
                 }
             )
@@ -402,54 +463,31 @@ fun LibraryScreen(
             ) {
                 when (pagerState.currentPage) {
                     0 -> {
-                        DropdownMenuItem(
-                            text = { Text("Sort by Title") },
-                            onClick = {
-                                songsViewModel.setSortBy(SortBy.TITLE)
-                                showSortMenu = false
-                            },
-                            leadingIcon = {
-                                if (uiState.sortBy == SortBy.TITLE) {
-                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                        SortBy.entries.forEach { option ->
+                            val isSelected = uiState.sortBy == option
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = when (option) {
+                                            SortBy.TITLE -> "Sort by Title"
+                                            SortBy.ARTIST -> "Sort by Artist"
+                                            SortBy.ALBUM -> "Sort by Album"
+                                            SortBy.DATE_ADDED -> "Sort by Date Added"
+                                            SortBy.DURATION -> "Sort by Duration"
+                                        }
+                                    )
+                                },
+                                onClick = {
+                                    songsViewModel.setSortBy(option)
+                                    showSortMenu = false
+                                },
+                                leadingIcon = {
+                                    if (isSelected) {
+                                        Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                    }
                                 }
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Sort by Artist") },
-                            onClick = {
-                                songsViewModel.setSortBy(SortBy.ARTIST)
-                                showSortMenu = false
-                            },
-                            leadingIcon = {
-                                if (uiState.sortBy == SortBy.ARTIST) {
-                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
-                                }
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Sort by Album") },
-                            onClick = {
-                                songsViewModel.setSortBy(SortBy.ALBUM)
-                                showSortMenu = false
-                            },
-                            leadingIcon = {
-                                if (uiState.sortBy == SortBy.ALBUM) {
-                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
-                                }
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Sort by Date Added") },
-                            onClick = {
-                                songsViewModel.setSortBy(SortBy.DATE_ADDED)
-                                showSortMenu = false
-                            },
-                            leadingIcon = {
-                                if (uiState.sortBy == SortBy.DATE_ADDED) {
-                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
-                                }
-                            }
-                        )
+                            )
+                        }
                         HorizontalDivider()
                         DropdownMenuItem(
                             text = { Text("Ascending") },
@@ -585,6 +623,60 @@ fun LibraryScreen(
                         )
                     }
                     4 -> {
+                        FolderSortBy.entries.forEach { option ->
+                            val isSelected = folderSortBy == option
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = when (option) {
+                                            FolderSortBy.NAME -> "Sort by Name"
+                                            FolderSortBy.TRACK_COUNT -> "Sort by Track Count"
+                                            FolderSortBy.PATH -> "Sort by Path"
+                                        }
+                                    )
+                                },
+                                onClick = {
+                                    if (folderSortBy == option) {
+                                        foldersViewModel.toggleSortOrder()
+                                    } else {
+                                        foldersViewModel.setSortBy(option)
+                                    }
+                                    showSortMenu = false
+                                },
+                                leadingIcon = {
+                                    if (isSelected) {
+                                        Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                    }
+                                }
+                            )
+                        }
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text("Ascending") },
+                            onClick = {
+                                if (folderSortOrder != FolderSortOrder.ASCENDING) foldersViewModel.toggleSortOrder()
+                                showSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (folderSortOrder == FolderSortOrder.ASCENDING) {
+                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Descending") },
+                            onClick = {
+                                if (folderSortOrder != FolderSortOrder.DESCENDING) foldersViewModel.toggleSortOrder()
+                                showSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (folderSortOrder == FolderSortOrder.DESCENDING) {
+                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                }
+                            }
+                        )
+                    }
+                    5 -> {
                         PlaylistSortBy.entries.forEach { option ->
                             val isSelected = playlistSortBy == option
                             DropdownMenuItem(
@@ -642,7 +734,7 @@ fun LibraryScreen(
             }
         }
 
-        // Horizontal Pager for Library Pages
+        // Horizontal Pager for 6 Library Categories
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
@@ -693,6 +785,14 @@ fun LibraryScreen(
                     )
                 }
                 4 -> {
+                    FoldersScreen(
+                        viewModel = foldersViewModel,
+                        onSongOptionsClick = { song -> songForOptions = song },
+                        contentPadding = contentPadding,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                5 -> {
                     PlaylistsScreen(
                         viewModel = playlistsViewModel,
                         onPlaylistClick = onNavigateToPlaylist,
@@ -704,6 +804,80 @@ fun LibraryScreen(
                 }
             }
         }
+    }
+
+    // Song Options Bottom Sheet for Library
+    songForOptions?.let { activeSong ->
+        ModalBottomSheet(
+            onDismissRequest = { songForOptions = null },
+            shape = VedTuneShapeTokens.BottomSheet,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+            OptionsSheetContent(
+                song = activeSong,
+                showArtwork = uiState.showArtwork,
+                onEditTags = {
+                    songForOptions = null
+                    onNavigateToEditTags(activeSong.id)
+                },
+                onEditLyrics = {
+                    songForOptions = null
+                },
+                onShare = {
+                    songForOptions = null
+                    val songUri = ContentUris.withAppendedId(
+                        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                        activeSong.id
+                    )
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "audio/*"
+                        putExtra(Intent.EXTRA_STREAM, songUri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "Share Song"))
+                },
+                onDeletePermanently = {
+                    songForOptions = null
+                    songToDeletePermanently = activeSong
+                },
+                onPlayerSettings = {
+                    songForOptions = null
+                },
+                onCloseClick = { songForOptions = null }
+            )
+        }
+    }
+
+    // Add to Playlist Dialog
+    songForPlaylist?.let { targetSong ->
+        AddToPlaylistDialog(
+            playlists = playlists,
+            onDismiss = { songForPlaylist = null },
+            onPlaylistSelected = { playlistId ->
+                songsViewModel.addSongToPlaylist(playlistId, targetSong.id)
+                songForPlaylist = null
+            },
+            onCreateNewPlaylist = { playlistName ->
+                songsViewModel.createPlaylistAndAddSong(playlistName, targetSong.id)
+                songForPlaylist = null
+            }
+        )
+    }
+
+    // Permanent Delete Confirmation Dialog
+    songToDeletePermanently?.let { targetSong ->
+        VedTuneConfirmDialog(
+            title = "Delete Song Permanently",
+            message = "Are you sure you want to delete '${targetSong.title}' permanently from this device? This action cannot be undone.",
+            confirmText = "Delete",
+            dismissText = "Cancel",
+            isDestructive = true,
+            onConfirm = {
+                songsViewModel.deleteSongPermanently(context, targetSong)
+                songToDeletePermanently = null
+            },
+            onDismiss = { songToDeletePermanently = null }
+        )
     }
 }
 
@@ -718,7 +892,7 @@ private fun LibraryQuickCard(
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
+        shape = VedTuneShapeTokens.Card,
         color = containerColor,
         modifier = modifier.height(58.dp)
     ) {

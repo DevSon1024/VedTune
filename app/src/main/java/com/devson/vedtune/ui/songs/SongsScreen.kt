@@ -94,6 +94,12 @@ import com.devson.vedtune.ui.components.SongArtwork
 import com.devson.vedtune.ui.components.AddToPlaylistDialog
 import com.devson.vedtune.ui.components.VedTuneTopAppBar
 import com.devson.vedtune.ui.components.PlayingIndicator
+import com.devson.vedtune.ui.components.VedTuneSongRow
+import com.devson.vedtune.ui.components.VedTuneEmptyState
+import com.devson.vedtune.ui.components.VedTuneBottomSheetHeader
+import com.devson.vedtune.ui.theme.VedTuneShapeTokens
+import com.devson.vedtune.ui.theme.VedTuneTextStyles
+import com.devson.vedtune.ui.theme.spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -246,22 +252,12 @@ fun SongsScreen(
                     }
                 }
                 uiState.songs.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "No Music Found",
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("No music files found", style = MaterialTheme.typography.titleMedium)
-                            Text("Pull down to scan your library", style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
+                    VedTuneEmptyState(
+                        icon = Icons.Default.MusicNote,
+                        title = "No Music Files Found",
+                        description = "Pull down to scan your storage or add audio files to your device.",
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
                 uiState.isGridView -> {
                     Box(modifier = Modifier.fillMaxSize()) {
@@ -285,7 +281,7 @@ fun SongsScreen(
                             ) { song ->
                                 val isCurrentSong = song.id == currentSongId
                                 val subtitle = if (song.album.isNotBlank() && song.album != "Unknown Album") {
-                                    "${song.artist} - ${song.album}"
+                                    "${song.artist} • ${song.album}"
                                 } else {
                                     song.artist
                                 }
@@ -364,61 +360,19 @@ fun SongsScreen(
                                 key = { it.id },
                                 contentType = { "song_list_item" }
                             ) { song ->
-                                val isCurrentSong = song.id == currentSongId
-                                val subtitle = if (song.album.isNotBlank() && song.album != "Unknown Album") {
-                                    "${song.artist} - ${song.album}"
-                                } else {
-                                    song.artist
-                                }
-                                com.devson.vedtune.ui.components.VedTuneListItem(
-                                    primaryText = song.title,
-                                    secondaryText = subtitle,
+                                VedTuneSongRow(
+                                    song = song,
+                                    isCurrentSong = song.id == currentSongId,
+                                    isPlaying = isPlaying,
+                                    showArtwork = uiState.viewPreferences.showAlbumArt,
                                     onClick = { viewModel.playSong(song) },
-                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    onOptionsClick = { selectedSongForOptions = song },
                                     modifier = Modifier.drawBehind {
                                         if (highlightedSongId == song.id) {
                                             drawRect(
                                                 color = highlightColor,
                                                 alpha = highlightAlpha.value
                                             )
-                                        }
-                                    },
-                                    leadingContent = {
-                                        if (uiState.viewPreferences.showAlbumArt) {
-                                            Box(
-                                                modifier = Modifier.size(52.dp)
-                                            ) {
-                                                SongArtwork(
-                                                    albumId = song.albumId,
-                                                    lastModified = song.dateModified,
-                                                    fallbackIcon = Icons.Default.MusicNote,
-                                                    showFallbackAnimation = false,
-                                                    modifier = Modifier
-                                                        .fillMaxSize()
-                                                        .clip(RoundedCornerShape(8.dp))
-                                                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                                                    showArtwork = uiState.showArtwork
-                                                )
-                                                if (isCurrentSong) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxSize()
-                                                            .clip(RoundedCornerShape(8.dp))
-                                                            .background(Color.Black.copy(alpha = 0.4f)),
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        PlayingIndicator(
-                                                            isPlaying = isPlaying,
-                                                            modifier = Modifier.size(24.dp)
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    },
-                                    trailingContent = {
-                                        IconButton(onClick = { selectedSongForOptions = song }) {
-                                            Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
                                         }
                                     }
                                 )

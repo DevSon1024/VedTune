@@ -99,6 +99,7 @@ class SongsViewModel @Inject constructor(
             SortBy.ARTIST -> if (sortOrder == SortOrder.ASCENDING) filtered.sortedBy { it.artist.lowercase() } else filtered.sortedByDescending { it.artist.lowercase() }
             SortBy.ALBUM -> if (sortOrder == SortOrder.ASCENDING) filtered.sortedBy { it.album.lowercase() } else filtered.sortedByDescending { it.album.lowercase() }
             SortBy.DATE_ADDED -> if (sortOrder == SortOrder.ASCENDING) filtered.sortedBy { it.dateAdded } else filtered.sortedByDescending { it.dateAdded }
+            SortBy.DURATION -> if (sortOrder == SortOrder.ASCENDING) filtered.sortedBy { it.duration } else filtered.sortedByDescending { it.duration }
         }
 
         sorted
