@@ -115,3 +115,22 @@ fun VedTuneLoadingState(
         }
     }
 }
+
+/**
+ * High-performance state transition wrapper for switching between loading, empty, and populated content.
+ */
+@Composable
+fun <T> VedTuneContentTransition(
+    targetState: T,
+    modifier: Modifier = Modifier,
+    content: @Composable (T) -> Unit
+) {
+    androidx.compose.animation.Crossfade(
+        targetState = targetState,
+        animationSpec = com.devson.vedtune.ui.theme.VedTuneMotion.standardTween(com.devson.vedtune.ui.theme.VedTuneMotion.DurationMedium),
+        modifier = modifier,
+        label = "StateContentTransition"
+    ) { state ->
+        content(state)
+    }
+}

@@ -1,13 +1,21 @@
 package com.devson.vedtune.ui.player.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.filled.Favorite
@@ -19,6 +27,8 @@ import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -52,7 +62,7 @@ fun ActionControlsStrip(
 ) {
     // Favorite pulse animation
     val favScale by animateFloatAsState(
-        targetValue = if (isFav) 1.2f else 1f,
+        targetValue = if (isFav) 1.25f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow
@@ -70,19 +80,32 @@ fun ActionControlsStrip(
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xxs),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Favorite Button
-            VedTuneIconButton(
-                icon = if (isFav) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                contentDescription = if (isFav) "Remove from Favorites" else "Add to Favorites",
+            // Favorite Button with Bouncy Spring and Morph
+            IconButton(
                 onClick = onFavClick,
-                iconSize = VedTuneIconSizes.Medium,
-                touchTargetSize = 44.dp,
-                tint = if (isFav) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.graphicsLayer {
-                    scaleX = favScale
-                    scaleY = favScale
+                modifier = Modifier
+                    .size(44.dp)
+                    .graphicsLayer {
+                        scaleX = favScale
+                        scaleY = favScale
+                    }
+            ) {
+                AnimatedContent(
+                    targetState = isFav,
+                    transitionSpec = {
+                        (scaleIn(initialScale = 0.7f) + fadeIn(tween(150)))
+                            .togetherWith(scaleOut(targetScale = 0.7f) + fadeOut(tween(150)))
+                    },
+                    label = "FavIconTransition"
+                ) { favorite ->
+                    Icon(
+                        imageVector = if (favorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = if (favorite) "Remove from Favorites" else "Add to Favorites",
+                        tint = if (favorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(VedTuneIconSizes.Medium)
+                    )
                 }
-            )
+            }
 
             // Playlist Add Button
             VedTuneIconButton(

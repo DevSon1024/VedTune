@@ -6,6 +6,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -96,14 +97,31 @@ sealed class Screen(val route: String) {
 }
 
 private val horizontalEnterTransition: AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.() -> androidx.compose.animation.EnterTransition = {
-    fadeIn(animationSpec = tween(200)) + slideInHorizontally(
-        initialOffsetX = { it / 8 },
+    slideInHorizontally(
+        initialOffsetX = { it / 6 },
         animationSpec = tween(250, easing = FastOutSlowInEasing)
-    )
+    ) + fadeIn(animationSpec = tween(200))
 }
 
 private val horizontalExitTransition: AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.() -> androidx.compose.animation.ExitTransition = {
-    fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing))
+    slideOutHorizontally(
+        targetOffsetX = { -it / 6 },
+        animationSpec = tween(250, easing = FastOutSlowInEasing)
+    ) + fadeOut(animationSpec = tween(180))
+}
+
+private val horizontalPopEnterTransition: AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.() -> androidx.compose.animation.EnterTransition = {
+    slideInHorizontally(
+        initialOffsetX = { -it / 6 },
+        animationSpec = tween(250, easing = FastOutSlowInEasing)
+    ) + fadeIn(animationSpec = tween(200))
+}
+
+private val horizontalPopExitTransition: AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.() -> androidx.compose.animation.ExitTransition = {
+    slideOutHorizontally(
+        targetOffsetX = { it / 6 },
+        animationSpec = tween(250, easing = FastOutSlowInEasing)
+    ) + fadeOut(animationSpec = tween(180))
 }
 
 @Composable
@@ -179,7 +197,9 @@ fun NavGraph(
         composable(
             route = Screen.FolderSettings.route,
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: SettingsViewModel = hiltViewModel()
             FolderSettingsScreen(
@@ -190,7 +210,9 @@ fun NavGraph(
         composable(
             route = Screen.AppearanceSettings.route,
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: SettingsViewModel = hiltViewModel()
             AppearanceSettingsScreen(
@@ -201,7 +223,9 @@ fun NavGraph(
         composable(
             route = Screen.PlayerInterfaceSettings.route,
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: SettingsViewModel = hiltViewModel()
             PlayerInterfaceSettingScreen(
@@ -212,7 +236,9 @@ fun NavGraph(
         composable(
             route = Screen.PlaybackSettings.route,
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: SettingsViewModel = hiltViewModel()
             PlaybackSettingsScreen(
@@ -223,7 +249,9 @@ fun NavGraph(
         composable(
             route = Screen.AudioSettings.route,
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: SettingsViewModel = hiltViewModel()
             AudioSettingsScreen(
@@ -237,7 +265,9 @@ fun NavGraph(
         composable(
             route = Screen.EqualizerSettings.route,
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: SettingsViewModel = hiltViewModel()
             EqualizerScreen(
@@ -248,7 +278,9 @@ fun NavGraph(
         composable(
             route = Screen.LibrarySettings.route,
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: SettingsViewModel = hiltViewModel()
             LibrarySettingsScreen(
@@ -265,7 +297,9 @@ fun NavGraph(
         composable(
             route = Screen.NotificationSettings.route,
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: SettingsViewModel = hiltViewModel()
             NotificationSettingsScreen(
@@ -276,7 +310,9 @@ fun NavGraph(
         composable(
             route = Screen.StorageSettings.route,
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: SettingsViewModel = hiltViewModel()
             StorageSettingsScreen(
@@ -287,7 +323,9 @@ fun NavGraph(
         composable(
             route = Screen.PrivacySettings.route,
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: SettingsViewModel = hiltViewModel()
             PrivacySettingsScreen(
@@ -301,7 +339,9 @@ fun NavGraph(
                 navArgument("artistName") { type = NavType.StringType }
             ),
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: ArtistDetailsViewModel = hiltViewModel()
             ArtistDetailsScreen(
@@ -316,14 +356,20 @@ fun NavGraph(
             enterTransition = {
                 slideIntoContainer(
                     AnimatedContentTransitionScope.SlideDirection.Up,
-                    animationSpec = tween(250, easing = FastOutSlowInEasing)
-                )
+                    animationSpec = tween(280, easing = FastOutSlowInEasing)
+                ) + fadeIn(animationSpec = tween(200))
             },
             exitTransition = {
                 slideOutOfContainer(
                     AnimatedContentTransitionScope.SlideDirection.Down,
                     animationSpec = tween(250, easing = FastOutSlowInEasing)
-                )
+                ) + fadeOut(animationSpec = tween(180))
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Down,
+                    animationSpec = tween(250, easing = FastOutSlowInEasing)
+                ) + fadeOut(animationSpec = tween(180))
             }
         ) {
             val viewModel: PlayerViewModel = hiltViewModel()
@@ -354,7 +400,9 @@ fun NavGraph(
                 navArgument("albumId") { type = NavType.LongType }
             ),
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: AlbumDetailsViewModel = hiltViewModel()
             AlbumDetailsScreen(
@@ -370,7 +418,9 @@ fun NavGraph(
                 navArgument("playlistId") { type = NavType.LongType }
             ),
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: PlaylistDetailsViewModel = hiltViewModel()
             PlaylistDetailsScreen(
@@ -386,7 +436,9 @@ fun NavGraph(
                 navArgument("songId") { type = NavType.LongType }
             ),
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: EditTagsViewModel = hiltViewModel()
             EditTagsScreen(
@@ -403,7 +455,9 @@ fun NavGraph(
                 navArgument("songId") { type = NavType.LongType }
             ),
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: LyricsEditorViewModel = hiltViewModel()
             LyricsEditorScreen(
@@ -414,7 +468,9 @@ fun NavGraph(
         composable(
             route = Screen.LyricsConverter.route,
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             LyricsConverterScreen(
                 onNavigateBack = { navController.popBackStackSafe() }
@@ -426,7 +482,9 @@ fun NavGraph(
                 navArgument("genreName") { type = NavType.StringType }
             ),
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: GenreDetailsViewModel = hiltViewModel()
             GenreDetailsScreen(
@@ -439,7 +497,9 @@ fun NavGraph(
         composable(
             route = Screen.About.route,
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             AboutScreen(
                 onBack = { navController.popBackStackSafe() },
@@ -449,7 +509,9 @@ fun NavGraph(
         composable(
             route = Screen.Credits.route,
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition
+            exitTransition = horizontalExitTransition,
+            popEnterTransition = horizontalPopEnterTransition,
+            popExitTransition = horizontalPopExitTransition
         ) {
             CreditsScreen(
                 onBack = { navController.popBackStackSafe() }

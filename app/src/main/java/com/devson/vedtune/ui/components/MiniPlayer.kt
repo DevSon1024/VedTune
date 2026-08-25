@@ -4,14 +4,22 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -232,14 +240,43 @@ fun MiniPlayer(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
-                            VedTuneIconButton(
-                                icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (isPlaying) "Pause" else "Play",
-                                onClick = onPlayPauseClick,
-                                iconSize = VedTuneIconSizes.Large,
-                                touchTargetSize = 40.dp,
-                                tint = MaterialTheme.colorScheme.primary
+                            val playPauseInteractionSource = remember { MutableInteractionSource() }
+                            val isPlayPausePressed by playPauseInteractionSource.collectIsPressedAsState()
+                            val playPauseScale by animateFloatAsState(
+                                targetValue = if (isPlayPausePressed) 0.85f else 1f,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                ),
+                                label = "MiniPlayerPlayPauseBounce"
                             )
+
+                            androidx.compose.material3.IconButton(
+                                onClick = onPlayPauseClick,
+                                interactionSource = playPauseInteractionSource,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .graphicsLayer {
+                                        scaleX = playPauseScale
+                                        scaleY = playPauseScale
+                                    }
+                            ) {
+                                AnimatedContent(
+                                    targetState = isPlaying,
+                                    transitionSpec = {
+                                        (scaleIn(initialScale = 0.8f) + fadeIn(VedTuneMotion.standardTween(VedTuneMotion.DurationShort)))
+                                            .togetherWith(scaleOut(targetScale = 0.8f) + fadeOut(VedTuneMotion.standardTween(VedTuneMotion.DurationShort)))
+                                    },
+                                    label = "MiniPlayerPlayPauseIcon"
+                                ) { playing ->
+                                    androidx.compose.material3.Icon(
+                                        imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        contentDescription = if (playing) "Pause" else "Play",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(VedTuneIconSizes.Large)
+                                    )
+                                }
+                            }
 
                             VedTuneIconButton(
                                 icon = Icons.Default.SkipNext,

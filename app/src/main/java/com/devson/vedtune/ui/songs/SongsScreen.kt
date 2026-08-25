@@ -36,10 +36,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.repeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.RepeatMode
+import com.devson.vedtune.ui.theme.VedTuneMotion
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -213,126 +215,142 @@ fun SongsScreen(
             onRefresh = { viewModel.refresh() },
             modifier = Modifier.weight(1f)
         ) {
-            when {
-                !hasPermission -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "Permission Required",
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "Permission Required",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "VedTune needs access to your audio files to build your music library.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(24.dp))
-                            Button(onClick = { launcher.launch(permission) }) {
-                                Text("Grant Permission")
+            val contentState = when {
+                !hasPermission -> "PERMISSION_DENIED"
+                uiState.isLoading -> "LOADING"
+                uiState.songs.isEmpty() -> "EMPTY"
+                uiState.isGridView -> "GRID"
+                else -> "LIST"
+            }
+
+            Crossfade(
+                targetState = contentState,
+                animationSpec = VedTuneMotion.standardTween(VedTuneMotion.DurationMedium),
+                label = "SongsContentStateTransition",
+                modifier = Modifier.fillMaxSize()
+            ) { state ->
+                when (state) {
+                    "PERMISSION_DENIED" -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = "Permission Required",
+                                    modifier = Modifier.size(64.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Permission Required",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "VedTune needs access to your audio files to build your music library.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
+                                Button(onClick = { launcher.launch(permission) }) {
+                                    Text("Grant Permission")
+                                }
                             }
                         }
                     }
-                }
-                uiState.isLoading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                    "LOADING" -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
                     }
-                }
-                uiState.songs.isEmpty() -> {
-                    VedTuneEmptyState(
-                        icon = Icons.Default.MusicNote,
-                        title = "No Music Files Found",
-                        description = "Pull down to scan your storage or add audio files to your device.",
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-                uiState.isGridView -> {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(uiState.viewPreferences.gridSpanCount),
-                            state = lazyGridState,
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(
-                                start = 8.dp,
-                                end = 8.dp,
-                                top = 8.dp,
-                                bottom = contentPadding.calculateBottomPadding() + 88.dp
-                            )
-                        ) {
-                            items(
-                                items = uiState.songs,
-                                key = { it.id },
-                                contentType = { "song_grid_item" }
-                            ) { song ->
-                                val isCurrentSong = song.id == currentSongId
-                                val subtitle = if (song.album.isNotBlank() && song.album != "Unknown Album") {
-                                    "${song.artist} • ${song.album}"
-                                } else {
-                                    song.artist
-                                }
-                                com.devson.vedtune.ui.components.VedTuneGridCard(
-                                    primaryText = song.title,
-                                    secondaryText = subtitle,
-                                    onClick = { viewModel.playSong(song) },
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                    gridCount = uiState.viewPreferences.gridSpanCount,
-                                    showArtwork = uiState.viewPreferences.showAlbumArt,
-                                    modifier = Modifier.drawBehind {
-                                        if (highlightedSongId == song.id) {
-                                            drawRect(
-                                                color = highlightColor,
-                                                alpha = highlightAlpha.value
-                                            )
-                                        }
-                                    },
-                                    trailingContent = {
-                                        IconButton(onClick = { selectedSongForOptions = song }) {
-                                            Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
-                                        }
+                    "EMPTY" -> {
+                        VedTuneEmptyState(
+                            icon = Icons.Default.MusicNote,
+                            title = "No Music Files Found",
+                            description = "Pull down to scan your storage or add audio files to your device.",
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    "GRID" -> {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(uiState.viewPreferences.gridSpanCount),
+                                state = lazyGridState,
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                contentPadding = PaddingValues(
+                                    start = 8.dp,
+                                    end = 8.dp,
+                                    top = 8.dp,
+                                    bottom = contentPadding.calculateBottomPadding() + 88.dp
+                                )
+                            ) {
+                                items(
+                                    items = uiState.songs,
+                                    key = { it.id },
+                                    contentType = { "song_grid_item" }
+                                ) { song ->
+                                    val isCurrentSong = song.id == currentSongId
+                                    val subtitle = if (song.album.isNotBlank() && song.album != "Unknown Album") {
+                                        "${song.artist} • ${song.album}"
+                                    } else {
+                                        song.artist
                                     }
-                                ) {
-                                    if (uiState.viewPreferences.showAlbumArt) {
-                                        Box(
-                                            modifier = Modifier.fillMaxSize()
-                                        ) {
-                                            SongArtwork(
-                                                albumId = song.albumId,
-                                                lastModified = song.dateModified,
-                                                fallbackIcon = Icons.Default.MusicNote,
-                                                showFallbackAnimation = false,
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .clip(RoundedCornerShape(12.dp))
-                                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                                                showArtwork = uiState.showArtwork
-                                            )
-                                            if (isCurrentSong) {
-                                                Box(
+                                    com.devson.vedtune.ui.components.VedTuneGridCard(
+                                        primaryText = song.title,
+                                        secondaryText = subtitle,
+                                        onClick = { viewModel.playSong(song) },
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                        gridCount = uiState.viewPreferences.gridSpanCount,
+                                        showArtwork = uiState.viewPreferences.showAlbumArt,
+                                        trailingContent = {
+                                            IconButton(onClick = { selectedSongForOptions = song }) {
+                                                Icon(
+                                                    imageVector = Icons.Default.MoreVert,
+                                                    contentDescription = "Options"
+                                                )
+                                            }
+                                        },
+                                        modifier = Modifier.drawBehind {
+                                            if (highlightedSongId == song.id) {
+                                                drawRect(
+                                                    color = highlightColor,
+                                                    alpha = highlightAlpha.value
+                                                )
+                                            }
+                                        }
+                                    ) {
+                                        if (uiState.viewPreferences.showAlbumArt) {
+                                            Box(modifier = Modifier.fillMaxSize()) {
+                                                SongArtwork(
+                                                    albumId = song.albumId,
+                                                    lastModified = song.dateModified,
+                                                    fallbackIcon = Icons.Default.MusicNote,
+                                                    showFallbackAnimation = false,
                                                     modifier = Modifier
                                                         .fillMaxSize()
                                                         .clip(RoundedCornerShape(12.dp))
-                                                        .background(Color.Black.copy(alpha = 0.4f)),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    PlayingIndicator(
-                                                        isPlaying = isPlaying,
-                                                        modifier = Modifier.size(32.dp)
-                                                    )
+                                                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                                                    showArtwork = uiState.viewPreferences.showAlbumArt
+                                                )
+                                                if (isCurrentSong) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxSize()
+                                                            .clip(RoundedCornerShape(12.dp))
+                                                            .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.4f)),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        PlayingIndicator(
+                                                            isPlaying = isPlaying,
+                                                            modifier = Modifier.size(32.dp)
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
@@ -341,41 +359,41 @@ fun SongsScreen(
                             }
                         }
                     }
-                }
-                else -> {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        LazyColumn(
-                            state = lazyListState,
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                            contentPadding = PaddingValues(
-                                start = 0.dp,
-                                end = 0.dp,
-                                top = 8.dp,
-                                bottom = contentPadding.calculateBottomPadding() + 88.dp
-                            )
-                        ) {
-                            items(
-                                items = uiState.songs,
-                                key = { it.id },
-                                contentType = { "song_list_item" }
-                            ) { song ->
-                                VedTuneSongRow(
-                                    song = song,
-                                    isCurrentSong = song.id == currentSongId,
-                                    isPlaying = isPlaying,
-                                    showArtwork = uiState.viewPreferences.showAlbumArt,
-                                    onClick = { viewModel.playSong(song) },
-                                    onOptionsClick = { selectedSongForOptions = song },
-                                    modifier = Modifier.drawBehind {
-                                        if (highlightedSongId == song.id) {
-                                            drawRect(
-                                                color = highlightColor,
-                                                alpha = highlightAlpha.value
-                                            )
-                                        }
-                                    }
+                    else -> {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            LazyColumn(
+                                state = lazyListState,
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(2.dp),
+                                contentPadding = PaddingValues(
+                                    start = 0.dp,
+                                    end = 0.dp,
+                                    top = 8.dp,
+                                    bottom = contentPadding.calculateBottomPadding() + 88.dp
                                 )
+                            ) {
+                                items(
+                                    items = uiState.songs,
+                                    key = { it.id },
+                                    contentType = { "song_list_item" }
+                                ) { song ->
+                                    VedTuneSongRow(
+                                        song = song,
+                                        isCurrentSong = song.id == currentSongId,
+                                        isPlaying = isPlaying,
+                                        showArtwork = uiState.viewPreferences.showAlbumArt,
+                                        onClick = { viewModel.playSong(song) },
+                                        onOptionsClick = { selectedSongForOptions = song },
+                                        modifier = Modifier.drawBehind {
+                                            if (highlightedSongId == song.id) {
+                                                drawRect(
+                                                    color = highlightColor,
+                                                    alpha = highlightAlpha.value
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
