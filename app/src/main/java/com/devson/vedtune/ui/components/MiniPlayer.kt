@@ -3,8 +3,6 @@ package com.devson.vedtune.ui.components
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -22,7 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -43,9 +40,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -56,6 +54,10 @@ import com.devson.vedtune.ui.theme.VedTuneShapeTokens
 import com.devson.vedtune.ui.theme.spacing
 import kotlinx.coroutines.launch
 
+/**
+ * Standardized, reusable Mini Player for VedTune.
+ * Provides accessible controls, smooth track change transitions, swipe gesture support, and battery-efficient progress updates.
+ */
 @Composable
 fun MiniPlayer(
     song: Song?,
@@ -70,26 +72,11 @@ fun MiniPlayer(
     showProgress: Boolean = true,
     isGestureEnabled: Boolean = false
 ) {
-    val rotationAngle = remember { Animatable(0f) }
-    LaunchedEffect(isPlaying) {
-        if (isPlaying) {
-            while (true) {
-                val startValue = rotationAngle.value % 360f
-                rotationAngle.snapTo(startValue)
-                rotationAngle.animateTo(
-                    targetValue = startValue + 360f,
-                    animationSpec = tween(durationMillis = 15000, easing = LinearEasing)
-                )
-            }
-        }
-    }
-
     val scale = remember { Animatable(1f) }
     val scope = rememberCoroutineScope()
     var isNext by remember { mutableStateOf(true) }
 
-    LaunchedEffect(song) {
-        // Reset to true so natural progression transitions forward
+    LaunchedEffect(song?.id) {
         isNext = true
     }
 
@@ -106,13 +93,13 @@ fun MiniPlayer(
         modifier = modifier
     ) {
         if (song != null) {
+            val accessibilityLabel = "Now playing: ${song.title} by ${song.artist}"
+
             Card(
                 modifier = Modifier
                     .padding(
-                        start = MaterialTheme.spacing.l,
-                        end = MaterialTheme.spacing.l,
-                        bottom = MaterialTheme.spacing.m,
-                        top = MaterialTheme.spacing.s
+                        horizontal = MaterialTheme.spacing.m,
+                        vertical = MaterialTheme.spacing.xs
                     )
                     .fillMaxWidth()
                     .height(64.dp)
@@ -121,23 +108,26 @@ fun MiniPlayer(
                         scaleX = scale.value
                         scaleY = scale.value
                     }
+                    .semantics {
+                        contentDescription = accessibilityLabel
+                    }
                     .then(
                         if (isGestureEnabled) {
                             Modifier
-                                .pointerInput(Unit) {
+                                .pointerInput(song.id) {
                                     detectTapGestures(
                                         onTap = { onClick() },
                                         onDoubleTap = {
                                             onPlayPauseClick()
                                             scope.launch {
-                                                scale.animateTo(0.90f, animationSpec = VedTuneMotion.standardTween(100))
-                                                scale.animateTo(1.05f, animationSpec = VedTuneMotion.standardTween(100))
+                                                scale.animateTo(0.92f, animationSpec = VedTuneMotion.standardTween(80))
+                                                scale.animateTo(1.04f, animationSpec = VedTuneMotion.standardTween(100))
                                                 scale.animateTo(1f, animationSpec = VedTuneMotion.standardTween(80))
                                             }
                                         }
                                     )
                                 }
-                                .pointerInput(Unit) {
+                                .pointerInput(song.id) {
                                     var dragAccumulator = 0f
                                     detectHorizontalDragGestures(
                                         onDragStart = { dragAccumulator = 0f },
@@ -146,7 +136,7 @@ fun MiniPlayer(
                                             dragAccumulator += dragAmount
                                         },
                                         onDragEnd = {
-                                            val threshold = 120f // pixels
+                                            val threshold = 100f
                                             if (dragAccumulator < -threshold) {
                                                 isNext = true
                                                 onSkipNextClick()
@@ -165,46 +155,63 @@ fun MiniPlayer(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = MaterialTheme.spacing.l, vertical = MaterialTheme.spacing.s),
+                            .padding(
+                                start = MaterialTheme.spacing.s,
+                                end = MaterialTheme.spacing.xs,
+                                top = MaterialTheme.spacing.xs,
+                                bottom = MaterialTheme.spacing.xs
+                            ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Animated track information section (Artwork, Title, Artist)
+                        // Artwork & Track Details with smooth horizontal transition
                         AnimatedContent(
                             targetState = song,
                             transitionSpec = {
                                 VedTuneMotion.horizontalTrackTransition(isNext)
                             },
-                            label = "track_transition",
-                            modifier = Modifier.weight(1f)
+                            label = "mini_player_track_content",
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable(enabled = isGestureEnabled, onClick = onClick)
                         ) { targetSong ->
                             Row(
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                SongArtwork(
-                                    albumId = targetSong.albumId,
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .rotate(rotationAngle.value)
-                                        .clip(CircleShape),
-                                    showArtwork = showArtwork
-                                )
+                                if (showArtwork) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .clip(VedTuneShapeTokens.Small)
+                                    ) {
+                                        SongArtwork(
+                                            albumId = targetSong.albumId,
+                                            lastModified = targetSong.dateModified,
+                                            modifier = Modifier.fillMaxSize(),
+                                            showArtwork = true
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.m))
+                                }
 
-                                Spacer(modifier = Modifier.width(MaterialTheme.spacing.m))
-
-                                Column(modifier = Modifier.weight(1f)) {
+                                Column(
+                                    modifier = Modifier.weight(1f)
+                                ) {
                                     Text(
                                         text = targetSong.title,
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
+                                    Spacer(modifier = Modifier.height(MaterialTheme.spacing.xxs))
                                     Text(
                                         text = targetSong.artist,
                                         style = MaterialTheme.typography.bodySmall,
@@ -216,55 +223,57 @@ fun MiniPlayer(
                             }
                         }
 
-                        // Statically rendered controls only if gesture mode is disabled
-                        if (!isGestureEnabled) {
-                            Spacer(modifier = Modifier.width(MaterialTheme.spacing.s))
-
-                            VedTuneIconButton(
-                                icon = Icons.Default.SkipPrevious,
-                                contentDescription = "Skip Previous",
-                                onClick = {
-                                    isNext = false
-                                    onSkipPreviousClick()
-                                },
-                                iconSize = VedTuneIconSizes.Medium,
-                                touchTargetSize = 36.dp,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        // Playback Controls
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (!isGestureEnabled) {
+                                VedTuneIconButton(
+                                    icon = Icons.Default.SkipPrevious,
+                                    contentDescription = "Previous track",
+                                    onClick = {
+                                        isNext = false
+                                        onSkipPreviousClick()
+                                    },
+                                    iconSize = VedTuneIconSizes.Medium,
+                                    touchTargetSize = 48.dp,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
 
                             VedTuneIconButton(
                                 icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                 contentDescription = if (isPlaying) "Pause" else "Play",
                                 onClick = onPlayPauseClick,
                                 iconSize = VedTuneIconSizes.Large,
-                                touchTargetSize = 40.dp,
+                                touchTargetSize = 48.dp,
                                 tint = MaterialTheme.colorScheme.primary
                             )
 
                             VedTuneIconButton(
                                 icon = Icons.Default.SkipNext,
-                                contentDescription = "Skip Next",
+                                contentDescription = "Next track",
                                 onClick = {
                                     isNext = true
                                     onSkipNextClick()
                                 },
                                 iconSize = VedTuneIconSizes.Medium,
-                                touchTargetSize = 36.dp,
+                                touchTargetSize = 48.dp,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
 
-                    // Progress indicator aligned at the bottom
+                    // Progress indicator aligned at the bottom (lambda-based for zero recomposition overhead)
                     if (showProgress) {
                         LinearProgressIndicator(
-                            progress = { progress },
+                            progress = { progress.coerceIn(0f, 1f) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(3.dp)
+                                .height(2.5.dp)
                                 .align(Alignment.BottomCenter),
                             color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                         )
                     }
                 }
