@@ -637,11 +637,13 @@ fun AudioSettingsScreen(
     }
 
     // Diagnostics Dialog
-    if (showDiagnosticsDialog && diagnostics != null) {
-        AudioDiagnosticsDialog(
-            diagnostics = diagnostics!!,
-            onDismiss = { showDiagnosticsDialog = false }
-        )
+    if (showDiagnosticsDialog) {
+        diagnostics?.let { diag ->
+            AudioDiagnosticsDialog(
+                diagnostics = diag,
+                onDismiss = { showDiagnosticsDialog = false }
+            )
+        }
     }
 
     // Audio Feature Explanation Dialog

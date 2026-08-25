@@ -29,6 +29,7 @@ object VedTuneShapeTokens {
     val ArtworkThumbnail = RoundedCornerShape(8.dp)
     val ArtworkCard = RoundedCornerShape(12.dp)
     val Card = RoundedCornerShape(16.dp)
+    val Search = RoundedCornerShape(16.dp)
     val Dialog = RoundedCornerShape(24.dp)
     val BottomSheet = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     val MiniPlayer = RoundedCornerShape(32.dp)

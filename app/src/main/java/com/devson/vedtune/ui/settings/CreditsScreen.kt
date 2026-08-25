@@ -19,11 +19,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -52,6 +50,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.devson.vedtune.ui.theme.VedTuneShapeTokens
+import com.devson.vedtune.ui.theme.spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,11 +97,11 @@ fun CreditsScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(horizontal = MaterialTheme.spacing.l),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.l),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.xs))
 
             CreditsHeroCard()
 
@@ -113,14 +113,14 @@ fun CreditsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .widthIn(max = 600.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m)
                 ) {
                     Text(
                         text = "Libraries & Dependencies",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+                        modifier = Modifier.padding(start = MaterialTheme.spacing.xs, bottom = 4.dp)
                     )
 
                     val libraries = remember { getOpenSourceLibraries() }
@@ -128,7 +128,7 @@ fun CreditsScreen(
                         LibraryCard(context = context, library = library)
                     }
 
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(MaterialTheme.spacing.xl))
                 }
             }
         }
@@ -141,16 +141,16 @@ private fun CreditsHeroCard() {
         modifier = Modifier
             .fillMaxWidth()
             .widthIn(max = 600.dp),
-        shape = RoundedCornerShape(24.dp),
+        shape = VedTuneShapeTokens.Card,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
         tonalElevation = 4.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 24.dp, horizontal = 16.dp),
+                .padding(vertical = MaterialTheme.spacing.xl, horizontal = MaterialTheme.spacing.l),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m)
         ) {
             Box(
                 modifier = Modifier
@@ -187,7 +187,7 @@ private fun CreditsHeroCard() {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 8.dp)
+                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.s)
             )
         }
     }
@@ -201,15 +201,15 @@ private fun LibraryCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(VedTuneShapeTokens.Card)
             .clickable { openUrl(context, library.url) },
-        shape = RoundedCornerShape(20.dp),
+        shape = VedTuneShapeTokens.Card,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
         tonalElevation = 2.dp
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(MaterialTheme.spacing.l),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.s)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -224,12 +224,12 @@ private fun LibraryCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.s),
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(top = 4.dp)
                     ) {
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = VedTuneShapeTokens.Pill,
                             color = MaterialTheme.colorScheme.secondaryContainer
                         ) {
                             Text(
@@ -241,7 +241,7 @@ private fun LibraryCard(
                             )
                         }
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = VedTuneShapeTokens.Pill,
                             color = MaterialTheme.colorScheme.tertiaryContainer
                         ) {
                             Text(

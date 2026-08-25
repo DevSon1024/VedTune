@@ -1,10 +1,10 @@
 package com.devson.vedtune.ui.artists
 
-import com.devson.vedtune.core.formatDuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,9 +18,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,12 +35,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.devson.vedtune.core.formatDuration
 import com.devson.vedtune.domain.model.Song
-import com.devson.vedtune.ui.components.SongArtwork
-import com.devson.vedtune.ui.components.PlayingIndicator
-import com.devson.vedtune.ui.components.MiniPlayer
 import com.devson.vedtune.ui.MainViewModel
-import androidx.compose.foundation.layout.PaddingValues
+import com.devson.vedtune.ui.components.MiniPlayer
+import com.devson.vedtune.ui.components.PlayingIndicator
+import com.devson.vedtune.ui.components.SongArtwork
+import com.devson.vedtune.ui.components.VedTuneEmptyState
+import com.devson.vedtune.ui.components.VedTunePrimaryButton
+import com.devson.vedtune.ui.components.VedTuneSecondaryButton
+import com.devson.vedtune.ui.theme.VedTuneShapeTokens
+import com.devson.vedtune.ui.theme.spacing
 import java.util.Locale
 
 @Composable
@@ -79,7 +85,7 @@ fun ArtistDetailsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = MaterialTheme.spacing.s),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBackClick) {
@@ -88,7 +94,7 @@ fun ArtistDetailsScreen(
                         contentDescription = "Go Back"
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(MaterialTheme.spacing.s))
                 Text(
                     text = artistDetails?.name ?: "Artist Details",
                     style = MaterialTheme.typography.titleLarge,
@@ -99,24 +105,24 @@ fun ArtistDetailsScreen(
             }
 
             if (songs.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "No songs by this artist")
-                }
+                VedTuneEmptyState(
+                    icon = Icons.Default.Person,
+                    title = "No Songs by Artist",
+                    description = "This artist has no audio tracks in your library.",
+                    modifier = Modifier.fillMaxSize()
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
-                        bottom = if (currentSong != null) 96.dp else 16.dp
+                        bottom = if (currentSong != null) 96.dp else MaterialTheme.spacing.l
                     )
                 ) {
                     item {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(24.dp),
+                                .padding(MaterialTheme.spacing.l),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             val distinctAlbums = remember(songs) {
@@ -125,7 +131,7 @@ fun ArtistDetailsScreen(
 
                             ElevatedCard(
                                 modifier = Modifier.size(200.dp),
-                                shape = MaterialTheme.shapes.extraLarge
+                                shape = VedTuneShapeTokens.Card
                             ) {
                                 if (distinctAlbums.isEmpty()) {
                                     Box(
@@ -190,7 +196,7 @@ fun ArtistDetailsScreen(
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.m))
 
                             Text(
                                 text = artistDetails?.name ?: "Unknown Artist",
@@ -208,26 +214,26 @@ fun ArtistDetailsScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.l))
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Button(
+                                VedTunePrimaryButton(
+                                    text = "Play",
+                                    icon = Icons.Default.PlayArrow,
                                     onClick = { viewModel.playArtist() },
                                     modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(text = "Play")
-                                }
+                                )
 
-                                FilledTonalButton(
+                                VedTuneSecondaryButton(
+                                    text = "Shuffle",
+                                    icon = Icons.Default.Shuffle,
                                     onClick = { viewModel.shuffleArtist() },
                                     modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(text = "Shuffle")
-                                }
+                                )
                             }
                         }
                     }
@@ -279,16 +285,16 @@ fun ArtistDetailsScreen(
 fun ArtistTrackItem(
     index: Int,
     song: Song,
+    isCurrentSong: Boolean,
+    isPlaying: Boolean,
     onClick: () -> Unit,
-    isCurrentSong: Boolean = false,
-    isPlaying: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+            .padding(horizontal = MaterialTheme.spacing.l, vertical = MaterialTheme.spacing.s),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (isCurrentSong) {
@@ -329,7 +335,7 @@ fun ArtistTrackItem(
             )
         }
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(MaterialTheme.spacing.m))
 
         Text(
             text = formatDuration(song.duration),

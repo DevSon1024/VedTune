@@ -608,8 +608,7 @@ fun SongsScreen(
         }
     }
 
-    if (showInfoDialogSong != null) {
-        val song = showInfoDialogSong!!
+    showInfoDialogSong?.let { song ->
         SongInfoBottomSheet(
             song = song,
             onNavigateToAlbum = onNavigateToAlbum,
@@ -646,8 +645,7 @@ fun SongsScreen(
         )
     }
 
-    if (showPreviewDialogSong != null) {
-        val song = showPreviewDialogSong!!
+    showPreviewDialogSong?.let { song ->
         SongPreviewDialog(
             song = song,
             viewModel = viewModel,
@@ -655,28 +653,18 @@ fun SongsScreen(
         )
     }
 
-    if (showDeleteConfirmDialogSong != null) {
-        val song = showDeleteConfirmDialogSong!!
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showDeleteConfirmDialogSong = null },
-            title = { Text("Delete Permanently") },
-            text = { Text("Are you sure you want to permanently delete \"${song.title}\" from your device? This action cannot be undone.") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.deleteSongPermanently(context, song)
-                        showDeleteConfirmDialogSong = null
-                    },
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Delete")
-                }
+    showDeleteConfirmDialogSong?.let { song ->
+        com.devson.vedtune.ui.components.VedTuneConfirmDialog(
+            title = "Delete Permanently",
+            message = "Are you sure you want to permanently delete \"${song.title}\" from your device? This action cannot be undone.",
+            confirmText = "Delete",
+            dismissText = "Cancel",
+            isDestructive = true,
+            onConfirm = {
+                viewModel.deleteSongPermanently(context, song)
+                showDeleteConfirmDialogSong = null
             },
-            dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { showDeleteConfirmDialogSong = null }) {
-                    Text("Cancel")
-                }
-            }
+            onDismiss = { showDeleteConfirmDialogSong = null }
         )
     }
 }
@@ -740,7 +728,7 @@ fun SongPreviewDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            shape = MaterialTheme.shapes.extraLarge,
+            shape = VedTuneShapeTokens.Dialog,
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(
@@ -763,7 +751,7 @@ fun SongPreviewDialog(
                     lastModified = song.dateModified,
                     modifier = Modifier
                         .size(140.dp)
-                        .clip(MaterialTheme.shapes.large)
+                        .clip(VedTuneShapeTokens.Card)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                 )
 

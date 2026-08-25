@@ -22,11 +22,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -62,6 +60,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.devson.vedtune.ui.theme.VedTuneShapeTokens
+import com.devson.vedtune.ui.theme.spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,10 +118,10 @@ fun AboutScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = MaterialTheme.spacing.l),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.l)
         ) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.xs))
 
             // 1. Brand / Identity Card
             AboutBrandCard(versionName = versionName, buildType = buildType)
@@ -145,7 +145,7 @@ fun AboutScreen(
             AboutSectionLabel(label = "Credits & Open Source")
             AboutCreditsCard(onClick = onNavigateToCredits)
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.xl))
         }
     }
 }
@@ -157,7 +157,7 @@ private fun AboutSectionLabel(label: String) {
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
         fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+        modifier = Modifier.padding(start = MaterialTheme.spacing.xs, bottom = 2.dp)
     )
 }
 
@@ -165,13 +165,13 @@ private fun AboutSectionLabel(label: String) {
 private fun AboutCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = VedTuneShapeTokens.Card,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
         tonalElevation = 2.dp
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(MaterialTheme.spacing.l),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m),
             content = content
         )
     }
@@ -184,16 +184,16 @@ private fun AboutBrandCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = VedTuneShapeTokens.Card,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
         tonalElevation = 4.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 24.dp, horizontal = 16.dp),
+                .padding(vertical = MaterialTheme.spacing.xl, horizontal = MaterialTheme.spacing.l),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.s)
         ) {
             // Gradient icon backplate
             Box(
@@ -234,11 +234,11 @@ private fun AboutBrandCard(
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(top = 4.dp)
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.s),
+                modifier = Modifier.padding(top = MaterialTheme.spacing.xs)
             ) {
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = VedTuneShapeTokens.Pill,
                     color = MaterialTheme.colorScheme.secondaryContainer
                 ) {
                     Text(
@@ -251,7 +251,7 @@ private fun AboutBrandCard(
                 }
 
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = VedTuneShapeTokens.Pill,
                     color = MaterialTheme.colorScheme.tertiaryContainer
                 ) {
                     Text(
@@ -291,7 +291,7 @@ private fun AboutDonateCard(context: Context) {
     val upiId = "devendraps0103@okicici"
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = VedTuneShapeTokens.Card,
         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
         border = BorderStroke(
             1.dp,
@@ -299,12 +299,12 @@ private fun AboutDonateCard(context: Context) {
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(MaterialTheme.spacing.l),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m)
             ) {
                 Box(
                     modifier = Modifier
@@ -335,17 +335,17 @@ private fun AboutDonateCard(context: Context) {
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(MaterialTheme.spacing.xs))
 
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = VedTuneShapeTokens.Medium,
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                        .padding(horizontal = MaterialTheme.spacing.m, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -370,8 +370,8 @@ private fun AboutDonateCard(context: Context) {
                             clipboard.setPrimaryClip(clip)
                             Toast.makeText(context, "UPI ID copied!", Toast.LENGTH_SHORT).show()
                         },
-                        shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        shape = VedTuneShapeTokens.Medium,
+                        contentPadding = PaddingValues(horizontal = MaterialTheme.spacing.m, vertical = MaterialTheme.spacing.s),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
@@ -438,11 +438,11 @@ private fun AboutCreditsCard(onClick: () -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
+                .clip(VedTuneShapeTokens.Medium)
                 .clickable(onClick = onClick)
                 .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m)
         ) {
             Box(
                 modifier = Modifier
@@ -516,11 +516,11 @@ private fun LinkRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(VedTuneShapeTokens.Small)
             .clickable(onClick = onClick)
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m)
     ) {
         Box(
             modifier = Modifier
@@ -556,3 +556,4 @@ private fun openUrl(context: Context, url: String) {
         Toast.makeText(context, "Could not open browser link", Toast.LENGTH_SHORT).show()
     }
 }
+

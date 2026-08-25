@@ -1,10 +1,10 @@
 package com.devson.vedtune.ui.albums
 
-import com.devson.vedtune.core.formatDuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,9 +18,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -28,19 +29,24 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.devson.vedtune.core.formatDuration
 import com.devson.vedtune.domain.model.Song
-import com.devson.vedtune.ui.components.SongArtwork
-import com.devson.vedtune.ui.components.PlayingIndicator
-import com.devson.vedtune.ui.components.MiniPlayer
 import com.devson.vedtune.ui.MainViewModel
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.runtime.remember
+import com.devson.vedtune.ui.components.MiniPlayer
+import com.devson.vedtune.ui.components.PlayingIndicator
+import com.devson.vedtune.ui.components.SongArtwork
+import com.devson.vedtune.ui.components.VedTuneEmptyState
+import com.devson.vedtune.ui.components.VedTunePrimaryButton
+import com.devson.vedtune.ui.components.VedTuneSecondaryButton
+import com.devson.vedtune.ui.theme.VedTuneShapeTokens
+import com.devson.vedtune.ui.theme.spacing
 import java.util.Locale
 
 @Composable
@@ -80,7 +86,7 @@ fun AlbumDetailsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = MaterialTheme.spacing.s),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBackClick) {
@@ -89,7 +95,7 @@ fun AlbumDetailsScreen(
                         contentDescription = "Go Back"
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(MaterialTheme.spacing.s))
                 Text(
                     text = albumDetails?.title ?: "Album Details",
                     style = MaterialTheme.typography.titleLarge,
@@ -100,30 +106,29 @@ fun AlbumDetailsScreen(
             }
 
             if (songs.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "No songs in this album")
-                }
+                VedTuneEmptyState(
+                    icon = Icons.Default.Album,
+                    title = "No Songs in Album",
+                    description = "This album contains no audio tracks.",
+                    modifier = Modifier.fillMaxSize()
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
-                        bottom = if (currentSong != null) 96.dp else 16.dp
+                        bottom = if (currentSong != null) 96.dp else MaterialTheme.spacing.l
                     )
                 ) {
                     item {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(24.dp),
+                                .padding(MaterialTheme.spacing.l),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             ElevatedCard(
-                                modifier = Modifier
-                                    .size(200.dp),
-                                shape = MaterialTheme.shapes.extraLarge
+                                modifier = Modifier.size(200.dp),
+                                shape = VedTuneShapeTokens.Card
                             ) {
                                 SongArtwork(
                                     albumId = viewModel.albumId,
@@ -132,7 +137,7 @@ fun AlbumDetailsScreen(
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.m))
 
                             Text(
                                 text = albumDetails?.title ?: "Unknown Album",
@@ -156,26 +161,26 @@ fun AlbumDetailsScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
 
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.l))
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Button(
+                                VedTunePrimaryButton(
+                                    text = "Play",
+                                    icon = Icons.Default.PlayArrow,
                                     onClick = { viewModel.playAlbum() },
                                     modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(text = "Play")
-                                }
+                                )
 
-                                FilledTonalButton(
+                                VedTuneSecondaryButton(
+                                    text = "Shuffle",
+                                    icon = Icons.Default.Shuffle,
                                     onClick = { viewModel.shuffleAlbum() },
                                     modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(text = "Shuffle")
-                                }
+                                )
                             }
                         }
                     }
@@ -227,16 +232,16 @@ fun AlbumDetailsScreen(
 fun AlbumTrackItem(
     trackNumber: Int,
     song: Song,
+    isCurrentSong: Boolean,
+    isPlaying: Boolean,
     onClick: () -> Unit,
-    isCurrentSong: Boolean = false,
-    isPlaying: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+            .padding(horizontal = MaterialTheme.spacing.l, vertical = MaterialTheme.spacing.s),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (isCurrentSong) {
@@ -277,7 +282,7 @@ fun AlbumTrackItem(
             )
         }
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(MaterialTheme.spacing.m))
 
         Text(
             text = formatDuration(song.duration),
@@ -286,3 +291,4 @@ fun AlbumTrackItem(
         )
     }
 }
+
