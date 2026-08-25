@@ -80,54 +80,6 @@ fun PlaylistsScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             val isGridView = viewPreferences.isGridView
-            var showSortMenu by remember { mutableStateOf(false) }
-
-            val currentSortLabel = when (sortBy) {
-                PlaylistSortBy.NAME -> "Name"
-                PlaylistSortBy.SONG_COUNT -> "Song Count"
-                PlaylistSortBy.DATE_CREATED -> "Date Created"
-            }
-            val orderIcon = if (sortOrder == com.devson.vedtune.ui.songs.SortOrder.ASCENDING) "↑" else "↓"
-
-            Box(modifier = Modifier.fillMaxWidth()) {
-                com.devson.vedtune.ui.components.LibraryUtilityRow(
-                    currentSortLabel = currentSortLabel,
-                    sortOrderIcon = orderIcon,
-                    onSortClick = { showSortMenu = true },
-                    isGridView = isGridView,
-                    onLayoutToggleClick = onLayoutToggleClick,
-                    onShuffleClick = { viewModel.playShuffleAll() }
-                )
-
-                DropdownMenu(
-                    expanded = showSortMenu,
-                    onDismissRequest = { showSortMenu = false }
-                ) {
-                    PlaylistSortBy.entries.forEach { option ->
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = when (option) {
-                                        PlaylistSortBy.NAME -> "Name"
-                                        PlaylistSortBy.SONG_COUNT -> "Song Count"
-                                        PlaylistSortBy.DATE_CREATED -> "Date Created"
-                                    }
-                                )
-                            },
-                            onClick = {
-                                if (sortBy == option) {
-                                    viewModel.toggleSortOrder()
-                                } else {
-                                    viewModel.setSortBy(option)
-                                }
-                                showSortMenu = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
 
             if (playlists.isEmpty()) {
                 Box(

@@ -139,6 +139,15 @@ enum class AudioFeatureHelp(
         whenToUse = "Ideal for party playlists, workouts, and continuous background music.",
         tradeOffs = "Intentionally overlaps songs. Not recommended for live albums, concept albums, or classical works where tracks transition naturally.",
         recommended = "Enable for mixed party playlists; disable for authentic album listening."
+    ),
+
+    SMOOTH_DIMMING(
+        title = "Smooth Audio Dimming",
+        icon = Icons.AutoMirrored.Filled.VolumeUp,
+        whatItDoes = "Smooth Audio Dimming (Audio Fade-in/Fade-out) gently ramps the playback volume up and down during play, pause, and track skip actions instead of abruptly cutting the audio waveform. This prevents harsh electrical clicks, popping artifacts, and sudden acoustic shock.",
+        whenToUse = "Recommended for all listening setups (headphones, earphones, car audio, Bluetooth speakers).",
+        tradeOffs = "Adds a subtle micro-fade (approx. 50–150ms) when tapping play or pause.",
+        recommended = "Keep enabled for the smoothest playback experience."
     )
 }
 

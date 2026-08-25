@@ -533,6 +533,51 @@ private fun PlaybackSectionCard(
                 }
             }
 
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+            // Smooth Audio Dimming (Audio Fade In / Fade Out)
+            val audioFadeInEnabled by viewModel.audioFadeInEnabled.collectAsState()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (audioFadeInEnabled) "Smooth Audio Dimming Active" else "Smooth Audio Dimming Disabled",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "Gradually ramps volume in and out when playing, pausing, or skipping tracks to eliminate abrupt cuts.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(
+                        onClick = { onShowHelp(AudioFeatureHelp.SMOOTH_DIMMING) },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Learn about Smooth Audio Dimming",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Switch(
+                    checked = audioFadeInEnabled,
+                    onCheckedChange = { viewModel.setAudioFadeInEnabled(it) }
+                )
+            }
+
             OutlinedButton(
                 onClick = onReset,
                 modifier = Modifier.align(Alignment.End)

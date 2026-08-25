@@ -53,17 +53,6 @@ fun GenresScreen(
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         } else {
             Column(modifier = Modifier.fillMaxSize()) {
-                com.devson.vedtune.ui.components.LibraryUtilityRow(
-                    currentSortLabel = currentSortLabel,
-                    sortOrderIcon = orderIcon,
-                    onSortClick = { viewModel.toggleSortOrder() },
-                    isGridView = isGridView,
-                    onLayoutToggleClick = onLayoutToggleClick,
-                    onShuffleClick = { viewModel.playShuffleAll() }
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
                 if (genres.isEmpty()) {
                     Box(
                         modifier = Modifier.fillMaxSize(),

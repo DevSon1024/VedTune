@@ -50,6 +50,15 @@ import com.devson.vedtune.ui.playlists.PlaylistsScreen
 import com.devson.vedtune.ui.playlists.PlaylistsViewModel
 import kotlinx.coroutines.launch
 
+import com.devson.vedtune.ui.components.LibraryUtilityRow
+import com.devson.vedtune.ui.songs.SortOrder
+import com.devson.vedtune.ui.albums.AlbumSortBy
+import com.devson.vedtune.ui.artists.ArtistSortBy
+import com.devson.vedtune.ui.playlists.PlaylistSortBy
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+
 data class LibraryTabItem(
     val label: String,
     val icon: ImageVector
@@ -68,7 +77,21 @@ fun LibraryScreen(
     modifier: Modifier = Modifier
 ) {
     val songsViewModel: SongsViewModel = hiltViewModel()
+    val albumsViewModel: AlbumsViewModel = hiltViewModel()
+    val artistsViewModel: ArtistsViewModel = hiltViewModel()
+    val genresViewModel: GenresViewModel = hiltViewModel()
+    val playlistsViewModel: PlaylistsViewModel = hiltViewModel()
+
     val uiState by songsViewModel.uiState.collectAsState()
+    val albumSortBy by albumsViewModel.sortBy.collectAsState()
+    val albumSortOrder by albumsViewModel.sortOrder.collectAsState()
+    val artistSortBy by artistsViewModel.sortBy.collectAsState()
+    val artistSortOrder by artistsViewModel.sortOrder.collectAsState()
+    val genreSortOrder by genresViewModel.sortOrder.collectAsState()
+    val playlistSortBy by playlistsViewModel.sortBy.collectAsState()
+    val playlistSortOrder by playlistsViewModel.sortOrder.collectAsState()
+
+    var showSortMenu by remember { mutableStateOf(false) }
 
     val tabs = listOf(
         LibraryTabItem("Songs", Icons.AutoMirrored.Filled.List),
@@ -104,6 +127,41 @@ fun LibraryScreen(
 
     val headerProgress = ((fullHeaderHeightPx + headerOffsetPx) / fullHeaderHeightPx).coerceIn(0f, 1f)
     val currentHeaderHeight = fullHeaderHeight * headerProgress
+
+    val currentSortLabel = when (pagerState.currentPage) {
+        0 -> when (uiState.sortBy) {
+            SortBy.TITLE -> "Title"
+            SortBy.ARTIST -> "Artist"
+            SortBy.ALBUM -> "Album"
+            SortBy.DATE_ADDED -> "Date Added"
+        }
+        1 -> when (albumSortBy) {
+            AlbumSortBy.TITLE -> "Title"
+            AlbumSortBy.ARTIST -> "Artist"
+            AlbumSortBy.SONG_COUNT -> "Song Count"
+        }
+        2 -> when (artistSortBy) {
+            ArtistSortBy.NAME -> "Name"
+            ArtistSortBy.SONG_COUNT -> "Song Count"
+            ArtistSortBy.ALBUM_COUNT -> "Album Count"
+        }
+        3 -> "Name"
+        4 -> when (playlistSortBy) {
+            PlaylistSortBy.NAME -> "Name"
+            PlaylistSortBy.SONG_COUNT -> "Song Count"
+            PlaylistSortBy.DATE_CREATED -> "Date Created"
+        }
+        else -> "Title"
+    }
+
+    val currentSortOrderIcon = when (pagerState.currentPage) {
+        0 -> if (uiState.sortOrder == SortOrder.ASCENDING) "↑" else "↓"
+        1 -> if (albumSortOrder == SortOrder.ASCENDING) "↑" else "↓"
+        2 -> if (artistSortOrder == SortOrder.ASCENDING) "↑" else "↓"
+        3 -> if (genreSortOrder == SortOrder.ASCENDING) "↑" else "↓"
+        4 -> if (playlistSortOrder == SortOrder.ASCENDING) "↑" else "↓"
+        else -> "↑"
+    }
 
     Column(
         modifier = modifier
@@ -309,7 +367,280 @@ fun LibraryScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(2.dp))
+        // Sticky Utility Row (Sort, Shuffle, Layout Toggle) - Stays persistent and does not animate on tab change
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 2.dp)
+        ) {
+            LibraryUtilityRow(
+                currentSortLabel = currentSortLabel,
+                sortOrderIcon = currentSortOrderIcon,
+                onSortClick = {
+                    if (pagerState.currentPage == 3) {
+                        genresViewModel.toggleSortOrder()
+                    } else {
+                        showSortMenu = true
+                    }
+                },
+                isGridView = uiState.isGridView,
+                onLayoutToggleClick = { songsViewModel.toggleLayoutView() },
+                onShuffleClick = {
+                    when (pagerState.currentPage) {
+                        0 -> songsViewModel.playShuffleAll()
+                        1 -> albumsViewModel.playShuffleAll()
+                        2 -> artistsViewModel.playShuffleAll()
+                        3 -> genresViewModel.playShuffleAll()
+                        4 -> playlistsViewModel.playShuffleAll()
+                    }
+                }
+            )
+
+            DropdownMenu(
+                expanded = showSortMenu,
+                onDismissRequest = { showSortMenu = false }
+            ) {
+                when (pagerState.currentPage) {
+                    0 -> {
+                        DropdownMenuItem(
+                            text = { Text("Sort by Title") },
+                            onClick = {
+                                songsViewModel.setSortBy(SortBy.TITLE)
+                                showSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (uiState.sortBy == SortBy.TITLE) {
+                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Sort by Artist") },
+                            onClick = {
+                                songsViewModel.setSortBy(SortBy.ARTIST)
+                                showSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (uiState.sortBy == SortBy.ARTIST) {
+                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Sort by Album") },
+                            onClick = {
+                                songsViewModel.setSortBy(SortBy.ALBUM)
+                                showSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (uiState.sortBy == SortBy.ALBUM) {
+                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Sort by Date Added") },
+                            onClick = {
+                                songsViewModel.setSortBy(SortBy.DATE_ADDED)
+                                showSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (uiState.sortBy == SortBy.DATE_ADDED) {
+                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                }
+                            }
+                        )
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text("Ascending") },
+                            onClick = {
+                                songsViewModel.setSortOrder(SortOrder.ASCENDING)
+                                showSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (uiState.sortOrder == SortOrder.ASCENDING) {
+                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Descending") },
+                            onClick = {
+                                songsViewModel.setSortOrder(SortOrder.DESCENDING)
+                                showSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (uiState.sortOrder == SortOrder.DESCENDING) {
+                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                }
+                            }
+                        )
+                    }
+                    1 -> {
+                        AlbumSortBy.entries.forEach { option ->
+                            val isSelected = albumSortBy == option
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = when (option) {
+                                            AlbumSortBy.TITLE -> "Sort by Title"
+                                            AlbumSortBy.ARTIST -> "Sort by Artist"
+                                            AlbumSortBy.SONG_COUNT -> "Sort by Song Count"
+                                        }
+                                    )
+                                },
+                                onClick = {
+                                    if (albumSortBy == option) {
+                                        albumsViewModel.toggleSortOrder()
+                                    } else {
+                                        albumsViewModel.setSortBy(option)
+                                    }
+                                    showSortMenu = false
+                                },
+                                leadingIcon = {
+                                    if (isSelected) {
+                                        Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                    }
+                                }
+                            )
+                        }
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text("Ascending") },
+                            onClick = {
+                                if (albumSortOrder != SortOrder.ASCENDING) albumsViewModel.toggleSortOrder()
+                                showSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (albumSortOrder == SortOrder.ASCENDING) {
+                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Descending") },
+                            onClick = {
+                                if (albumSortOrder != SortOrder.DESCENDING) albumsViewModel.toggleSortOrder()
+                                showSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (albumSortOrder == SortOrder.DESCENDING) {
+                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                }
+                            }
+                        )
+                    }
+                    2 -> {
+                        ArtistSortBy.entries.forEach { option ->
+                            val isSelected = artistSortBy == option
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = when (option) {
+                                            ArtistSortBy.NAME -> "Sort by Name"
+                                            ArtistSortBy.SONG_COUNT -> "Sort by Song Count"
+                                            ArtistSortBy.ALBUM_COUNT -> "Sort by Album Count"
+                                        }
+                                    )
+                                },
+                                onClick = {
+                                    if (artistSortBy == option) {
+                                        artistsViewModel.toggleSortOrder()
+                                    } else {
+                                        artistsViewModel.setSortBy(option)
+                                    }
+                                    showSortMenu = false
+                                },
+                                leadingIcon = {
+                                    if (isSelected) {
+                                        Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                    }
+                                }
+                            )
+                        }
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text("Ascending") },
+                            onClick = {
+                                if (artistSortOrder != SortOrder.ASCENDING) artistsViewModel.toggleSortOrder()
+                                showSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (artistSortOrder == SortOrder.ASCENDING) {
+                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Descending") },
+                            onClick = {
+                                if (artistSortOrder != SortOrder.DESCENDING) artistsViewModel.toggleSortOrder()
+                                showSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (artistSortOrder == SortOrder.DESCENDING) {
+                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                }
+                            }
+                        )
+                    }
+                    4 -> {
+                        PlaylistSortBy.entries.forEach { option ->
+                            val isSelected = playlistSortBy == option
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = when (option) {
+                                            PlaylistSortBy.NAME -> "Sort by Name"
+                                            PlaylistSortBy.SONG_COUNT -> "Sort by Song Count"
+                                            PlaylistSortBy.DATE_CREATED -> "Sort by Date Created"
+                                        }
+                                    )
+                                },
+                                onClick = {
+                                    if (playlistSortBy == option) {
+                                        playlistsViewModel.toggleSortOrder()
+                                    } else {
+                                        playlistsViewModel.setSortBy(option)
+                                    }
+                                    showSortMenu = false
+                                },
+                                leadingIcon = {
+                                    if (isSelected) {
+                                        Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                    }
+                                }
+                            )
+                        }
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text("Ascending") },
+                            onClick = {
+                                if (playlistSortOrder != SortOrder.ASCENDING) playlistsViewModel.toggleSortOrder()
+                                showSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (playlistSortOrder == SortOrder.ASCENDING) {
+                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Descending") },
+                            onClick = {
+                                if (playlistSortOrder != SortOrder.DESCENDING) playlistsViewModel.toggleSortOrder()
+                                showSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (playlistSortOrder == SortOrder.DESCENDING) {
+                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected")
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
 
         // Horizontal Pager for Library Pages
         HorizontalPager(
@@ -332,9 +663,8 @@ fun LibraryScreen(
                     )
                 }
                 1 -> {
-                    val viewModel: AlbumsViewModel = hiltViewModel()
                     AlbumsScreen(
-                        viewModel = viewModel,
+                        viewModel = albumsViewModel,
                         onAlbumClick = onNavigateToAlbum,
                         viewPreferences = uiState.viewPreferences,
                         onLayoutToggleClick = { songsViewModel.toggleLayoutView() },
@@ -343,9 +673,8 @@ fun LibraryScreen(
                     )
                 }
                 2 -> {
-                    val viewModel: ArtistsViewModel = hiltViewModel()
                     ArtistsScreen(
-                        viewModel = viewModel,
+                        viewModel = artistsViewModel,
                         onArtistClick = onNavigateToArtist,
                         viewPreferences = uiState.viewPreferences,
                         onLayoutToggleClick = { songsViewModel.toggleLayoutView() },
@@ -354,9 +683,8 @@ fun LibraryScreen(
                     )
                 }
                 3 -> {
-                    val viewModel: GenresViewModel = hiltViewModel()
                     GenresScreen(
-                        viewModel = viewModel,
+                        viewModel = genresViewModel,
                         onGenreClick = onNavigateToGenre,
                         viewPreferences = uiState.viewPreferences,
                         onLayoutToggleClick = { songsViewModel.toggleLayoutView() },
@@ -365,9 +693,8 @@ fun LibraryScreen(
                     )
                 }
                 4 -> {
-                    val viewModel: PlaylistsViewModel = hiltViewModel()
                     PlaylistsScreen(
-                        viewModel = viewModel,
+                        viewModel = playlistsViewModel,
                         onPlaylistClick = onNavigateToPlaylist,
                         viewPreferences = uiState.viewPreferences,
                         onLayoutToggleClick = { songsViewModel.toggleLayoutView() },

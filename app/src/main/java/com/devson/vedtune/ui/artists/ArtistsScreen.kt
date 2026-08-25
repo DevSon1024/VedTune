@@ -69,46 +69,6 @@ fun ArtistsScreen(
     Column(
         modifier = modifier.fillMaxSize()
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            com.devson.vedtune.ui.components.LibraryUtilityRow(
-                currentSortLabel = currentSortLabel,
-                sortOrderIcon = orderIcon,
-                onSortClick = { showSortMenu = true },
-                isGridView = isGridView,
-                onLayoutToggleClick = onLayoutToggleClick,
-                onShuffleClick = { viewModel.playShuffleAll() }
-            )
-
-            DropdownMenu(
-                expanded = showSortMenu,
-                onDismissRequest = { showSortMenu = false }
-            ) {
-                ArtistSortBy.entries.forEach { option ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = when (option) {
-                                    ArtistSortBy.NAME -> "Name"
-                                    ArtistSortBy.SONG_COUNT -> "Song Count"
-                                    ArtistSortBy.ALBUM_COUNT -> "Album Count"
-                                }
-                            )
-                        },
-                        onClick = {
-                            if (sortBy == option) {
-                                viewModel.toggleSortOrder()
-                            } else {
-                                viewModel.setSortBy(option)
-                            }
-                            showSortMenu = false
-                        }
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
         if (artists.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),

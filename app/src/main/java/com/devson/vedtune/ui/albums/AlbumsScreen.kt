@@ -76,46 +76,6 @@ fun AlbumsScreen(
     Column(
         modifier = modifier.fillMaxSize()
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            com.devson.vedtune.ui.components.LibraryUtilityRow(
-                currentSortLabel = currentSortLabel,
-                sortOrderIcon = orderIcon,
-                onSortClick = { showSortMenu = true },
-                isGridView = isGridView,
-                onLayoutToggleClick = onLayoutToggleClick,
-                onShuffleClick = { viewModel.playShuffleAll() }
-            )
-
-            DropdownMenu(
-                expanded = showSortMenu,
-                onDismissRequest = { showSortMenu = false }
-            ) {
-                AlbumSortBy.entries.forEach { option ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = when (option) {
-                                    AlbumSortBy.TITLE -> "Title"
-                                    AlbumSortBy.ARTIST -> "Artist"
-                                    AlbumSortBy.SONG_COUNT -> "Song Count"
-                                }
-                            )
-                        },
-                        onClick = {
-                            if (sortBy == option) {
-                                viewModel.toggleSortOrder()
-                            } else {
-                                viewModel.setSortBy(option)
-                            }
-                            showSortMenu = false
-                        }
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
         if (albums.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
