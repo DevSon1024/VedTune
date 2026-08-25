@@ -1,10 +1,6 @@
 package com.devson.vedtune.ui.components
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,7 +18,6 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -42,6 +37,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.devson.vedtune.core.toFormattedDuration
+import com.devson.vedtune.ui.theme.VedTuneIconSizes
+import com.devson.vedtune.ui.theme.VedTuneMotion
+import com.devson.vedtune.ui.theme.spacing
 
 @Composable
 fun VedTuneTopAppBar(
@@ -71,7 +69,7 @@ fun VedTuneTopAppBar(
         AnimatedContent(
             targetState = isSearchActive,
             transitionSpec = {
-                fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+                VedTuneMotion.FadeTransition
             },
             label = "TopAppBarSearchTransition"
         ) { active ->
@@ -80,19 +78,19 @@ fun VedTuneTopAppBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(64.dp)
-                        .padding(horizontal = 8.dp),
+                        .padding(horizontal = MaterialTheme.spacing.s),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = {
-                        isSearchActive = false
-                        onQueryChange("")
-                    }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Cancel Search",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
+                    VedTuneIconButton(
+                        icon = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Cancel Search",
+                        onClick = {
+                            isSearchActive = false
+                            onQueryChange("")
+                        },
+                        iconSize = VedTuneIconSizes.Standard,
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
 
                     val focusRequester = remember { FocusRequester() }
 
@@ -113,13 +111,13 @@ fun VedTuneTopAppBar(
                         ),
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { onQueryChange("") }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Clear Text",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                VedTuneIconButton(
+                                    icon = Icons.Default.Close,
+                                    contentDescription = "Clear Text",
+                                    onClick = { onQueryChange("") },
+                                    iconSize = VedTuneIconSizes.Medium,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     )
@@ -133,7 +131,7 @@ fun VedTuneTopAppBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(64.dp)
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = MaterialTheme.spacing.l),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -146,33 +144,33 @@ fun VedTuneTopAppBar(
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (showSearchAction) {
-                            IconButton(onClick = { isSearchActive = true }) {
-                                Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = "Search",
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
+                            VedTuneIconButton(
+                                icon = Icons.Default.Search,
+                                contentDescription = "Search",
+                                onClick = { isSearchActive = true },
+                                iconSize = VedTuneIconSizes.Standard,
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
                         }
 
                         if (showSortAction && onSortClick != null) {
-                            IconButton(onClick = onSortClick) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.Sort,
-                                    contentDescription = "Sort Options",
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
+                            VedTuneIconButton(
+                                icon = Icons.AutoMirrored.Filled.Sort,
+                                contentDescription = "Sort Options",
+                                onClick = onSortClick,
+                                iconSize = VedTuneIconSizes.Standard,
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
                         }
 
                         if (showLayoutToggleAction && onLayoutToggleClick != null) {
-                            IconButton(onClick = onLayoutToggleClick) {
-                                Icon(
-                                    imageVector = if (isGridView) Icons.AutoMirrored.Filled.List else Icons.Filled.GridView,
-                                    contentDescription = "Toggle Layout",
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
+                            VedTuneIconButton(
+                                icon = if (isGridView) Icons.AutoMirrored.Filled.List else Icons.Filled.GridView,
+                                contentDescription = "Toggle Layout",
+                                onClick = onLayoutToggleClick,
+                                iconSize = VedTuneIconSizes.Standard,
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
                         }
                     }
                 }
@@ -190,7 +188,11 @@ fun VedTuneTopAppBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                    .padding(
+                        start = MaterialTheme.spacing.l,
+                        end = MaterialTheme.spacing.l,
+                        bottom = MaterialTheme.spacing.s
+                    ),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -202,16 +204,14 @@ fun VedTuneTopAppBar(
                 )
 
                 if (onShuffleClick != null && totalItemCount > 0) {
-                    IconButton(
+                    VedTuneIconButton(
+                        icon = Icons.Default.Shuffle,
+                        contentDescription = "Shuffle All",
                         onClick = onShuffleClick,
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Shuffle,
-                            contentDescription = "Shuffle All",
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                        iconSize = VedTuneIconSizes.Medium,
+                        touchTargetSize = 36.dp,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
