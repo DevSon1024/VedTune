@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import com.devson.vedtune.ui.components.AddToPlaylistDialog
+import com.devson.vedtune.ui.components.ArtworkThumbnailSize
 import com.devson.vedtune.ui.components.AudioDiagnosticsDialog
 import com.devson.vedtune.ui.components.SongArtwork
 import com.devson.vedtune.ui.components.VedTuneConfirmDialog
@@ -192,6 +193,7 @@ fun PlayerScreen(
                         modifier = Modifier.fillMaxSize(),
                         showArtwork = showArtworkState,
                         blurRadius = playerBackgroundBlurRadius.toInt(),
+                        thumbnailSize = ArtworkThumbnailSize.SMALL,
                         isPlaying = isPlaying,
                         showFallbackAnimation = false
                     )

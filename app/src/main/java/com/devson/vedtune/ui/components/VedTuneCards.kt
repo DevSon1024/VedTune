@@ -81,6 +81,7 @@ fun VedTuneSongRow(
                     lastModified = song.dateModified,
                     fallbackIcon = Icons.Default.MusicNote,
                     showFallbackAnimation = false,
+                    thumbnailSize = ArtworkThumbnailSize.SMALL,
                     modifier = Modifier
                         .fillMaxSize()
                         .clip(VedTuneShapeTokens.Small)
@@ -179,6 +180,7 @@ fun VedTuneAlbumCard(
             albumId = album.id,
             fallbackIcon = Icons.Default.Album,
             showFallbackAnimation = false,
+            thumbnailSize = ArtworkThumbnailSize.MEDIUM,
             modifier = Modifier.fillMaxSize(),
             showArtwork = showArtwork
         )

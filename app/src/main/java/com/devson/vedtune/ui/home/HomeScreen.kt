@@ -76,14 +76,16 @@ fun HomeScreen(
 
     val currentSong by mainViewModel.currentSong.collectAsState()
     val isPlaying by mainViewModel.isPlaying.collectAsState()
-    val position by mainViewModel.playbackPosition.collectAsState()
-    val duration by mainViewModel.playbackDuration.collectAsState()
     val showAlbumArt by mainViewModel.showAlbumArt.collectAsState()
     val showMiniPlayerProgress by mainViewModel.showMiniPlayerProgress.collectAsState()
     val isGestureMiniPlayerEnabled by mainViewModel.isGestureMiniPlayerEnabled.collectAsState()
 
-    val progress = remember(position, duration) {
-        if (duration > 0) position.toFloat() / duration.toFloat() else 0f
+    val progressProvider = remember(mainViewModel) {
+        {
+            val dur = mainViewModel.playbackDuration.value
+            val pos = mainViewModel.playbackPosition.value
+            if (dur > 0L) (pos.toFloat() / dur.toFloat()).coerceIn(0f, 1f) else 0f
+        }
     }
 
     Scaffold(
@@ -94,7 +96,7 @@ fun HomeScreen(
                     MiniPlayer(
                         song = currentSong,
                         isPlaying = isPlaying,
-                        progress = progress,
+                        progress = progressProvider,
                         onPlayPauseClick = {
                             if (isPlaying) mainViewModel.pause() else mainViewModel.play()
                         },

@@ -41,10 +41,30 @@ import androidx.graphics.shapes.pill
 import androidx.graphics.shapes.star
 import androidx.compose.runtime.collectAsState
 
+enum class ArtworkThumbnailSize(val px: Int) {
+    SMALL(150),
+    MEDIUM(300),
+    LARGE(600),
+    ORIGINAL(-1)
+}
+
 object ArtworkCache {
     private val lock = Any()
     private var isInitialized = false
     private val customAlbums = mutableSetOf<Long>()
+    private var cachedSettingsRepo: com.devson.vedtune.domain.repository.SettingsRepository? = null
+
+    fun getSettingsRepository(context: Context): com.devson.vedtune.domain.repository.SettingsRepository {
+        synchronized(lock) {
+            cachedSettingsRepo?.let { return it }
+            val repo = EntryPointAccessors.fromApplication(
+                context.applicationContext,
+                SongArtworkEntryPoint::class.java
+            ).settingsRepository()
+            cachedSettingsRepo = repo
+            return repo
+        }
+    }
 
     private fun initIfNeeded(context: Context) {
         synchronized(lock) {
@@ -303,9 +323,9 @@ class BlurTransformation(
                 stackpointer = (stackpointer + 1) % div
                 sir = stack[stackpointer]
 
-                routsum += sir[0]
-                goutsum += sir[1]
-                boutsum += sir[2]
+                routsum -= sir[0]
+                goutsum -= sir[1]
+                boutsum -= sir[2]
 
                 rinsum -= sir[0]
                 ginsum -= sir[1]
@@ -377,20 +397,12 @@ fun SongArtwork(
     isPlaying: Boolean = false,
     playbackProgress: (() -> Float)? = null,
     fallbackIcon: androidx.compose.ui.graphics.vector.ImageVector = androidx.compose.material.icons.Icons.Default.MusicNote,
-    showFallbackAnimation: Boolean = false
+    showFallbackAnimation: Boolean = false,
+    thumbnailSize: ArtworkThumbnailSize = ArtworkThumbnailSize.SMALL,
+    forceSquare: Boolean = true
 ) {
     val context = LocalContext.current
     var isError by remember(albumId, lastModified, ignoreCustomArtwork) { mutableStateOf(false) }
-
-    val settingsRepository = remember(context) {
-        EntryPointAccessors.fromApplication(
-            context.applicationContext,
-            SongArtworkEntryPoint::class.java
-        ).settingsRepository()
-    }
-
-    val forceSquare by settingsRepository.forceSquareArtwork.collectAsState(initial = true)
-    val quality by settingsRepository.albumArtQuality.collectAsState(initial = com.devson.vedtune.domain.model.AlbumArtQuality.BALANCED)
 
     val artworkData = remember(albumId, lastModified, ignoreCustomArtwork) {
         if (!ignoreCustomArtwork && ArtworkCache.hasCustomArtwork(context, albumId)) {
@@ -403,22 +415,14 @@ fun SongArtwork(
         }
     }
 
-    val model = remember(artworkData, blurRadius, lastModified, quality) {
+    val model = remember(artworkData, blurRadius, lastModified, thumbnailSize) {
         val builder = ImageRequest.Builder(context)
             .data(artworkData)
-            .memoryCacheKey("artwork_${albumId}_${lastModified}_blur_${blurRadius}_quality_${quality.name}")
+            .memoryCacheKey("artwork_${albumId}_${lastModified}_blur_${blurRadius}_size_${thumbnailSize.name}")
             .crossfade(true)
         
-        when (quality) {
-            com.devson.vedtune.domain.model.AlbumArtQuality.SAVE_SPACE -> {
-                builder.size(150, 150)
-            }
-            com.devson.vedtune.domain.model.AlbumArtQuality.BALANCED -> {
-                builder.size(400, 400)
-            }
-            com.devson.vedtune.domain.model.AlbumArtQuality.HIGH_QUALITY -> {
-                // Full resolution / no restriction
-            }
+        if (thumbnailSize != ArtworkThumbnailSize.ORIGINAL) {
+            builder.size(thumbnailSize.px, thumbnailSize.px)
         }
 
         if (blurRadius > 0) {
@@ -427,43 +431,36 @@ fun SongArtwork(
         builder.build()
     }
 
-    Crossfade(
-        targetState = (!showArtwork || isError),
-        label = "ArtworkCrossfade",
-        modifier = modifier
-    ) { fallbackActive ->
-        if (fallbackActive) {
-            if (showFallbackAnimation) {
-                ExpressiveArtworkFallback(
-                    isPlaying = isPlaying,
-                    progress = playbackProgress,
-                    showAnimation = true,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                    contentAlignment = Alignment.Center
-                ) {
-                    androidx.compose.material3.Icon(
-                        imageVector = fallbackIcon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-        } else {
-            AsyncImage(
-                model = model,
-                contentDescription = "Album Artwork",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = if (forceSquare) ContentScale.Crop else ContentScale.Fit,
-                onError = { isError = true },
-                onSuccess = { isError = false }
+    if (!showArtwork || isError) {
+        if (showFallbackAnimation) {
+            ExpressiveArtworkFallback(
+                isPlaying = isPlaying,
+                progress = playbackProgress,
+                showAnimation = true,
+                modifier = modifier
             )
+        } else {
+            Box(
+                modifier = modifier
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = fallbackIcon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
+    } else {
+        AsyncImage(
+            model = model,
+            contentDescription = "Album Artwork",
+            modifier = modifier,
+            contentScale = if (forceSquare) ContentScale.Crop else ContentScale.Fit,
+            onError = { isError = true },
+            onSuccess = { isError = false }
+        )
     }
 }

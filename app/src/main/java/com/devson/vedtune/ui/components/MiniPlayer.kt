@@ -68,7 +68,7 @@ import kotlinx.coroutines.launch
 fun MiniPlayer(
     song: Song?,
     isPlaying: Boolean,
-    progress: Float,
+    progress: () -> Float,
     onPlayPauseClick: () -> Unit,
     onSkipNextClick: () -> Unit,
     onSkipPreviousClick: () -> Unit,
@@ -78,20 +78,6 @@ fun MiniPlayer(
     showProgress: Boolean = true,
     isGestureEnabled: Boolean = false
 ) {
-    val rotationAngle = remember { Animatable(0f) }
-    LaunchedEffect(isPlaying) {
-        if (isPlaying) {
-            while (true) {
-                val startValue = rotationAngle.value % 360f
-                rotationAngle.snapTo(startValue)
-                rotationAngle.animateTo(
-                    targetValue = startValue + 360f,
-                    animationSpec = tween(durationMillis = 15000, easing = LinearEasing)
-                )
-            }
-        }
-    }
-
     val scale = remember { Animatable(1f) }
     val scope = rememberCoroutineScope()
     var isNext by remember { mutableStateOf(true) }
@@ -198,7 +184,6 @@ fun MiniPlayer(
                                     albumId = targetSong.albumId,
                                     modifier = Modifier
                                         .size(44.dp)
-                                        .rotate(rotationAngle.value)
                                         .clip(CircleShape),
                                     showArtwork = showArtwork
                                 )
@@ -295,7 +280,7 @@ fun MiniPlayer(
                     // Progress indicator aligned at the bottom
                     if (showProgress) {
                         LinearProgressIndicator(
-                            progress = { progress },
+                            progress = progress,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(3.dp)

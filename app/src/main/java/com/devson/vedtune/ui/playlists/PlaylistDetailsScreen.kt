@@ -82,14 +82,16 @@ fun PlaylistDetailsScreen(
 
     val currentSong by mainViewModel.currentSong.collectAsStateWithLifecycle()
     val mainIsPlaying by mainViewModel.isPlaying.collectAsStateWithLifecycle()
-    val position by mainViewModel.playbackPosition.collectAsStateWithLifecycle()
-    val duration by mainViewModel.playbackDuration.collectAsStateWithLifecycle()
     val showArtworkFlow by mainViewModel.showAlbumArt.collectAsStateWithLifecycle()
     val showMiniPlayerProgress by mainViewModel.showMiniPlayerProgress.collectAsStateWithLifecycle()
     val isGestureMiniPlayerEnabled by mainViewModel.isGestureMiniPlayerEnabled.collectAsStateWithLifecycle()
 
-    val progress = remember(position, duration) {
-        if (duration > 0) position.toFloat() / duration.toFloat() else 0f
+    val progressProvider = remember(mainViewModel) {
+        {
+            val dur = mainViewModel.playbackDuration.value
+            val pos = mainViewModel.playbackPosition.value
+            if (dur > 0L) (pos.toFloat() / dur.toFloat()).coerceIn(0f, 1f) else 0f
+        }
     }
 
     val isFavorite = viewModel.isFavoritePlaylist
@@ -278,7 +280,7 @@ fun PlaylistDetailsScreen(
                 MiniPlayer(
                     song = currentSong,
                     isPlaying = mainIsPlaying,
-                    progress = progress,
+                    progress = progressProvider,
                     onPlayPauseClick = {
                         if (mainIsPlaying) mainViewModel.pause() else mainViewModel.play()
                     },

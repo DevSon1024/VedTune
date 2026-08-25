@@ -99,18 +99,7 @@ class MainViewModel @Inject constructor(
 
     val isPlaying: StateFlow<Boolean> = playbackConnection.isPlaying
 
-    val currentSong: StateFlow<Song?> = playbackConnection.currentSongId
-        .flatMapLatest { id ->
-            if (id != null) {
-                // Retrieve the song entity from Room to reflect favorites/details changes
-                kotlinx.coroutines.flow.flow {
-                    emit(repository.getSongById(id))
-                }
-            } else {
-                flowOf<Song?>(null)
-            }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    val currentSong: StateFlow<Song?> = playbackConnection.currentSong
 
     val playbackPosition: StateFlow<Long> = playbackConnection.playbackPosition
     val playbackDuration: StateFlow<Long> = playbackConnection.playbackDuration

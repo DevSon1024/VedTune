@@ -377,10 +377,11 @@ fun SongsScreen(
                                     key = { it.id },
                                     contentType = { "song_list_item" }
                                 ) { song ->
+                                    val isCurrent = song.id == currentSongId
                                     VedTuneSongRow(
                                         song = song,
-                                        isCurrentSong = song.id == currentSongId,
-                                        isPlaying = isPlaying,
+                                        isCurrentSong = isCurrent,
+                                        isPlaying = isPlaying && isCurrent,
                                         showArtwork = uiState.viewPreferences.showAlbumArt,
                                         onClick = { viewModel.playSong(song) },
                                         onOptionsClick = { selectedSongForOptions = song },

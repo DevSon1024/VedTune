@@ -78,6 +78,9 @@ class PlaybackConnection @Inject constructor(
     private val _queueSongMap = MutableStateFlow<Map<Long, Song>>(emptyMap())
     val queueSongMap: StateFlow<Map<Long, Song>> = _queueSongMap.asStateFlow()
 
+    private val _currentSong = MutableStateFlow<Song?>(null)
+    val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
+
     companion object {
         private val KEY_CURRENT_SON_ID = longPreferencesKey("current_song_id")
         private val KEY_PLAYBACK_POSITION = longPreferencesKey("playback_position")
@@ -100,12 +103,12 @@ class PlaybackConnection @Inject constructor(
             consecutiveErrors = 0
             val songId = mediaItem?.mediaId?.toLongOrNull()
             _currentSongId.value = songId
+            _currentSong.value = songId?.let { _queueSongMap.value[it] }
             updateQueue()
             _playbackPosition.value = 0L
             _playbackDuration.value = mediaController?.duration?.coerceAtLeast(0L) ?: 0L
 
-
-            scope.launch {
+            scope.launch(Dispatchers.IO) {
                 dataStore.edit { preferences ->
                     if (songId != null) {
                         preferences[KEY_CURRENT_SON_ID] = songId
@@ -274,14 +277,13 @@ class PlaybackConnection @Inject constructor(
                         lastSaveTime = now
                     }
                 }
-                delay(50)
+                delay(150)
             }
         }
     }
 
-
     private fun savePlaybackPosition(position: Long) {
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
             dataStore.edit { preferences ->
                 preferences[KEY_PLAYBACK_POSITION] = position
             }
@@ -326,12 +328,28 @@ class PlaybackConnection @Inject constructor(
                     controller.seekTo(index, 0L)
                 }
                 controller.prepare()
-                playWithFadeIn()
+                controller.volume = 1f
+                controller.play()
                 
-                repository.saveQueue(finalPlaylist)
-                dataStore.edit { preferences ->
-                    preferences[KEY_CURRENT_SON_ID] = song.id
-                    preferences[KEY_PLAYBACK_POSITION] = 0L
+                // Update in-memory state immediately
+                val songsMap = HashMap<Long, Song>(finalPlaylist.size).apply {
+                    finalPlaylist.forEach { put(it.id, it) }
+                }
+                _playlistQueue.value = finalPlaylist
+                _queueSongMap.value = songsMap
+                _currentSongId.value = song.id
+                _currentSong.value = song
+                
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        repository.saveQueue(finalPlaylist)
+                        dataStore.edit { preferences ->
+                            preferences[KEY_CURRENT_SON_ID] = song.id
+                            preferences[KEY_PLAYBACK_POSITION] = 0L
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -376,7 +394,8 @@ class PlaybackConnection @Inject constructor(
                 } else {
                     controller.addMediaItem(mediaItem)
                     controller.prepare()
-                    playWithFadeIn()
+                    controller.volume = 1f
+                    controller.play()
                 }
                 val currentQueue = repository.getQueue().toMutableList()
                 val indexInQueue = currentQueue.indexOfFirst { it.id == song.id }
@@ -390,8 +409,7 @@ class PlaybackConnection @Inject constructor(
                     0
                 }
                 currentQueue.add(insertIndex.coerceIn(0, currentQueue.size), song)
-                repository.saveQueue(currentQueue)
-
+                
                 // Update originalQueue in parallel
                 val updatedOriginal = originalQueue.toMutableList()
                 val idxInOrig = updatedOriginal.indexOfFirst { it.id == song.id }
@@ -406,6 +424,10 @@ class PlaybackConnection @Inject constructor(
                 }
                 updatedOriginal.add(insertIdxInOrig.coerceIn(0, updatedOriginal.size), song)
                 originalQueue = updatedOriginal
+
+                scope.launch(Dispatchers.IO) {
+                    repository.saveQueue(currentQueue)
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -418,8 +440,10 @@ class PlaybackConnection @Inject constructor(
                 val controller = getController()
                 originalQueue = playlist
                 _shuffleModeEnabled.value = true
-                dataStore.edit { preferences ->
-                    preferences[KEY_SHUFFLE_MODE] = true
+                scope.launch(Dispatchers.IO) {
+                    dataStore.edit { preferences ->
+                        preferences[KEY_SHUFFLE_MODE] = true
+                    }
                 }
                 
                 val remaining = playlist.filter { it.id != song.id }.shuffled()
@@ -442,12 +466,27 @@ class PlaybackConnection @Inject constructor(
                 controller.setMediaItems(mediaItems)
                 controller.seekTo(0, 0L)
                 controller.prepare()
-                playWithFadeIn()
+                controller.volume = 1f
+                controller.play()
                 
-                repository.saveQueue(fullList)
-                dataStore.edit { preferences ->
-                    preferences[KEY_CURRENT_SON_ID] = song.id
-                    preferences[KEY_PLAYBACK_POSITION] = 0L
+                val songsMap = HashMap<Long, Song>(fullList.size).apply {
+                    fullList.forEach { put(it.id, it) }
+                }
+                _playlistQueue.value = fullList
+                _queueSongMap.value = songsMap
+                _currentSongId.value = song.id
+                _currentSong.value = song
+
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        repository.saveQueue(fullList)
+                        dataStore.edit { preferences ->
+                            preferences[KEY_CURRENT_SON_ID] = song.id
+                            preferences[KEY_PLAYBACK_POSITION] = 0L
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -462,48 +501,17 @@ class PlaybackConnection @Inject constructor(
                 controller.stop()
                 controller.clearMediaItems()
                 _currentSongId.value = null
+                _currentSong.value = null
                 _playbackPosition.value = 0L
                 _playbackDuration.value = 0L
                 _queueSongMap.value = emptyMap()
                 originalQueue = emptyList()
-                repository.saveQueue(emptyList())
-                dataStore.edit { preferences ->
-                    preferences.remove(KEY_CURRENT_SON_ID)
-                    preferences[KEY_PLAYBACK_POSITION] = 0L
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    private fun playWithFadeIn() {
-        fadeJob?.cancel()
-        fadeJob = scope.launch {
-            try {
-                val controller = getController()
-                val preferences = dataStore.data.first()
-                val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
-                if (fadeIn) {
-                    controller.volume = 0f
-                    controller.play()
-                    var waitCount = 0
-                    while (!controller.isPlaying && controller.playWhenReady && waitCount < 20) {
-                        delay(50)
-                        waitCount++
+                scope.launch(Dispatchers.IO) {
+                    repository.saveQueue(emptyList())
+                    dataStore.edit { preferences ->
+                        preferences.remove(KEY_CURRENT_SON_ID)
+                        preferences[KEY_PLAYBACK_POSITION] = 0L
                     }
-                    var vol = 0f
-                    while (vol < 1.0f && controller.isPlaying) {
-                        delay(25)
-                        vol += 0.05f
-                        controller.volume = vol.coerceAtMost(1f)
-                    }
-                    if (controller.playWhenReady) {
-                        controller.volume = 1f
-                    }
-                } else {
-                    controller.volume = 1f
-                    controller.play()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -512,30 +520,22 @@ class PlaybackConnection @Inject constructor(
     }
 
     fun play() {
-        playWithFadeIn()
+        scope.launch {
+            try {
+                val controller = getController()
+                controller.volume = 1f
+                controller.play()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     fun pause() {
-        fadeJob?.cancel()
-        fadeJob = scope.launch {
+        scope.launch {
             try {
                 val controller = getController()
-                val preferences = dataStore.data.first()
-                val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
-                if (fadeIn && controller.isPlaying) {
-                    var vol = controller.volume
-                    while (vol > 0.0f && controller.isPlaying) {
-                        delay(20)
-                        vol -= 0.05f
-                        controller.volume = vol.coerceAtLeast(0f)
-                    }
-                    if (controller.isPlaying) {
-                        controller.pause()
-                    }
-                    controller.volume = 1f
-                } else {
-                    controller.pause()
-                }
+                controller.pause()
                 savePlaybackPosition(controller.currentPosition)
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -544,37 +544,13 @@ class PlaybackConnection @Inject constructor(
     }
 
     fun skipToNext() {
-        fadeJob?.cancel()
-        fadeJob = scope.launch {
+        scope.launch {
             try {
                 val controller = getController()
-                val preferences = dataStore.data.first()
-                val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
-                if (fadeIn && controller.isPlaying && controller.nextMediaItemIndex != androidx.media3.common.C.INDEX_UNSET) {
-                    var vol = controller.volume
-                    while (vol > 0.0f && controller.isPlaying) {
-                        delay(15)
-                        vol -= 0.1f
-                        controller.volume = vol.coerceAtLeast(0f)
-                    }
+                if (controller.nextMediaItemIndex != androidx.media3.common.C.INDEX_UNSET) {
                     controller.seekToNext()
-                    var waitCount = 0
-                    while (!controller.isPlaying && controller.playWhenReady && waitCount < 20) {
-                        delay(50)
-                        waitCount++
-                    }
-                    controller.volume = 0f
-                    var newVol = 0f
-                    while (newVol < 1.0f && controller.isPlaying) {
-                        delay(20)
-                        newVol += 0.08f
-                        controller.volume = newVol.coerceAtMost(1f)
-                    }
-                    if (controller.playWhenReady) {
-                        controller.volume = 1f
-                    }
-                } else {
-                    controller.seekToNext()
+                    controller.volume = 1f
+                    controller.play()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -583,37 +559,13 @@ class PlaybackConnection @Inject constructor(
     }
 
     fun skipToPrevious() {
-        fadeJob?.cancel()
-        fadeJob = scope.launch {
+        scope.launch {
             try {
                 val controller = getController()
-                val preferences = dataStore.data.first()
-                val fadeIn = preferences[KEY_AUDIO_FADE_IN_ENABLED] ?: true
-                if (fadeIn && controller.isPlaying && controller.previousMediaItemIndex != androidx.media3.common.C.INDEX_UNSET) {
-                    var vol = controller.volume
-                    while (vol > 0.0f && controller.isPlaying) {
-                        delay(15)
-                        vol -= 0.1f
-                        controller.volume = vol.coerceAtLeast(0f)
-                    }
+                if (controller.previousMediaItemIndex != androidx.media3.common.C.INDEX_UNSET) {
                     controller.seekToPrevious()
-                    var waitCount = 0
-                    while (!controller.isPlaying && controller.playWhenReady && waitCount < 20) {
-                        delay(50)
-                        waitCount++
-                    }
-                    controller.volume = 0f
-                    var newVol = 0f
-                    while (newVol < 1.0f && controller.isPlaying) {
-                        delay(20)
-                        newVol += 0.08f
-                        controller.volume = newVol.coerceAtMost(1f)
-                    }
-                    if (controller.playWhenReady) {
-                        controller.volume = 1f
-                    }
-                } else {
-                    controller.seekToPrevious()
+                    controller.volume = 1f
+                    controller.play()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -791,6 +743,10 @@ class PlaybackConnection @Inject constructor(
                 }
                 _playlistQueue.value = orderedSongs
                 _queueSongMap.value = songsMap
+                val curId = _currentSongId.value
+                if (curId != null && (_currentSong.value == null || _currentSong.value?.id != curId)) {
+                    _currentSong.value = songsMap[curId]
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
