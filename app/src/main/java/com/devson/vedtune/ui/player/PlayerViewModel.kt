@@ -334,6 +334,23 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    fun playNext(song: Song) {
+        playbackConnection.playNext(song)
+    }
+
+    fun saveQueueAsPlaylist(playlistName: String) {
+        if (playlistName.isBlank()) return
+        viewModelScope.launch {
+            val queue = playlistQueue.value
+            if (queue.isEmpty()) return@launch
+            val newPlaylistId = repository.createPlaylist(playlistName.trim())
+            queue.forEach { song ->
+                repository.addSongToPlaylist(newPlaylistId, song.id)
+            }
+            _uiEvent.emit(PlayerUiEvent.ShowToast("Queue saved as '$playlistName'"))
+        }
+    }
+
     fun deleteSongPermanently(context: android.content.Context, song: Song) {
         viewModelScope.launch {
             val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, song.id)

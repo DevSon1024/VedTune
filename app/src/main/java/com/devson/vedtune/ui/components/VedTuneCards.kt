@@ -258,10 +258,12 @@ fun VedTunePlaylistCard(
     playlist: Playlist,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    previewAlbumIds: List<Long> = emptyList(),
     showArtwork: Boolean = true,
     gridCount: Int = 2
 ) {
-    val subtitle = "${playlist.songCount} ${if (playlist.songCount == 1) "song" else "songs"}"
+    val isFavorite = playlist.id == Playlist.FAVORITES_PLAYLIST_ID
+    val subtitle = "${playlist.songCount} ${if (playlist.songCount == 1) "track" else "tracks"}"
 
     VedTuneGridCard(
         primaryText = playlist.name,
@@ -271,12 +273,11 @@ fun VedTunePlaylistCard(
         gridCount = gridCount,
         showArtwork = showArtwork
     ) {
-        SongArtwork(
-            albumId = -1L,
-            fallbackIcon = Icons.AutoMirrored.Filled.QueueMusic,
-            showFallbackAnimation = false,
-            modifier = Modifier.fillMaxSize(),
-            showArtwork = showArtwork
+        PlaylistArtworkCollage(
+            albumIds = previewAlbumIds,
+            isFavorite = isFavorite,
+            showArtwork = showArtwork,
+            modifier = Modifier.fillMaxSize()
         )
     }
 }

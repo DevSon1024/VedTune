@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,19 +17,22 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,13 +47,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.devson.vedtune.domain.model.Song
-import com.devson.vedtune.ui.components.SongArtwork
-import com.devson.vedtune.ui.components.PlayingIndicator
-import com.devson.vedtune.ui.components.MiniPlayer
 import com.devson.vedtune.ui.MainViewModel
-import androidx.compose.foundation.layout.PaddingValues
+import com.devson.vedtune.ui.components.MiniPlayer
+import com.devson.vedtune.ui.components.PlayingIndicator
+import com.devson.vedtune.ui.components.PlaylistArtworkCollage
+import com.devson.vedtune.ui.components.SongArtwork
+import com.devson.vedtune.ui.components.VedTuneEmptyState
+import com.devson.vedtune.ui.components.VedTuneIconButton
+import com.devson.vedtune.ui.theme.VedTuneIconSizes
+import com.devson.vedtune.ui.theme.VedTuneShapeTokens
+import com.devson.vedtune.ui.theme.VedTuneTextStyles
+import com.devson.vedtune.ui.theme.spacing
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun PlaylistDetailsScreen(
@@ -59,23 +71,39 @@ fun PlaylistDetailsScreen(
     onNavigateToPlayer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val songs by viewModel.songs.collectAsState()
-    val playlistDetails by viewModel.playlistDetails.collectAsState()
-    val showArtwork by viewModel.showAlbumArt.collectAsState()
+    val songs by viewModel.songs.collectAsStateWithLifecycle()
+    val previewAlbumIds by viewModel.previewAlbumIds.collectAsStateWithLifecycle()
+    val totalDurationMs by viewModel.totalDurationMs.collectAsStateWithLifecycle()
+    val playlistDetails by viewModel.playlistDetails.collectAsStateWithLifecycle()
+    val showArtwork by viewModel.showAlbumArt.collectAsStateWithLifecycle()
 
-    val currentSongId by viewModel.currentSongId.collectAsState()
-    val isPlaying by viewModel.isPlaying.collectAsState()
+    val currentSongId by viewModel.currentSongId.collectAsStateWithLifecycle()
+    val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
 
-    val currentSong by mainViewModel.currentSong.collectAsState()
-    val mainIsPlaying by mainViewModel.isPlaying.collectAsState()
-    val position by mainViewModel.playbackPosition.collectAsState()
-    val duration by mainViewModel.playbackDuration.collectAsState()
-    val showArtworkFlow by mainViewModel.showAlbumArt.collectAsState()
-    val showMiniPlayerProgress by mainViewModel.showMiniPlayerProgress.collectAsState()
-    val isGestureMiniPlayerEnabled by mainViewModel.isGestureMiniPlayerEnabled.collectAsState()
+    val currentSong by mainViewModel.currentSong.collectAsStateWithLifecycle()
+    val mainIsPlaying by mainViewModel.isPlaying.collectAsStateWithLifecycle()
+    val position by mainViewModel.playbackPosition.collectAsStateWithLifecycle()
+    val duration by mainViewModel.playbackDuration.collectAsStateWithLifecycle()
+    val showArtworkFlow by mainViewModel.showAlbumArt.collectAsStateWithLifecycle()
+    val showMiniPlayerProgress by mainViewModel.showMiniPlayerProgress.collectAsStateWithLifecycle()
+    val isGestureMiniPlayerEnabled by mainViewModel.isGestureMiniPlayerEnabled.collectAsStateWithLifecycle()
 
     val progress = remember(position, duration) {
         if (duration > 0) position.toFloat() / duration.toFloat() else 0f
+    }
+
+    val isFavorite = viewModel.isFavoritePlaylist
+    val playlistTitle = if (isFavorite) "Favorites" else (playlistDetails?.name ?: "Playlist")
+
+    val formattedTotalDuration = remember(totalDurationMs) {
+        val hours = TimeUnit.MILLISECONDS.toHours(totalDurationMs)
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(totalDurationMs) % 60
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(totalDurationMs) % 60
+        when {
+            hours > 0 -> String.format(Locale.getDefault(), "%d hr %d min", hours, minutes)
+            minutes > 0 -> String.format(Locale.getDefault(), "%d min %d sec", minutes, seconds)
+            else -> String.format(Locale.getDefault(), "%d sec", seconds)
+        }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -84,120 +112,154 @@ fun PlaylistDetailsScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
+            // Navigation Top Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = MaterialTheme.spacing.s),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Go Back"
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
+                VedTuneIconButton(
+                    icon = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Go Back",
+                    onClick = onBackClick,
+                    iconSize = VedTuneIconSizes.Medium
+                )
+                Spacer(modifier = Modifier.width(MaterialTheme.spacing.s))
                 Text(
-                    text = playlistDetails?.name ?: "Playlist",
-                    style = MaterialTheme.typography.titleLarge,
+                    text = playlistTitle,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
             }
 
             if (songs.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "No songs in this playlist")
-                }
+                VedTuneEmptyState(
+                    icon = if (isFavorite) Icons.Default.Favorite else Icons.AutoMirrored.Filled.QueueMusic,
+                    title = if (isFavorite) "No Favorite Songs" else "Playlist is Empty",
+                    description = if (isFavorite) "Tap the heart icon on any track to add it to your favorites."
+                    else "Add songs to this playlist from your library to start listening.",
+                    modifier = Modifier.fillMaxSize()
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
-                        bottom = if (currentSong != null) 96.dp else 16.dp
+                        bottom = if (currentSong != null) 96.dp else 24.dp
                     )
                 ) {
+                    // Playlist Hero Header Section
                     item {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(24.dp),
+                                .padding(horizontal = MaterialTheme.spacing.l, vertical = MaterialTheme.spacing.m),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Card(
-                                modifier = Modifier.size(160.dp),
-                                shape = MaterialTheme.shapes.extraLarge,
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-                            ) {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.PlayArrow,
-                                        contentDescription = "Playlist cover",
-                                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                        modifier = Modifier.size(64.dp)
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Text(
-                                text = playlistDetails?.name ?: "Playlist",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                            // Collage / Hero Artwork
+                            PlaylistArtworkCollage(
+                                albumIds = previewAlbumIds,
+                                isFavorite = isFavorite,
+                                showArtwork = showArtwork,
+                                modifier = Modifier
+                                    .size(168.dp)
+                                    .clip(VedTuneShapeTokens.Large)
                             )
 
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.m))
+
+                            // Playlist Title
                             Text(
-                                text = if (songs.size == 1) "1 Song" else "${songs.size} Songs",
-                                style = MaterialTheme.typography.bodyLarge,
+                                text = playlistTitle,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.xs))
+
+                            // Metadata (Count + Duration)
+                            Text(
+                                text = "${songs.size} ${if (songs.size == 1) "track" else "tracks"} • $formattedTotalDuration",
+                                style = VedTuneTextStyles.Metadata,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.l))
 
+                            // Play and Shuffle Action Buttons
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Button(
                                     onClick = { viewModel.playPlaylist() },
-                                    modifier = Modifier.weight(1f)
+                                    shape = VedTuneShapeTokens.Pill,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
+                                    ),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp)
                                 ) {
-                                    Text(text = "Play")
+                                    Icon(
+                                        imageVector = Icons.Default.PlayArrow,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(VedTuneIconSizes.Small)
+                                    )
+                                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.xs))
+                                    Text(
+                                        text = "Play All",
+                                        fontWeight = FontWeight.SemiBold
+                                    )
                                 }
 
                                 FilledTonalButton(
                                     onClick = { viewModel.shufflePlaylist() },
-                                    modifier = Modifier.weight(1f)
+                                    shape = VedTuneShapeTokens.Pill,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp)
                                 ) {
-                                    Text(text = "Shuffle")
+                                    Icon(
+                                        imageVector = Icons.Default.Shuffle,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(VedTuneIconSizes.Small)
+                                    )
+                                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.xs))
+                                    Text(
+                                        text = "Shuffle",
+                                        fontWeight = FontWeight.SemiBold
+                                    )
                                 }
                             }
+
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.m))
                         }
                     }
 
+                    // Track List
                     itemsIndexed(
                         items = songs,
                         key = { _, song -> song.id }
                     ) { index, song ->
                         val isCurrentSong = song.id == currentSongId
-                        PlaylistTrackItem(
+                        PlaylistTrackRow(
                             index = index + 1,
                             song = song,
                             showArtwork = showArtwork,
                             isCurrentSong = isCurrentSong,
                             isPlaying = isPlaying,
                             onClick = { viewModel.playSong(song) },
+                            onPlayNext = { viewModel.playNext(song) },
                             onRemoveClick = { viewModel.removeSongFromPlaylist(song.id) }
                         )
                     }
@@ -205,6 +267,7 @@ fun PlaylistDetailsScreen(
             }
         }
 
+        // MiniPlayer Overlay
         if (currentSong != null) {
             Box(
                 modifier = Modifier
@@ -232,11 +295,12 @@ fun PlaylistDetailsScreen(
 }
 
 @Composable
-fun PlaylistTrackItem(
+private fun PlaylistTrackRow(
     index: Int,
     song: Song,
     showArtwork: Boolean,
     onClick: () -> Unit,
+    onPlayNext: () -> Unit,
     onRemoveClick: () -> Unit,
     isCurrentSong: Boolean = false,
     isPlaying: Boolean = false,
@@ -244,79 +308,99 @@ fun PlaylistTrackItem(
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (isCurrentSong) {
-            Box(
-                modifier = Modifier.width(32.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                PlayingIndicator(
-                    isPlaying = isPlaying,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-        } else {
-            Text(
-                text = String.format(Locale.getDefault(), "%02d", index),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.width(32.dp)
-            )
-        }
-
-        SongArtwork(
-            albumId = song.albumId,
-            modifier = Modifier
-                .size(40.dp)
-                .clip(MaterialTheme.shapes.small),
-            showArtwork = showArtwork
-        )
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
+    ListItem(
+        headlineContent = {
             Text(
                 text = song.title,
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = if (isCurrentSong) FontWeight.Bold else FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface
+                color = if (isCurrentSong) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
             )
+        },
+        supportingContent = {
             Text(
-                text = song.artist,
-                style = MaterialTheme.typography.bodySmall,
+                text = "${song.artist} • ${song.album}",
+                style = VedTuneTextStyles.Metadata,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Box {
-            IconButton(onClick = { showMenu = true }) {
-                Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
-            }
-            DropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false }
+        },
+        leadingContent = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                DropdownMenuItem(
-                    text = { Text("Remove from Playlist") },
-                    onClick = {
-                        onRemoveClick()
-                        showMenu = false
+                if (isCurrentSong) {
+                    Box(
+                        modifier = Modifier.size(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        PlayingIndicator(
+                            isPlaying = isPlaying,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
-                )
+                } else {
+                    Text(
+                        text = String.format(Locale.getDefault(), "%02d", index),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.width(24.dp)
+                    )
+                }
+
+                if (showArtwork) {
+                    SongArtwork(
+                        albumId = song.albumId,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(VedTuneShapeTokens.Small),
+                        showArtwork = showArtwork
+                    )
+                }
             }
-        }
-    }
+        },
+        trailingContent = {
+            Box {
+                VedTuneIconButton(
+                    icon = Icons.Default.MoreVert,
+                    contentDescription = "Track Options",
+                    onClick = { showMenu = true },
+                    iconSize = VedTuneIconSizes.Medium,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Play Next") },
+                        onClick = {
+                            onPlayNext()
+                            showMenu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Remove from Playlist") },
+                        onClick = {
+                            onRemoveClick()
+                            showMenu = false
+                        }
+                    )
+                }
+            }
+        },
+        colors = ListItemDefaults.colors(
+            containerColor = if (isCurrentSong) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
+            else MaterialTheme.colorScheme.surface
+        ),
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(VedTuneShapeTokens.Medium)
+            .clickable(onClick = onClick)
+    )
 }

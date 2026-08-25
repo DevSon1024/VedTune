@@ -18,10 +18,10 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -46,8 +46,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.devson.vedtune.domain.model.Playlist
 import com.devson.vedtune.domain.model.ViewPreferences
+import com.devson.vedtune.ui.components.PlaylistArtworkCollage
 import com.devson.vedtune.ui.components.VedTuneEmptyState
 import com.devson.vedtune.ui.components.VedTuneIconButton
 import com.devson.vedtune.ui.components.VedTunePlaylistCard
@@ -66,11 +68,13 @@ fun PlaylistsScreen(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
-    val playlists by viewModel.playlists.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
+    val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+    val playlistPreviews by viewModel.playlistPreviews.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     var showCreateDialog by remember { mutableStateOf(false) }
 
     val isGridView = viewPreferences.isGridView
+    val showArtwork = viewPreferences.showAlbumArt
     val adaptiveInfo = rememberVedTuneAdaptiveInfo()
 
     val lazyListState = rememberLazyListState()
@@ -114,10 +118,12 @@ fun PlaylistsScreen(
                         key = { it.id },
                         contentType = { "playlist_grid_item" }
                     ) { playlist ->
+                        val previewIds = playlistPreviews[playlist.id] ?: emptyList()
                         VedTunePlaylistCard(
                             playlist = playlist,
                             onClick = { onPlaylistClick(playlist.id) },
-                            showArtwork = viewPreferences.showAlbumArt,
+                            previewAlbumIds = previewIds,
+                            showArtwork = showArtwork,
                             gridCount = gridSpanCount
                         )
                     }
@@ -139,8 +145,11 @@ fun PlaylistsScreen(
                         key = { it.id },
                         contentType = { "playlist_list_item" }
                     ) { playlist ->
+                        val previewIds = playlistPreviews[playlist.id] ?: emptyList()
                         PlaylistItemRow(
                             playlist = playlist,
+                            previewAlbumIds = previewIds,
+                            showArtwork = showArtwork,
                             onClick = { onPlaylistClick(playlist.id) },
                             onDeleteClick = { viewModel.deletePlaylist(playlist.id) }
                         )
@@ -182,9 +191,12 @@ fun PlaylistItemRow(
     playlist: Playlist,
     onClick: () -> Unit,
     onDeleteClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    previewAlbumIds: List<Long> = emptyList(),
+    showArtwork: Boolean = true
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val isFavorite = playlist.id == Playlist.FAVORITES_PLAYLIST_ID
 
     ListItem(
         headlineContent = {
@@ -205,41 +217,37 @@ fun PlaylistItemRow(
             )
         },
         leadingContent = {
-            Box(
+            PlaylistArtworkCollage(
+                albumIds = previewAlbumIds,
+                isFavorite = isFavorite,
+                showArtwork = showArtwork,
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(VedTuneShapeTokens.Small)
-                    .background(MaterialTheme.colorScheme.secondaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.QueueMusic,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.size(VedTuneIconSizes.Medium)
-                )
-            }
+                    .size(52.dp)
+                    .clip(VedTuneShapeTokens.ArtworkCard)
+            )
         },
         trailingContent = {
-            Box {
-                VedTuneIconButton(
-                    icon = Icons.Default.MoreVert,
-                    contentDescription = "Playlist Options",
-                    onClick = { showMenu = true },
-                    iconSize = VedTuneIconSizes.Medium,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Delete Playlist") },
-                        onClick = {
-                            onDeleteClick()
-                            showMenu = false
-                        }
+            if (!isFavorite) {
+                Box {
+                    VedTuneIconButton(
+                        icon = Icons.Default.MoreVert,
+                        contentDescription = "Playlist Options",
+                        onClick = { showMenu = true },
+                        iconSize = VedTuneIconSizes.Medium,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Delete Playlist") },
+                            onClick = {
+                                onDeleteClick()
+                                showMenu = false
+                            }
+                        )
+                    }
                 }
             }
         },
@@ -288,7 +296,7 @@ fun CreatePlaylistDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onCreate(playlistName) },
+                onClick = { onCreate(playlistName.trim()) },
                 enabled = playlistName.isNotBlank()
             ) {
                 Text(text = "Create")
