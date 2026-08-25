@@ -47,8 +47,8 @@ fun PlayerArtworkPager(
     onPlayPause: () -> Unit,
     onViewAlbumArt: () -> Unit,
     modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 48.dp),
-    overlapOffset: Dp = 32.dp
+    contentPadding: PaddingValues = PaddingValues(horizontal = 28.dp),
+    overlapOffset: Dp = 20.dp
 ) {
     if (queue.isEmpty()) return
 

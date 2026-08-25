@@ -2,6 +2,7 @@ package com.devson.vedtune.ui.player.components
 
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,7 +37,7 @@ fun ClickableMetadata(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
@@ -53,14 +54,16 @@ fun ClickableMetadata(
                 .basicMarquee()
         )
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
             modifier = Modifier
+                .fillMaxWidth(0.85f)
                 .clip(MaterialTheme.shapes.small)
                 .clickable { onArtistClick() }
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .padding(horizontal = 8.dp, vertical = 2.dp)
         ) {
             Icon(
                 imageVector = Icons.Rounded.Person,
@@ -83,10 +86,12 @@ fun ClickableMetadata(
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
             modifier = Modifier
+                .fillMaxWidth(0.85f)
                 .clip(MaterialTheme.shapes.small)
                 .clickable { onAlbumClick() }
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .padding(horizontal = 8.dp, vertical = 2.dp)
         ) {
             Icon(
                 imageVector = Icons.Rounded.Album,

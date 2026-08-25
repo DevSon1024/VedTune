@@ -244,17 +244,18 @@ fun PlayerScreen(
                     .fillMaxSize()
                     .statusBarsPadding()
                     .navigationBarsPadding()
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Header
                 PlayerHeader(
                     sleepTimerRemaining = sleepTimerRemaining,
                     onBackClick = onBackClick,
-                    onQueueClick = { showQueueSheet = true }
+                    onQueueClick = { showQueueSheet = true },
+                    modifier = Modifier.padding(horizontal = 8.dp)
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 // Smooth Crossfade transition for Artwork/Lyrics and Clickable Metadata
                 Crossfade(
@@ -317,7 +318,7 @@ fun PlayerScreen(
 
                         // Clickable Metadata
                         if (!showLyrics) {
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             ClickableMetadata(
                                 song = displayedSong,
                                 onSongClick = { sheetState = PlayerSheetState.SongInfo },
@@ -328,7 +329,7 @@ fun PlayerScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 // Action Controls Strip
                 ActionControlsStrip(
@@ -353,10 +354,11 @@ fun PlayerScreen(
                         }
                         viewModel.setRepeatMode(nextMode)
                     },
-                    onToggleLyrics = { showLyrics = !showLyrics }
+                    onToggleLyrics = { showLyrics = !showLyrics },
+                    modifier = Modifier.padding(horizontal = 8.dp)
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 // Seek Bar
                 PlayerSeekBar(
@@ -366,10 +368,11 @@ fun PlayerScreen(
                     style = seekbarStyle,
                     isPlaying = isPlaying,
                     onSeek = { viewModel.seekTo(it) },
-                    onToggleRemainingTime = { viewModel.toggleRemainingTime() }
+                    onToggleRemainingTime = { viewModel.toggleRemainingTime() },
+                    modifier = Modifier.padding(horizontal = 8.dp)
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 // Bottom-most Playback Controls
                 PlaybackControls(
@@ -379,7 +382,8 @@ fun PlayerScreen(
                     onBackwardClick = { viewModel.skipBackward() },
                     onPlayPauseClick = { viewModel.togglePlayPause() },
                     onForwardClick = { viewModel.skipForward() },
-                    onNextClick = { viewModel.skipToNext() }
+                    onNextClick = { viewModel.skipToNext() },
+                    modifier = Modifier.padding(horizontal = 4.dp)
                 )
             }
         }

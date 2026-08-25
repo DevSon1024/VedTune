@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -53,105 +54,129 @@ fun PlaybackControls(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.Center,
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(
-            onClick = onPreviousClick,
-            modifier = Modifier.size(48.dp)
+        // 1. Previous Track
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Rounded.SkipPrevious,
-                contentDescription = "Previous",
-                tint = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.size(30.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        if (showForwardBackward) {
             IconButton(
-                onClick = onBackwardClick,
-                modifier = Modifier.size(48.dp)
+                onClick = onPreviousClick,
+                modifier = Modifier.size(52.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.FastRewind,
-                    contentDescription = "Rewind",
+                    imageVector = Icons.Rounded.SkipPrevious,
+                    contentDescription = "Previous Track",
                     tint = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.size(30.dp)
+                    modifier = Modifier.size(32.dp)
                 )
             }
-            Spacer(modifier = Modifier.width(16.dp))
         }
 
-        val interactionSource = remember { MutableInteractionSource() }
-        val isPressed by interactionSource.collectIsPressedAsState()
-        val scale by animateFloatAsState(
-            targetValue = if (isPressed) 0.90f else 1f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessLow
-            ),
-            label = "PlayPauseBounce"
-        )
-
-        IconButton(
-            onClick = onPlayPauseClick,
-            interactionSource = interactionSource,
-            modifier = Modifier
-                .size(72.dp)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
+        // 2. Rewind 10s (if enabled)
+        if (showForwardBackward) {
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                IconButton(
+                    onClick = onBackwardClick,
+                    modifier = Modifier.size(52.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.FastRewind,
+                        contentDescription = "Rewind",
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
+                        modifier = Modifier.size(28.dp)
+                    )
                 }
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer)
-        ) {
-            AnimatedContent(
-                targetState = isPlaying,
-                transitionSpec = {
-                    (scaleIn() + fadeIn()).togetherWith(scaleOut() + fadeOut())
-                },
-                label = "PlayPauseIconTransition"
-            ) { playing ->
-                Icon(
-                    imageVector = if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                    contentDescription = if (playing) "Pause" else "Play",
-                    modifier = Modifier.size(40.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
             }
         }
 
-        if (showForwardBackward) {
-            Spacer(modifier = Modifier.width(16.dp))
+        // 3. Play / Pause Hero Button
+        Box(
+            modifier = Modifier.weight(1.25f),
+            contentAlignment = Alignment.Center
+        ) {
+            val interactionSource = remember { MutableInteractionSource() }
+            val isPressed by interactionSource.collectIsPressedAsState()
+            val scale by animateFloatAsState(
+                targetValue = if (isPressed) 0.90f else 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                ),
+                label = "PlayPauseBounce"
+            )
+
             IconButton(
-                onClick = onForwardClick,
-                modifier = Modifier.size(48.dp)
+                onClick = onPlayPauseClick,
+                interactionSource = interactionSource,
+                modifier = Modifier
+                    .size(72.dp)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    }
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                AnimatedContent(
+                    targetState = isPlaying,
+                    transitionSpec = {
+                        (scaleIn() + fadeIn()).togetherWith(scaleOut() + fadeOut())
+                    },
+                    label = "PlayPauseIconTransition"
+                ) { playing ->
+                    Icon(
+                        imageVector = if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        contentDescription = if (playing) "Pause" else "Play",
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+        }
+
+        // 4. Fast Forward 10s (if enabled)
+        if (showForwardBackward) {
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                IconButton(
+                    onClick = onForwardClick,
+                    modifier = Modifier.size(52.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.FastForward,
+                        contentDescription = "Fast Forward",
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+        }
+
+        // 5. Next Track
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            IconButton(
+                onClick = onNextClick,
+                modifier = Modifier.size(52.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.FastForward,
-                    contentDescription = "Forward",
+                    imageVector = Icons.Rounded.SkipNext,
+                    contentDescription = "Next Track",
                     tint = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.size(30.dp)
+                    modifier = Modifier.size(32.dp)
                 )
             }
-        }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        IconButton(
-            onClick = onNextClick,
-            modifier = Modifier.size(48.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.SkipNext,
-                contentDescription = "Next",
-                tint = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.size(30.dp)
-            )
         }
     }
 }
