@@ -18,19 +18,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -40,30 +41,33 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import com.devson.vedtune.ui.components.AddToPlaylistDialog
+import com.devson.vedtune.ui.components.AudioDiagnosticsDialog
 import com.devson.vedtune.ui.components.SongArtwork
+import com.devson.vedtune.ui.components.VedTuneConfirmDialog
 import com.devson.vedtune.ui.player.components.ActionControlsStrip
 import com.devson.vedtune.ui.player.components.ArtworkCard
-import com.devson.vedtune.ui.player.components.PlayerArtworkPager
 import com.devson.vedtune.ui.player.components.ClickableMetadata
 import com.devson.vedtune.ui.player.components.LyricsPanel
 import com.devson.vedtune.ui.player.components.OptionsSheetContent
 import com.devson.vedtune.ui.player.components.PlaybackControls
+import com.devson.vedtune.ui.player.components.PlayerArtworkPager
 import com.devson.vedtune.ui.player.components.PlayerHeader
 import com.devson.vedtune.ui.player.components.PlayerSeekBar
-import com.devson.vedtune.ui.components.AudioDiagnosticsDialog
 import com.devson.vedtune.ui.player.components.PlayerSettingsDialog
 import com.devson.vedtune.ui.player.components.SleepTimerDialog
 import com.devson.vedtune.ui.player.components.ViewAlbumArtOverlay
 import com.devson.vedtune.ui.songs.SongInfoBottomSheet
+import com.devson.vedtune.ui.theme.ArtworkColorExtractor
+import com.devson.vedtune.ui.theme.VedTuneShapeTokens
+import com.devson.vedtune.ui.theme.rememberVedTuneAdaptiveInfo
+import com.devson.vedtune.ui.theme.spacing
 
-// Unified sheet state
 private sealed class PlayerSheetState {
     object Hidden : PlayerSheetState()
     object Options : PlayerSheetState()
@@ -119,11 +123,12 @@ fun PlayerScreen(
     var showLyrics by remember { mutableStateOf(false) }
     var showQueueSheet by remember { mutableStateOf(false) }
 
+    val adaptiveInfo = rememberVedTuneAdaptiveInfo()
     val context = LocalContext.current
 
-    // Artwork scale animation - driven smoothly by isPlaying state
+    // Artwork spring scale animation driven by playback state
     val artworkScale by animateFloatAsState(
-        targetValue = if (isPlaying) 1.0f else 0.88f,
+        targetValue = if (isPlaying) 1.0f else 0.90f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow
@@ -159,7 +164,7 @@ fun PlayerScreen(
         }
     }
 
-    // Keep Screen On logic for Lyrics
+    // Keep screen awake if enabled when viewing lyrics
     if (showLyrics && keepScreenOnWithLyrics) {
         DisposableEffect(context) {
             var ctx = context
@@ -178,7 +183,7 @@ fun PlayerScreen(
     Box(
         modifier = modifier.fillMaxSize()
     ) {
-        // 1. Dynamic Blurred Background with Crossfade transition
+        // 1. Dynamic Contrast-Safe Blurred Artwork Background
         Crossfade(targetState = song?.albumId, label = "BackgroundTransition") { albumId ->
             if (albumId != null) {
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -190,42 +195,29 @@ fun PlayerScreen(
                         isPlaying = isPlaying,
                         showFallbackAnimation = false
                     )
-                    val background = MaterialTheme.colorScheme.background
-                    val isDark = (background.red + background.green + background.blue) / 3f < 0.5f
-                    val overlayBrush = remember(isDark) {
-                        Brush.verticalGradient(
-                            colors = if (isDark) {
-                                listOf(
-                                    Color.Black.copy(alpha = 0.7f),
-                                    Color.Black.copy(alpha = 0.85f),
-                                    Color.Black.copy(alpha = 0.95f)
-                                )
-                            } else {
-                                listOf(
-                                    Color.White.copy(alpha = 0.5f),
-                                    Color.White.copy(alpha = 0.7f),
-                                    Color.White.copy(alpha = 0.85f)
-                                )
-                            }
-                        )
+                    val isDark = MaterialTheme.colorScheme.surface.let {
+                        (it.red * 0.299f + it.green * 0.587f + it.blue * 0.114f) < 0.5f
+                    }
+                    val gradientBrush = remember(isDark) {
+                        ArtworkColorExtractor.playerBackgroundGradient(isDark)
                     }
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(overlayBrush)
+                            .background(gradientBrush)
                     )
                 }
             }
         }
 
-        // 2. Main Contents
+        // 2. Main Content (Adaptive Portrait vs Landscape Layout)
         val currentActiveSong = song
         if (currentActiveSong == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     text = "No song selected",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         } else {
@@ -239,152 +231,279 @@ fun PlayerScreen(
                 }
             }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Header
-                PlayerHeader(
-                    sleepTimerRemaining = sleepTimerRemaining,
-                    onBackClick = onBackClick,
-                    onQueueClick = { showQueueSheet = true },
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Smooth Crossfade transition for Artwork/Lyrics and Clickable Metadata
-                Crossfade(
-                    targetState = currentActiveSong,
-                    modifier = Modifier.weight(1f),
-                    label = "CenterContentTransition"
-                ) { displayedSong ->
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+            if (adaptiveInfo.isLandscape) {
+                // Landscape / Tablet Split Layout (Two Columns)
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                        .padding(horizontal = MaterialTheme.spacing.l, vertical = MaterialTheme.spacing.s),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left Column: Artwork & Lyrics
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        // Artwork / Lyrics Container
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (showLyrics) {
-                                LyricsPanel(
-                                    viewModel = viewModel,
-                                    activeSong = displayedSong,
-                                    onToggleLyrics = { showLyrics = false },
-                                    onEditLyricsClick = { onNavigateToLyricsEditor(displayedSong.id) }
+                        if (showLyrics) {
+                            LyricsPanel(
+                                viewModel = viewModel,
+                                activeSong = currentActiveSong,
+                                onToggleLyrics = { showLyrics = false },
+                                onEditLyricsClick = { onNavigateToLyricsEditor(currentActiveSong.id) }
+                            )
+                        } else {
+                            if (playlistQueue.isNotEmpty()) {
+                                PlayerArtworkPager(
+                                    queue = playlistQueue,
+                                    currentQueueIndex = currentQueueIndex,
+                                    isPlaying = isPlaying,
+                                    artworkScale = artworkScale,
+                                    showArtwork = showArtworkState,
+                                    albumArtClickAction = albumArtClickAction,
+                                    playbackProgress = progressProvider,
+                                    onSkipToQueueItem = { newIndex -> viewModel.skipToQueueItem(newIndex) },
+                                    onToggleLyrics = { showLyrics = true },
+                                    onPlayPause = { viewModel.togglePlayPause() },
+                                    onViewAlbumArt = { showViewAlbumArtOverlay = true }
                                 )
                             } else {
-                                if (playlistQueue.isNotEmpty()) {
-                                    PlayerArtworkPager(
-                                        queue = playlistQueue,
-                                        currentQueueIndex = currentQueueIndex,
-                                        isPlaying = isPlaying,
-                                        artworkScale = artworkScale,
-                                        showArtwork = showArtworkState,
-                                        albumArtClickAction = albumArtClickAction,
-                                        playbackProgress = progressProvider,
-                                        onSkipToQueueItem = { newIndex -> viewModel.skipToQueueItem(newIndex) },
-                                        onToggleLyrics = { showLyrics = true },
-                                        onPlayPause = { viewModel.togglePlayPause() },
-                                        onViewAlbumArt = { showViewAlbumArtOverlay = true }
-                                    )
-                                } else {
-                                    ArtworkCard(
-                                        song = displayedSong,
-                                        showArtwork = showArtworkState,
-                                        isPlaying = isPlaying,
-                                        artworkScale = artworkScale,
-                                        enableSwipeToSkip = enableSwipeToSkip,
-                                        albumArtClickAction = albumArtClickAction,
-                                        playbackProgress = progressProvider,
-                                        onToggleLyrics = { showLyrics = true },
-                                        onPlayPause = { viewModel.togglePlayPause() },
-                                        onViewAlbumArt = { showViewAlbumArtOverlay = true },
-                                        onSwipeNext = { viewModel.skipToNext() },
-                                        onSwipePrevious = { viewModel.skipToPrevious() }
-                                    )
-                                }
+                                ArtworkCard(
+                                    song = currentActiveSong,
+                                    showArtwork = showArtworkState,
+                                    isPlaying = isPlaying,
+                                    artworkScale = artworkScale,
+                                    enableSwipeToSkip = enableSwipeToSkip,
+                                    albumArtClickAction = albumArtClickAction,
+                                    playbackProgress = progressProvider,
+                                    onToggleLyrics = { showLyrics = true },
+                                    onPlayPause = { viewModel.togglePlayPause() },
+                                    onViewAlbumArt = { showViewAlbumArtOverlay = true },
+                                    onSwipeNext = { viewModel.skipToNext() },
+                                    onSwipePrevious = { viewModel.skipToPrevious() }
+                                )
                             }
                         }
+                    }
 
-                        // Clickable Metadata
-                        if (!showLyrics) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            ClickableMetadata(
-                                song = displayedSong,
-                                onSongClick = { sheetState = PlayerSheetState.SongInfo },
-                                onArtistClick = { onNavigateToArtist(displayedSong.artist) },
-                                onAlbumClick = { onNavigateToAlbum(displayedSong.albumId) }
-                            )
-                        }
+                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.l))
+
+                    // Right Column: Controls & Metadata
+                    Column(
+                        modifier = Modifier
+                            .weight(1.1f)
+                            .fillMaxHeight(),
+                        verticalArrangement = Arrangement.SpaceBetween,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        PlayerHeader(
+                            sleepTimerRemaining = sleepTimerRemaining,
+                            onBackClick = onBackClick,
+                            onQueueClick = { showQueueSheet = true },
+                            onOptionsClick = { sheetState = PlayerSheetState.Options }
+                        )
+
+                        ClickableMetadata(
+                            song = currentActiveSong,
+                            onSongClick = { sheetState = PlayerSheetState.SongInfo },
+                            onArtistClick = { onNavigateToArtist(currentActiveSong.artist) },
+                            onAlbumClick = { onNavigateToAlbum(currentActiveSong.albumId) }
+                        )
+
+                        ActionControlsStrip(
+                            isFav = isFav,
+                            sleepTimerRemaining = sleepTimerRemaining,
+                            shuffleModeEnabled = shuffleModeEnabled,
+                            repeatMode = repeatMode,
+                            showLyricsButton = showLyricsButton,
+                            showSleepTimerButton = showSleepTimerButton,
+                            showShuffleRepeatButtons = showShuffleRepeatButtons,
+                            onSleepTimerClick = { showSleepTimerDialog = true },
+                            onFavClick = { viewModel.toggleFavorite() },
+                            onPlaylistClick = { sheetState = PlayerSheetState.AddToPlaylist },
+                            onInfoClick = { sheetState = PlayerSheetState.SongInfo },
+                            onOptionsClick = { sheetState = PlayerSheetState.Options },
+                            onShuffleClick = { viewModel.setShuffleModeEnabled(!shuffleModeEnabled) },
+                            onRepeatClick = {
+                                val nextMode = when (repeatMode) {
+                                    Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                                    Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                                    else -> Player.REPEAT_MODE_OFF
+                                }
+                                viewModel.setRepeatMode(nextMode)
+                            },
+                            onToggleLyrics = { showLyrics = !showLyrics }
+                        )
+
+                        PlayerSeekBar(
+                            positionState = viewModel.playbackPosition,
+                            duration = duration,
+                            showRemainingTime = showRemainingTimeState,
+                            style = seekbarStyle,
+                            isPlaying = isPlaying,
+                            onSeek = { viewModel.seekTo(it) },
+                            onToggleRemainingTime = { viewModel.toggleRemainingTime() }
+                        )
+
+                        PlaybackControls(
+                            isPlaying = isPlaying,
+                            showForwardBackward = showForwardBackward,
+                            onPreviousClick = { viewModel.skipToPrevious() },
+                            onBackwardClick = { viewModel.skipBackward() },
+                            onPlayPauseClick = { viewModel.togglePlayPause() },
+                            onForwardClick = { viewModel.skipForward() },
+                            onNextClick = { viewModel.skipToNext() }
+                        )
                     }
                 }
+            } else {
+                // Portrait Mobile-First Layout
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                        .padding(horizontal = MaterialTheme.spacing.m, vertical = MaterialTheme.spacing.xs),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Header
+                    PlayerHeader(
+                        sleepTimerRemaining = sleepTimerRemaining,
+                        onBackClick = onBackClick,
+                        onQueueClick = { showQueueSheet = true },
+                        onOptionsClick = { sheetState = PlayerSheetState.Options }
+                    )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(MaterialTheme.spacing.xs))
 
-                // Action Controls Strip
-                ActionControlsStrip(
-                    isFav = isFav,
-                    sleepTimerRemaining = sleepTimerRemaining,
-                    shuffleModeEnabled = shuffleModeEnabled,
-                    repeatMode = repeatMode,
-                    showLyricsButton = showLyricsButton,
-                    showSleepTimerButton = showSleepTimerButton,
-                    showShuffleRepeatButtons = showShuffleRepeatButtons,
-                    onSleepTimerClick = { showSleepTimerDialog = true },
-                    onFavClick = { viewModel.toggleFavorite() },
-                    onPlaylistClick = { sheetState = PlayerSheetState.AddToPlaylist },
-                    onInfoClick = { sheetState = PlayerSheetState.SongInfo },
-                    onOptionsClick = { sheetState = PlayerSheetState.Options },
-                    onShuffleClick = { viewModel.setShuffleModeEnabled(!shuffleModeEnabled) },
-                    onRepeatClick = {
-                        val nextMode = when (repeatMode) {
-                            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
-                            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
-                            else -> Player.REPEAT_MODE_OFF
+                    // Center Hero Artwork / Lyrics Container
+                    Crossfade(
+                        targetState = currentActiveSong,
+                        modifier = Modifier.weight(1f),
+                        label = "CenterContentTransition"
+                    ) { displayedSong ->
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (showLyrics) {
+                                    LyricsPanel(
+                                        viewModel = viewModel,
+                                        activeSong = displayedSong,
+                                        onToggleLyrics = { showLyrics = false },
+                                        onEditLyricsClick = { onNavigateToLyricsEditor(displayedSong.id) }
+                                    )
+                                } else {
+                                    if (playlistQueue.isNotEmpty()) {
+                                        PlayerArtworkPager(
+                                            queue = playlistQueue,
+                                            currentQueueIndex = currentQueueIndex,
+                                            isPlaying = isPlaying,
+                                            artworkScale = artworkScale,
+                                            showArtwork = showArtworkState,
+                                            albumArtClickAction = albumArtClickAction,
+                                            playbackProgress = progressProvider,
+                                            onSkipToQueueItem = { newIndex -> viewModel.skipToQueueItem(newIndex) },
+                                            onToggleLyrics = { showLyrics = true },
+                                            onPlayPause = { viewModel.togglePlayPause() },
+                                            onViewAlbumArt = { showViewAlbumArtOverlay = true }
+                                        )
+                                    } else {
+                                        ArtworkCard(
+                                            song = displayedSong,
+                                            showArtwork = showArtworkState,
+                                            isPlaying = isPlaying,
+                                            artworkScale = artworkScale,
+                                            enableSwipeToSkip = enableSwipeToSkip,
+                                            albumArtClickAction = albumArtClickAction,
+                                            playbackProgress = progressProvider,
+                                            onToggleLyrics = { showLyrics = true },
+                                            onPlayPause = { viewModel.togglePlayPause() },
+                                            onViewAlbumArt = { showViewAlbumArtOverlay = true },
+                                            onSwipeNext = { viewModel.skipToNext() },
+                                            onSwipePrevious = { viewModel.skipToPrevious() }
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Metadata directly beneath artwork
+                            if (!showLyrics) {
+                                Spacer(modifier = Modifier.height(MaterialTheme.spacing.m))
+                                ClickableMetadata(
+                                    song = displayedSong,
+                                    onSongClick = { sheetState = PlayerSheetState.SongInfo },
+                                    onArtistClick = { onNavigateToArtist(displayedSong.artist) },
+                                    onAlbumClick = { onNavigateToAlbum(displayedSong.albumId) }
+                                )
+                            }
                         }
-                        viewModel.setRepeatMode(nextMode)
-                    },
-                    onToggleLyrics = { showLyrics = !showLyrics },
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
+                    }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(MaterialTheme.spacing.m))
 
-                // Seek Bar
-                PlayerSeekBar(
-                    positionState = viewModel.playbackPosition,
-                    duration = duration,
-                    showRemainingTime = showRemainingTimeState,
-                    style = seekbarStyle,
-                    isPlaying = isPlaying,
-                    onSeek = { viewModel.seekTo(it) },
-                    onToggleRemainingTime = { viewModel.toggleRemainingTime() },
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
+                    // Action Controls Strip
+                    ActionControlsStrip(
+                        isFav = isFav,
+                        sleepTimerRemaining = sleepTimerRemaining,
+                        shuffleModeEnabled = shuffleModeEnabled,
+                        repeatMode = repeatMode,
+                        showLyricsButton = showLyricsButton,
+                        showSleepTimerButton = showSleepTimerButton,
+                        showShuffleRepeatButtons = showShuffleRepeatButtons,
+                        onSleepTimerClick = { showSleepTimerDialog = true },
+                        onFavClick = { viewModel.toggleFavorite() },
+                        onPlaylistClick = { sheetState = PlayerSheetState.AddToPlaylist },
+                        onInfoClick = { sheetState = PlayerSheetState.SongInfo },
+                        onOptionsClick = { sheetState = PlayerSheetState.Options },
+                        onShuffleClick = { viewModel.setShuffleModeEnabled(!shuffleModeEnabled) },
+                        onRepeatClick = {
+                            val nextMode = when (repeatMode) {
+                                Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                                Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                                else -> Player.REPEAT_MODE_OFF
+                            }
+                            viewModel.setRepeatMode(nextMode)
+                        },
+                        onToggleLyrics = { showLyrics = !showLyrics }
+                    )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(MaterialTheme.spacing.s))
 
-                // Bottom-most Playback Controls
-                PlaybackControls(
-                    isPlaying = isPlaying,
-                    showForwardBackward = showForwardBackward,
-                    onPreviousClick = { viewModel.skipToPrevious() },
-                    onBackwardClick = { viewModel.skipBackward() },
-                    onPlayPauseClick = { viewModel.togglePlayPause() },
-                    onForwardClick = { viewModel.skipForward() },
-                    onNextClick = { viewModel.skipToNext() },
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
+                    // Progress Seek Bar
+                    PlayerSeekBar(
+                        positionState = viewModel.playbackPosition,
+                        duration = duration,
+                        showRemainingTime = showRemainingTimeState,
+                        style = seekbarStyle,
+                        isPlaying = isPlaying,
+                        onSeek = { viewModel.seekTo(it) },
+                        onToggleRemainingTime = { viewModel.toggleRemainingTime() }
+                    )
+
+                    Spacer(modifier = Modifier.height(MaterialTheme.spacing.s))
+
+                    // Playback Controls
+                    PlaybackControls(
+                        isPlaying = isPlaying,
+                        showForwardBackward = showForwardBackward,
+                        onPreviousClick = { viewModel.skipToPrevious() },
+                        onBackwardClick = { viewModel.skipBackward() },
+                        onPlayPauseClick = { viewModel.togglePlayPause() },
+                        onForwardClick = { viewModel.skipForward() },
+                        onNextClick = { viewModel.skipToNext() }
+                    )
+                }
             }
         }
     }
@@ -419,25 +538,17 @@ fun PlayerScreen(
     // Delete Confirmation Dialog
     if (showDeleteConfirmDialog) {
         song?.let { activeSong ->
-            AlertDialog(
-                onDismissRequest = { showDeleteConfirmDialog = false },
-                title = { Text(text = "Delete Song Permanently") },
-                text = { Text(text = "Are you sure you want to delete '${activeSong.title}' permanently from this device? This action cannot be undone.") },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            viewModel.deleteSongPermanently(context, activeSong)
-                            showDeleteConfirmDialog = false
-                        }
-                    ) {
-                        Text(text = "Delete Permanently", color = MaterialTheme.colorScheme.error)
-                    }
+            VedTuneConfirmDialog(
+                title = "Delete Song Permanently",
+                message = "Are you sure you want to delete '${activeSong.title}' permanently from this device? This action cannot be undone.",
+                confirmText = "Delete",
+                dismissText = "Cancel",
+                isDestructive = true,
+                onConfirm = {
+                    viewModel.deleteSongPermanently(context, activeSong)
+                    showDeleteConfirmDialog = false
                 },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                        Text(text = "Cancel")
-                    }
-                }
+                onDismiss = { showDeleteConfirmDialog = false }
             )
         }
     }
@@ -446,7 +557,9 @@ fun PlayerScreen(
     if (sheetState == PlayerSheetState.Options) {
         song?.let { activeSong ->
             ModalBottomSheet(
-                onDismissRequest = { sheetState = PlayerSheetState.Hidden }
+                onDismissRequest = { sheetState = PlayerSheetState.Hidden },
+                shape = VedTuneShapeTokens.BottomSheet,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
             ) {
                 OptionsSheetContent(
                     song = activeSong,
@@ -483,7 +596,8 @@ fun PlayerScreen(
                     onPlayerSettings = {
                         sheetState = PlayerSheetState.Hidden
                         showPlayerSettingsDialog = true
-                    }
+                    },
+                    onCloseClick = { sheetState = PlayerSheetState.Hidden }
                 )
             }
         }

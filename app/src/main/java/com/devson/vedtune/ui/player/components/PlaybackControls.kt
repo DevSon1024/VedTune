@@ -15,11 +15,9 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FastForward
@@ -39,6 +37,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
+import com.devson.vedtune.ui.theme.VedTuneIconSizes
+import com.devson.vedtune.ui.theme.spacing
 
 @Composable
 fun PlaybackControls(
@@ -54,7 +54,7 @@ fun PlaybackControls(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = MaterialTheme.spacing.xs),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -70,8 +70,8 @@ fun PlaybackControls(
                 Icon(
                     imageVector = Icons.Rounded.SkipPrevious,
                     contentDescription = "Previous Track",
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.size(32.dp)
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(VedTuneIconSizes.ExtraLarge)
                 )
             }
         }
@@ -84,27 +84,27 @@ fun PlaybackControls(
             ) {
                 IconButton(
                     onClick = onBackwardClick,
-                    modifier = Modifier.size(52.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.FastRewind,
                         contentDescription = "Rewind",
-                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
-                        modifier = Modifier.size(28.dp)
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                        modifier = Modifier.size(VedTuneIconSizes.Large)
                     )
                 }
             }
         }
 
-        // 3. Play / Pause Hero Button
+        // 3. Play / Pause Dominant Hero Button
         Box(
-            modifier = Modifier.weight(1.25f),
+            modifier = Modifier.weight(1.3f),
             contentAlignment = Alignment.Center
         ) {
             val interactionSource = remember { MutableInteractionSource() }
             val isPressed by interactionSource.collectIsPressedAsState()
             val scale by animateFloatAsState(
-                targetValue = if (isPressed) 0.90f else 1f,
+                targetValue = if (isPressed) 0.88f else 1f,
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioMediumBouncy,
                     stiffness = Spring.StiffnessLow
@@ -134,7 +134,7 @@ fun PlaybackControls(
                     Icon(
                         imageVector = if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                         contentDescription = if (playing) "Pause" else "Play",
-                        modifier = Modifier.size(40.dp),
+                        modifier = Modifier.size(VedTuneIconSizes.Hero),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
@@ -149,13 +149,13 @@ fun PlaybackControls(
             ) {
                 IconButton(
                     onClick = onForwardClick,
-                    modifier = Modifier.size(52.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.FastForward,
                         contentDescription = "Fast Forward",
-                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
-                        modifier = Modifier.size(28.dp)
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                        modifier = Modifier.size(VedTuneIconSizes.Large)
                     )
                 }
             }
@@ -173,8 +173,8 @@ fun PlaybackControls(
                 Icon(
                     imageVector = Icons.Rounded.SkipNext,
                     contentDescription = "Next Track",
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.size(32.dp)
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(VedTuneIconSizes.ExtraLarge)
                 )
             }
         }
