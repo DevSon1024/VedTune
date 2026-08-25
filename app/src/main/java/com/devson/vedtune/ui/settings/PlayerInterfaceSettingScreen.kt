@@ -2,235 +2,339 @@ package com.devson.vedtune.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.devson.vedtune.domain.model.SeekBarStyle
+import com.devson.vedtune.ui.components.VedTuneIconButton
+import com.devson.vedtune.ui.theme.VedTuneIconSizes
+import com.devson.vedtune.ui.theme.VedTuneShapeTokens
+import com.devson.vedtune.ui.theme.VedTuneTextStyles
+import com.devson.vedtune.ui.theme.spacing
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerInterfaceSettingScreen(
     viewModel: SettingsViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val seekbarStyle by viewModel.seekbarStyle.collectAsState()
     val showRemainingTime by viewModel.showRemainingTime.collectAsState()
     val showMiniPlayerProgress by viewModel.showMiniPlayerProgress.collectAsState()
-    
     val isGestureMiniPlayerEnabled by viewModel.isGestureMiniPlayerEnabled.collectAsState()
     val enableSwipeToSkip by viewModel.enableSwipeToSkip.collectAsState()
-    
     val showLyricsButton by viewModel.showLyricsButton.collectAsState()
     val showSleepTimerButton by viewModel.showSleepTimerButton.collectAsState()
     val showShuffleRepeatButtons by viewModel.showShuffleRepeatButtons.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Player Interface",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+    ) {
+        // Top App Bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = MaterialTheme.spacing.s),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            VedTuneIconButton(
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Go Back",
+                onClick = onNavigateBack,
+                iconSize = VedTuneIconSizes.Medium
+            )
+            Spacer(modifier = Modifier.width(MaterialTheme.spacing.s))
+            Text(
+                text = "Player Interface",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
             )
         }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(innerPadding)
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = MaterialTheme.spacing.l,
+                end = MaterialTheme.spacing.l,
+                top = MaterialTheme.spacing.s,
+                bottom = MaterialTheme.spacing.xxl
+            ),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m)
         ) {
-            // SECTION 1: Seekbar & Progress
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Seekbar & Progress",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
-                SettingsCard(
+            // Seekbar & Progress Card
+            item {
+                InterfaceSectionCard(
                     title = "Visual Progress Indicators",
                     icon = Icons.Default.Palette
                 ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs)) {
                         Text(
                             text = "Seekbar Style",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
-                        SingleChoiceSegmentedButtonRow(
-                            modifier = Modifier.fillMaxWidth()
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.s)
                         ) {
-                            SeekBarStyle.entries.forEachIndexed { index, style ->
-                                val label = when (style) {
-                                    SeekBarStyle.DEFAULT -> "Line"
-                                    SeekBarStyle.SLIM -> "Dashed"
-                                    SeekBarStyle.WAVY -> "Wave"
-                                }
-                                SegmentedButton(
-                                    selected = seekbarStyle == style,
+                            SeekBarStyle.entries.forEach { style ->
+                                FilterChip(
+                                    selected = (seekbarStyle == style),
                                     onClick = { viewModel.setSeekBarStyle(style) },
-                                    shape = SegmentedButtonDefaults.itemShape(
-                                        index = index,
-                                        count = SeekBarStyle.entries.size
-                                    )
-                                ) {
-                                    Text(text = label)
-                                }
+                                    label = {
+                                        Text(
+                                            text = when (style) {
+                                                SeekBarStyle.DEFAULT -> "Standard"
+                                                SeekBarStyle.SLIM -> "Slim"
+                                                SeekBarStyle.WAVY -> "Waveform"
+                                            }
+                                        )
+                                    },
+                                    shape = VedTuneShapeTokens.Pill
+                                )
                             }
                         }
                     }
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
-                    SettingSwitchRow(
-                        title = "Show Remaining Time",
-                        description = "Show negative countdown remaining time instead of duration.",
-                        checked = showRemainingTime,
-                        onCheckedChange = { viewModel.setShowRemainingTime(it) },
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Show Remaining Time",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Display countdown remaining time instead of total duration",
+                                style = VedTuneTextStyles.Metadata,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = showRemainingTime,
+                            onCheckedChange = { viewModel.setShowRemainingTime(it) }
+                        )
+                    }
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
-                    SettingSwitchRow(
-                        title = "Show Mini Player Progress",
-                        description = "Display the thin progress line along the top of the mini player card.",
-                        checked = showMiniPlayerProgress,
-                        onCheckedChange = { viewModel.setShowMiniPlayerProgress(it) },
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Show Mini Player Progress",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Display thin progress line across top of mini player",
+                                style = VedTuneTextStyles.Metadata,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = showMiniPlayerProgress,
+                            onCheckedChange = { viewModel.setShowMiniPlayerProgress(it) }
+                        )
+                    }
                 }
             }
 
-            // SECTION 2: Player Controls
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Player Controls",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
-                SettingsCard(
-                    title = "Control Visibility & Actions",
-                    icon = Icons.Rounded.Tune
+            // Controls Visibility Card
+            item {
+                InterfaceSectionCard(
+                    title = "Controls Visibility & Gestures",
+                    icon = Icons.Default.Tune
                 ) {
-                    SettingSwitchRow(
-                        title = "Show Lyrics Button",
-                        description = "Show button to open the lyrics panel on player controls.",
-                        checked = showLyricsButton,
-                        onCheckedChange = { viewModel.setShowLyricsButton(it) },
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Show Lyrics Button",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Access synchronized lyrics in player action bar",
+                                style = VedTuneTextStyles.Metadata,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = showLyricsButton,
+                            onCheckedChange = { viewModel.setShowLyricsButton(it) }
+                        )
+                    }
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
-                    SettingSwitchRow(
-                        title = "Show Sleep Timer",
-                        description = "Show button to set sleep timer on player controls.",
-                        checked = showSleepTimerButton,
-                        onCheckedChange = { viewModel.setShowSleepTimerButton(it) },
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Show Sleep Timer Button",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Quick shortcut to configure sleep timer in player",
+                                style = VedTuneTextStyles.Metadata,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = showSleepTimerButton,
+                            onCheckedChange = { viewModel.setShowSleepTimerButton(it) }
+                        )
+                    }
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
-                    SettingSwitchRow(
-                        title = "Show Shuffle & Repeat",
-                        description = "Show shuffle and repeat buttons on player controls.",
-                        checked = showShuffleRepeatButtons,
-                        onCheckedChange = { viewModel.setShowShuffleRepeatButtons(it) },
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Show Shuffle & Repeat",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Display playback mode buttons next to playback transport",
+                                style = VedTuneTextStyles.Metadata,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = showShuffleRepeatButtons,
+                            onCheckedChange = { viewModel.setShowShuffleRepeatButtons(it) }
+                        )
+                    }
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
-                    SettingSwitchRow(
-                        title = "Gesture-Based Mini Player",
-                        description = "Control playback using gestures on the mini player.",
-                        checked = isGestureMiniPlayerEnabled,
-                        onCheckedChange = { viewModel.setGestureMiniPlayerEnabled(it) },
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-
-                    SettingSwitchRow(
-                        title = "Swipe to Skip Artwork",
-                        description = "Swipe left/right on player album artwork to skip songs.",
-                        checked = enableSwipeToSkip,
-                        onCheckedChange = { viewModel.setEnableSwipeToSkip(it) },
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Swipe on Artwork to Skip",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Swipe left/right on full player album artwork to skip songs",
+                                style = VedTuneTextStyles.Metadata,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = enableSwipeToSkip,
+                            onCheckedChange = { viewModel.setEnableSwipeToSkip(it) }
+                        )
+                    }
                 }
             }
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(8.dp))
+@Composable
+private fun InterfaceSectionCard(
+    title: String,
+    icon: ImageVector,
+    content: @Composable () -> Unit
+) {
+    Card(
+        shape = VedTuneShapeTokens.Card,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(MaterialTheme.spacing.l),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.s)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.s)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(VedTuneIconSizes.Medium)
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+            content()
         }
     }
 }

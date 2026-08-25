@@ -34,6 +34,10 @@ import com.devson.vedtune.ui.settings.PlayerInterfaceSettingScreen
 import com.devson.vedtune.ui.settings.PlaybackSettingsScreen
 import com.devson.vedtune.ui.settings.EqualizerScreen
 import com.devson.vedtune.ui.settings.LibrarySettingsScreen
+import com.devson.vedtune.ui.settings.AudioSettingsScreen
+import com.devson.vedtune.ui.settings.NotificationSettingsScreen
+import com.devson.vedtune.ui.settings.StorageSettingsScreen
+import com.devson.vedtune.ui.settings.PrivacySettingsScreen
 import com.devson.vedtune.ui.playlists.PlaylistDetailsScreen
 import com.devson.vedtune.ui.playlists.PlaylistDetailsViewModel
 import com.devson.vedtune.ui.songs.EditTagsScreen
@@ -57,8 +61,12 @@ sealed class Screen(val route: String) {
     data object AppearanceSettings : Screen("appearance_settings")
     data object PlayerInterfaceSettings : Screen("player_interface_settings")
     data object PlaybackSettings : Screen("playback_settings")
+    data object AudioSettings : Screen("audio_settings")
     data object EqualizerSettings : Screen("equalizer_settings")
     data object LibrarySettings : Screen("library_settings")
+    data object NotificationSettings : Screen("notification_settings")
+    data object StorageSettings : Screen("storage_settings")
+    data object PrivacySettings : Screen("privacy_settings")
     data object Player : Screen("player")
     data object AlbumDetails : Screen("album_details/{albumId}") {
         fun createRoute(albumId: Long) = "album_details/$albumId"
@@ -136,8 +144,20 @@ fun NavGraph(
                 onNavigateToPlaybackSettings = {
                     navController.navigateSafe(Screen.PlaybackSettings.route)
                 },
+                onNavigateToAudioSettings = {
+                    navController.navigateSafe(Screen.AudioSettings.route)
+                },
                 onNavigateToLibrarySettings = {
                     navController.navigateSafe(Screen.LibrarySettings.route)
+                },
+                onNavigateToNotificationSettings = {
+                    navController.navigateSafe(Screen.NotificationSettings.route)
+                },
+                onNavigateToStorageSettings = {
+                    navController.navigateSafe(Screen.StorageSettings.route)
+                },
+                onNavigateToPrivacySettings = {
+                    navController.navigateSafe(Screen.PrivacySettings.route)
                 },
                 onNavigateToEditTags = { songId ->
                     navController.navigateSafe(Screen.EditTags.createRoute(songId))
@@ -197,6 +217,17 @@ fun NavGraph(
             val viewModel: SettingsViewModel = hiltViewModel()
             PlaybackSettingsScreen(
                 viewModel = viewModel,
+                onNavigateBack = { navController.popBackStackSafe() }
+            )
+        }
+        composable(
+            route = Screen.AudioSettings.route,
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
+        ) {
+            val viewModel: SettingsViewModel = hiltViewModel()
+            AudioSettingsScreen(
+                viewModel = viewModel,
                 onNavigateBack = { navController.popBackStackSafe() },
                 onNavigateToEqualizer = {
                     navController.navigateSafe(Screen.EqualizerSettings.route)
@@ -225,7 +256,43 @@ fun NavGraph(
                 onNavigateBack = { navController.popBackStackSafe() },
                 onNavigateToFolderSettings = {
                     navController.navigateSafe(Screen.FolderSettings.route)
+                },
+                onNavigateToLyricsConverter = {
+                    navController.navigateSafe(Screen.LyricsConverter.route)
                 }
+            )
+        }
+        composable(
+            route = Screen.NotificationSettings.route,
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
+        ) {
+            val viewModel: SettingsViewModel = hiltViewModel()
+            NotificationSettingsScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStackSafe() }
+            )
+        }
+        composable(
+            route = Screen.StorageSettings.route,
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
+        ) {
+            val viewModel: SettingsViewModel = hiltViewModel()
+            StorageSettingsScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStackSafe() }
+            )
+        }
+        composable(
+            route = Screen.PrivacySettings.route,
+            enterTransition = horizontalEnterTransition,
+            exitTransition = horizontalExitTransition
+        ) {
+            val viewModel: SettingsViewModel = hiltViewModel()
+            PrivacySettingsScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStackSafe() }
             )
         }
         composable(

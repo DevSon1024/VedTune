@@ -438,4 +438,35 @@ class SettingsViewModel @Inject constructor(
     fun resetAudioSettings() {
         viewModelScope.launch { settingsRepository.resetAudioSettings() }
     }
+
+    fun resetAppearanceSettings() {
+        viewModelScope.launch {
+            settingsRepository.setThemeMode("SYSTEM")
+            settingsRepository.setAmoledDark(false)
+            settingsRepository.setDynamicColorsEnabled(true)
+            settingsRepository.setShowAlbumArt(true)
+            settingsRepository.setForceSquareArtwork(true)
+            settingsRepository.setAlbumArtQuality(com.devson.vedtune.domain.model.AlbumArtQuality.BALANCED)
+            settingsRepository.setDefaultStartScreen("songs")
+        }
+    }
+
+    fun resetLibrarySettings() {
+        viewModelScope.launch {
+            settingsRepository.setAutoSyncOnStartup(true)
+            settingsRepository.setFolderFilterMode(FolderFilterMode.NONE)
+            settingsRepository.setBlacklistedFolders(emptySet())
+            settingsRepository.setWhitelistedFolders(emptySet())
+            settingsRepository.setIncludeSubfolders(true)
+        }
+    }
+
+    fun resetAllSettings() {
+        viewModelScope.launch {
+            resetAppearanceSettings()
+            settingsRepository.resetPlaybackSettings()
+            settingsRepository.resetAudioSettings()
+            resetLibrarySettings()
+        }
+    }
 }

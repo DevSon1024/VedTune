@@ -1,6 +1,5 @@
 package com.devson.vedtune.ui.settings
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,18 +15,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Lyrics
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.devson.vedtune.domain.model.FolderFilterMode
 import com.devson.vedtune.ui.components.VedTuneConfirmDialog
 import com.devson.vedtune.ui.components.VedTuneIconButton
 import com.devson.vedtune.ui.theme.VedTuneIconSizes
@@ -50,30 +45,22 @@ import com.devson.vedtune.ui.theme.VedTuneTextStyles
 import com.devson.vedtune.ui.theme.spacing
 
 @Composable
-fun LibrarySettingsScreen(
+fun NotificationSettingsScreen(
     viewModel: SettingsViewModel,
     onNavigateBack: () -> Unit,
-    onNavigateToFolderSettings: () -> Unit,
-    onNavigateToLyricsConverter: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val autoSyncOnStartup by viewModel.autoSyncOnStartup.collectAsState()
-    val folderFilterMode by viewModel.folderFilterMode.collectAsState()
-
+    val showAlbumArt by viewModel.showAlbumArt.collectAsState()
+    var showLockscreenArtwork by remember { mutableStateOf(true) }
+    var stopOnDismiss by remember { mutableStateOf(true) }
     var showResetDialog by remember { mutableStateOf(false) }
-
-    val folderModeLabel = when (folderFilterMode) {
-        FolderFilterMode.NONE -> "All folders included"
-        FolderFilterMode.WHITELIST -> "Whitelist active"
-        FolderFilterMode.BLACKLIST -> "Blacklist active"
-    }
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
     ) {
-        // Top Bar
+        // Top App Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -89,7 +76,7 @@ fun LibrarySettingsScreen(
             )
             Spacer(modifier = Modifier.width(MaterialTheme.spacing.s))
             Text(
-                text = "Library & Folders",
+                text = "Notifications",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -97,7 +84,7 @@ fun LibrarySettingsScreen(
             )
             VedTuneIconButton(
                 icon = Icons.Default.RestartAlt,
-                contentDescription = "Reset Library Settings",
+                contentDescription = "Reset Notification Settings",
                 onClick = { showResetDialog = true },
                 iconSize = VedTuneIconSizes.Medium,
                 tint = MaterialTheme.colorScheme.error
@@ -114,11 +101,11 @@ fun LibrarySettingsScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m)
         ) {
-            // MediaStore Sync Card
+            // Media Notification Card
             item {
-                LibrarySectionCard(
-                    title = "Media Synchronization",
-                    icon = Icons.Default.Sync
+                NotificationSectionCard(
+                    title = "Media Notification",
+                    icon = Icons.Default.Notifications
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -127,92 +114,78 @@ fun LibrarySettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Auto-sync on Startup",
+                                text = "Show Album Artwork",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Scan and sync device MediaStore audio on app launch",
+                                text = "Display high-res artwork inside system media notification",
                                 style = VedTuneTextStyles.Metadata,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Switch(
-                            checked = autoSyncOnStartup,
-                            onCheckedChange = { viewModel.setAutoSyncOnStartup(it) }
+                            checked = showAlbumArt,
+                            onCheckedChange = { viewModel.setShowAlbumArt(it) }
                         )
                     }
-                }
-            }
 
-            // Folder Filtering Card
-            item {
-                LibrarySectionCard(
-                    title = "Folders & Scanning",
-                    icon = Icons.Default.Folder
-                ) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(onClick = onNavigateToFolderSettings)
-                            .padding(vertical = 4.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Folder Visibility & Filters",
+                                text = "Stop Playback on Swipe Dismiss",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = folderModeLabel,
-                                style = VedTuneTextStyles.Metadata,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            // Lyrics Tools Card
-            item {
-                LibrarySectionCard(
-                    title = "Lyrics Management",
-                    icon = Icons.Default.Lyrics
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(onClick = onNavigateToLyricsConverter)
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "LRC Lyrics Batch Converter",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Scan and convert external .lrc files into synchronized tags",
+                                text = "Fully pause and stop background playback service when notification is dismissed",
                                 style = VedTuneTextStyles.Metadata,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        Switch(
+                            checked = stopOnDismiss,
+                            onCheckedChange = { stopOnDismiss = it }
+                        )
+                    }
+                }
+            }
+
+            // Lockscreen Card
+            item {
+                NotificationSectionCard(
+                    title = "Lockscreen Controls",
+                    icon = Icons.Default.Lock
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Lockscreen Artwork & Controls",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Enable interactive transport controls on Android lockscreen",
+                                style = VedTuneTextStyles.Metadata,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = showLockscreenArtwork,
+                            onCheckedChange = { showLockscreenArtwork = it }
                         )
                     }
                 }
@@ -220,16 +193,17 @@ fun LibrarySettingsScreen(
         }
     }
 
-    // Reset Library Dialog
     if (showResetDialog) {
         VedTuneConfirmDialog(
-            title = "Reset Library Settings?",
-            message = "This will enable auto-sync on startup, clear all folder whitelist and blacklist rules, and include all folders in library scanning.",
+            title = "Reset Notification Settings?",
+            message = "This will restore default notification settings (Album artwork enabled, Stop on dismiss enabled, Lockscreen controls enabled).",
             confirmText = "Reset",
             dismissText = "Cancel",
             isDestructive = true,
             onConfirm = {
-                viewModel.resetLibrarySettings()
+                viewModel.setShowAlbumArt(true)
+                showLockscreenArtwork = true
+                stopOnDismiss = true
                 showResetDialog = false
             },
             onDismiss = { showResetDialog = false }
@@ -238,7 +212,7 @@ fun LibrarySettingsScreen(
 }
 
 @Composable
-private fun LibrarySectionCard(
+private fun NotificationSectionCard(
     title: String,
     icon: ImageVector,
     content: @Composable () -> Unit
