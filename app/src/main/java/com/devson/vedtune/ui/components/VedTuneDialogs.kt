@@ -142,8 +142,8 @@ fun VedTuneConfirmDialog(
 @Composable
 fun VedTuneBottomSheetHeader(
     title: String,
-    onCloseClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onCloseClick: () -> Unit = {},
     subtitle: String? = null
 ) {
     Column(

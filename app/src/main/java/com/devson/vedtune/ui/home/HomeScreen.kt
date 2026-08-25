@@ -142,6 +142,17 @@ fun HomeScreen(
                                 pagerState.animateScrollToPage(2)
                             }
                         },
+                        onNavigateToSearch = {
+                            scope.launch {
+                                pagerState.animateScrollToPage(1)
+                            }
+                        },
+                        onNavigateToSettings = {
+                            scope.launch {
+                                pagerState.animateScrollToPage(3)
+                            }
+                        },
+                        onNavigateToFolderSettings = onNavigateToFolderSettings,
                         contentPadding = innerPadding,
                         modifier = Modifier.fillMaxSize()
                     )
