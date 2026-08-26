@@ -7,34 +7,31 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import com.devson.vedtune.ui.songs.SortOrder
-import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -49,117 +46,130 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.devson.vedtune.domain.model.Playlist
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import com.devson.vedtune.domain.model.ViewPreferences
+import com.devson.vedtune.ui.components.PlaylistArtworkCollage
+import com.devson.vedtune.ui.components.VedTuneEmptyState
+import com.devson.vedtune.ui.components.VedTuneIconButton
+import com.devson.vedtune.ui.components.VedTunePlaylistCard
+import com.devson.vedtune.ui.theme.VedTuneIconSizes
+import com.devson.vedtune.ui.theme.VedTuneShapeTokens
+import com.devson.vedtune.ui.theme.VedTuneTextStyles
+import com.devson.vedtune.ui.theme.rememberVedTuneAdaptiveInfo
+import com.devson.vedtune.ui.theme.spacing
 
 @Composable
 fun PlaylistsScreen(
     viewModel: PlaylistsViewModel,
     onPlaylistClick: (Long) -> Unit,
-    viewPreferences: com.devson.vedtune.domain.model.ViewPreferences,
+    viewPreferences: ViewPreferences,
     onLayoutToggleClick: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
-    val playlists by viewModel.playlists.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val totalItemCount by viewModel.totalItemCount.collectAsState()
+    val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+    val playlistPreviews by viewModel.playlistPreviews.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     var showCreateDialog by remember { mutableStateOf(false) }
+
+    val isGridView = viewPreferences.isGridView
+    val showArtwork = viewPreferences.showAlbumArt
+    val adaptiveInfo = rememberVedTuneAdaptiveInfo()
 
     val lazyListState = rememberLazyListState()
     val lazyGridState = rememberLazyGridState()
 
-    val sortBy by viewModel.sortBy.collectAsState()
-    val sortOrder by viewModel.sortOrder.collectAsState()
+    val gridSpanCount = when {
+        adaptiveInfo.isTablet -> 4
+        adaptiveInfo.isLandscape -> 3
+        else -> viewPreferences.gridSpanCount
+    }
 
     Box(
         modifier = modifier.fillMaxSize()
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            val isGridView = viewPreferences.isGridView
-
-            if (playlists.isEmpty()) {
-                Box(
+        if (playlists.isEmpty()) {
+            VedTuneEmptyState(
+                icon = Icons.AutoMirrored.Filled.QueueMusic,
+                title = if (searchQuery.isBlank()) "No Playlists" else "No Matching Playlists",
+                description = "Create a custom playlist to organize your favorite music.",
+                actionText = "Create Playlist",
+                onActionClick = { showCreateDialog = true },
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            if (isGridView) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(gridSpanCount),
+                    state = lazyGridState,
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                    contentPadding = PaddingValues(
+                        start = MaterialTheme.spacing.s,
+                        end = MaterialTheme.spacing.s,
+                        top = MaterialTheme.spacing.s,
+                        bottom = contentPadding.calculateBottomPadding() + 88.dp
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.s),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.s)
                 ) {
-                    Text(
-                        text = if (searchQuery.isBlank()) "No playlists. Tap + to create one." else "No matching playlists",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+                    items(
+                        items = playlists,
+                        key = { it.id },
+                        contentType = { "playlist_grid_item" }
+                    ) { playlist ->
+                        val previewIds = playlistPreviews[playlist.id] ?: emptyList()
+                        VedTunePlaylistCard(
+                            playlist = playlist,
+                            onClick = { onPlaylistClick(playlist.id) },
+                            previewAlbumIds = previewIds,
+                            showArtwork = showArtwork,
+                            gridCount = gridSpanCount
+                        )
+                    }
                 }
             } else {
-                if (isGridView) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                            columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(viewPreferences.gridSpanCount),
-                            state = lazyGridState,
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(
-                                start = 8.dp,
-                                end = 8.dp,
-                                top = 8.dp,
-                                bottom = contentPadding.calculateBottomPadding() + 88.dp
-                            ),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(
-                                items = playlists,
-                                key = { it.id },
-                                contentType = { "playlist_grid_item" }
-                            ) { playlist ->
-                                PlaylistGridItem(
-                                    playlist = playlist,
-                                    onClick = { onPlaylistClick(playlist.id) },
-                                    onDeleteClick = { viewModel.deletePlaylist(playlist.id) },
-                                    showArtwork = viewPreferences.showAlbumArt,
-                                    gridCount = viewPreferences.gridSpanCount
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        LazyColumn(
-                            state = lazyListState,
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                            contentPadding = PaddingValues(
-                                start = 0.dp,
-                                end = 0.dp,
-                                top = 8.dp,
-                                bottom = contentPadding.calculateBottomPadding() + 88.dp
-                            )
-                        ) {
-                            items(
-                                items = playlists,
-                                key = { it.id },
-                                contentType = { "playlist_list_item" }
-                            ) { playlist ->
-                                PlaylistItemRow(
-                                    playlist = playlist,
-                                    onClick = { onPlaylistClick(playlist.id) },
-                                    onDeleteClick = { viewModel.deletePlaylist(playlist.id) },
-                                    showArtwork = viewPreferences.showAlbumArt
-                                )
-                            }
-                        }
+                LazyColumn(
+                    state = lazyListState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 0.dp,
+                        end = 0.dp,
+                        top = MaterialTheme.spacing.s,
+                        bottom = contentPadding.calculateBottomPadding() + 88.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    items(
+                        items = playlists,
+                        key = { it.id },
+                        contentType = { "playlist_list_item" }
+                    ) { playlist ->
+                        val previewIds = playlistPreviews[playlist.id] ?: emptyList()
+                        PlaylistItemRow(
+                            playlist = playlist,
+                            previewAlbumIds = previewIds,
+                            showArtwork = showArtwork,
+                            onClick = { onPlaylistClick(playlist.id) },
+                            onDeleteClick = { viewModel.deletePlaylist(playlist.id) }
+                        )
                     }
                 }
             }
         }
 
+        // Floating Action Button to create playlist
         FloatingActionButton(
             onClick = { showCreateDialog = true },
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            shape = VedTuneShapeTokens.Large,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = contentPadding.calculateBottomPadding() + 16.dp)
+                .padding(
+                    end = MaterialTheme.spacing.l,
+                    bottom = contentPadding.calculateBottomPadding() + 16.dp
+                )
         ) {
             Icon(imageVector = Icons.Default.Add, contentDescription = "Create Playlist")
         }
@@ -181,49 +191,50 @@ fun PlaylistItemRow(
     playlist: Playlist,
     onClick: () -> Unit,
     onDeleteClick: () -> Unit,
-    showArtwork: Boolean = true,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    previewAlbumIds: List<Long> = emptyList(),
+    showArtwork: Boolean = true
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val isFavorite = playlist.id == Playlist.FAVORITES_PLAYLIST_ID
 
     com.devson.vedtune.ui.components.VedTuneListItem(
         primaryText = playlist.name,
-        secondaryText = if (playlist.songCount == 1) "1 song" else "${playlist.songCount} songs",
+        secondaryText = "${playlist.songCount} ${if (playlist.songCount == 1) "track" else "tracks"}",
         onClick = onClick,
         modifier = modifier,
-        leadingContent = if (showArtwork) {
-            {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.secondaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Playlist Placeholder",
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                }
-            }
-        } else null,
+        leadingContent = {
+            PlaylistArtworkCollage(
+                albumIds = previewAlbumIds,
+                isFavorite = isFavorite,
+                showArtwork = showArtwork,
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(VedTuneShapeTokens.ArtworkCard)
+            )
+        },
         trailingContent = {
-            Box {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
-                }
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Delete") },
-                        onClick = {
-                            onDeleteClick()
-                            showMenu = false
-                        }
+            if (!isFavorite) {
+                Box {
+                    VedTuneIconButton(
+                        icon = Icons.Default.MoreVert,
+                        contentDescription = "Playlist Options",
+                        onClick = { showMenu = true },
+                        iconSize = VedTuneIconSizes.Medium,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Delete Playlist") },
+                            onClick = {
+                                onDeleteClick()
+                                showMenu = false
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -239,25 +250,33 @@ fun CreatePlaylistDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = "New Playlist") },
+        title = {
+            Text(
+                text = "New Playlist",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.s)) {
                 Text(
                     text = "Enter a name for this playlist:",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 OutlinedTextField(
                     value = playlistName,
                     onValueChange = { playlistName = it },
-                    placeholder = { Text(text = "Playlist Name") },
+                    placeholder = { Text(text = "My Playlist") },
                     singleLine = true,
+                    shape = VedTuneShapeTokens.Medium,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onCreate(playlistName) },
+                onClick = { onCreate(playlistName.trim()) },
                 enabled = playlistName.isNotBlank()
             ) {
                 Text(text = "Create")
@@ -269,70 +288,4 @@ fun CreatePlaylistDialog(
             }
         }
     )
-}
-
-@Composable
-fun PlaylistGridItem(
-    playlist: Playlist,
-    onClick: () -> Unit,
-    onDeleteClick: () -> Unit,
-    showArtwork: Boolean = true,
-    gridCount: Int = 2,
-    modifier: Modifier = Modifier
-) {
-    var showMenu by remember { mutableStateOf(false) }
-
-    com.devson.vedtune.ui.components.VedTuneGridCard(
-        primaryText = playlist.name,
-        secondaryText = "${playlist.songCount} ${if (playlist.songCount == 1) "song" else "songs"}",
-        onClick = onClick,
-        modifier = modifier,
-        gridCount = gridCount,
-        showArtwork = showArtwork
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.secondaryContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.size(48.dp)
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
-                contentAlignment = Alignment.TopEnd
-            ) {
-                IconButton(
-                    onClick = { showMenu = true },
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Options",
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Delete") },
-                        onClick = {
-                            onDeleteClick()
-                            showMenu = false
-                        }
-                    )
-                }
-            }
-        }
-    }
 }

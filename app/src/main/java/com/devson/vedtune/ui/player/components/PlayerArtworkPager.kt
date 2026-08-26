@@ -25,6 +25,7 @@ import androidx.compose.ui.util.lerp
 import androidx.compose.ui.zIndex
 import com.devson.vedtune.domain.model.AlbumArtClickAction
 import com.devson.vedtune.domain.model.Song
+import com.devson.vedtune.ui.components.ArtworkThumbnailSize
 import com.devson.vedtune.ui.components.SongArtwork
 import kotlin.math.absoluteValue
 
@@ -131,6 +132,7 @@ fun PlayerArtworkPager(
                 lastModified = song.dateModified,
                 modifier = Modifier.fillMaxSize(),
                 showArtwork = showArtwork,
+                thumbnailSize = ArtworkThumbnailSize.LARGE,
                 isPlaying = isPlaying && isCenter,
                 playbackProgress = if (isCenter) playbackProgress else { { 0f } },
                 showFallbackAnimation = true

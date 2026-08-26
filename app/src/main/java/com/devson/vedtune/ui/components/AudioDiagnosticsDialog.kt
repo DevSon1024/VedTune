@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -17,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -44,11 +44,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.devson.vedtune.domain.model.AudioDiagnostics
+import com.devson.vedtune.ui.theme.VedTuneIconSizes
+import com.devson.vedtune.ui.theme.VedTuneShapeTokens
+import com.devson.vedtune.ui.theme.spacing
 
 @Composable
 fun AudioDiagnosticsDialog(
@@ -59,183 +61,169 @@ fun AudioDiagnosticsDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        )
     ) {
-        Card(
+        Box(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .widthIn(max = 560.dp)
-                .heightIn(max = 700.dp)
-                .padding(vertical = 16.dp),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                .fillMaxSize()
+                .padding(MaterialTheme.spacing.l),
+            contentAlignment = Alignment.Center
         ) {
-            Column(
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                    .widthIn(min = 280.dp, max = 560.dp)
+                    .heightIn(max = 680.dp),
+                shape = VedTuneShapeTokens.Dialog,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
-                // Header: Title + Close Icon
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-                        }
-                        Text(
-                            text = "Audio Information",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                // Scrollable Diagnostic Items
                 Column(
                     modifier = Modifier
-                        .weight(1f, fill = false)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .fillMaxWidth()
+                        .padding(MaterialTheme.spacing.xl),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m)
                 ) {
-                    // 1. Current Track Metadata
-                    DiagnosticsGroupCard(
-                        title = "Current Track",
-                        icon = Icons.Default.MusicNote
+                    // Header: Title + Close Icon
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        DiagnosticItem("Title", diagnostics.source.title)
-                        DiagnosticItem("Artist", diagnostics.source.artist)
-                        DiagnosticItem("Album", diagnostics.source.album)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Surface(
+                                shape = VedTuneShapeTokens.Small,
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(VedTuneIconSizes.Medium)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "Audio Diagnostics",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
-                    // 2. Source File Details
-                    DiagnosticsGroupCard(
-                        title = "Source File Format",
-                        icon = Icons.Default.GraphicEq
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                    // Scrollable Diagnostics Content
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m)
                     ) {
-                        DiagnosticItem("Format", diagnostics.source.container)
-                        DiagnosticItem("Codec", diagnostics.source.codec)
-                        DiagnosticItem("Bitrate", diagnostics.source.bitrate)
-                        DiagnosticItem("Sample Rate", diagnostics.source.sampleRate)
-                        DiagnosticItem("Bit Depth", diagnostics.source.bitDepth)
-                        DiagnosticItem("Channels", diagnostics.source.channels)
-                        DiagnosticItem("Duration", diagnostics.source.durationFormatted)
-                        DiagnosticItem("File Size", diagnostics.source.fileSizeFormatted)
+                        // Source Section
+                        DiagnosticsCategoryCard(
+                            title = "Source Track",
+                            icon = Icons.Default.MusicNote
+                        ) {
+                            DiagnosticRow("Container / Format", diagnostics.source.container)
+                            DiagnosticRow("Codec", diagnostics.source.codec)
+                            DiagnosticRow("Sample Rate", diagnostics.source.sampleRate)
+                            DiagnosticRow("Bit Depth", diagnostics.source.bitDepth)
+                            DiagnosticRow("Channels", diagnostics.source.channels)
+                            DiagnosticRow("Bitrate", diagnostics.source.bitrate)
+                            DiagnosticRow("File Size", diagnostics.source.fileSizeFormatted)
+                        }
+
+                        // Processing Section
+                        DiagnosticsCategoryCard(
+                            title = "Signal Processing (DSP)",
+                            icon = Icons.Default.Tune
+                        ) {
+                            DiagnosticRow(
+                                "Bit-Perfect Mode",
+                                if (diagnostics.output.isBitPerfectTransparent) "ACTIVE (Untouched)" else "Inactive"
+                            )
+                            DiagnosticRow("ReplayGain Applied", diagnostics.dsp.replayGain)
+                            DiagnosticRow("Loudness Normalization", diagnostics.dsp.loudnessNormalization)
+                            DiagnosticRow("Equalizer Active", diagnostics.dsp.equalizer)
+                            DiagnosticRow("Bass Boost Active", diagnostics.dsp.bassBoost)
+                            DiagnosticRow("Virtualizer Active", diagnostics.dsp.virtualizer)
+                            DiagnosticRow("Limiter Active", diagnostics.dsp.limiter)
+                            DiagnosticRow("Active DSP Count", "${diagnostics.dsp.activeDspCount}")
+                        }
+
+                        // Output Section
+                        DiagnosticsCategoryCard(
+                            title = "Hardware Output",
+                            icon = Icons.Default.Speaker
+                        ) {
+                            DiagnosticRow("Decoder", diagnostics.output.decoderName)
+                            DiagnosticRow("Output Sample Rate", diagnostics.output.outputSampleRate)
+                            DiagnosticRow("Output Channels", diagnostics.output.outputChannels)
+                            DiagnosticRow("Master Volume", diagnostics.output.masterVolume)
+                            DiagnosticRow("Audio Session ID", "${diagnostics.output.audioSessionId}")
+                        }
                     }
 
-                    // 3. Playback / Decoder
-                    DiagnosticsGroupCard(
-                        title = "Playback Stream",
-                        icon = Icons.Default.Speaker
-                    ) {
-                        DiagnosticItem("Decoder", diagnostics.output.decoderName)
-                        DiagnosticItem("Audio Session ID", if (diagnostics.output.audioSessionId > 0) diagnostics.output.audioSessionId.toString() else "System Default")
-                        DiagnosticItem("Output Sample Rate", diagnostics.output.outputSampleRate)
-                        DiagnosticItem("Output Channels", diagnostics.output.outputChannels)
-                        DiagnosticItem("Master Volume", diagnostics.output.masterVolume)
-                        DiagnosticItem(
-                            label = "Signal Integrity",
-                            value = if (diagnostics.output.isBitPerfectTransparent) "Bit-Perfect Transparent" else "DSP Active / Modified",
-                            isHighlighted = diagnostics.output.isBitPerfectTransparent
-                        )
-                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-                    // 4. Processing / DSP State
-                    DiagnosticsGroupCard(
-                        title = "Processing (DSP)",
-                        icon = Icons.Default.Tune
+                    // Actions Row: Copy + Close
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m)
                     ) {
-                        DiagnosticItem("ReplayGain", diagnostics.dsp.replayGain)
-                        DiagnosticItem("Equalizer", diagnostics.dsp.equalizer)
-                        DiagnosticItem("Bass Boost", diagnostics.dsp.bassBoost)
-                        DiagnosticItem("Virtualizer", diagnostics.dsp.virtualizer)
-                        DiagnosticItem("Normalizer (LUFS)", diagnostics.dsp.loudnessNormalization)
-                        DiagnosticItem("Limiter & Safety", diagnostics.dsp.limiter)
-                        DiagnosticItem(
-                            label = "Active Modules",
-                            value = if (diagnostics.dsp.activeDspCount == 0) "0 (Bit-Perfect Mode)" else "${diagnostics.dsp.activeDspCount} Active",
-                            isHighlighted = diagnostics.dsp.activeDspCount == 0
-                        )
-                    }
+                        OutlinedButton(
+                            onClick = {
+                                val text = buildDiagnosticsReport(diagnostics)
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val clip = ClipData.newPlainText("VedTune Diagnostics", text)
+                                clipboard.setPrimaryClip(clip)
+                                Toast.makeText(context, "Diagnostics copied to clipboard", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = VedTuneShapeTokens.Pill
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                modifier = Modifier.size(VedTuneIconSizes.Small)
+                            )
+                            Spacer(modifier = Modifier.width(MaterialTheme.spacing.xs))
+                            Text("Copy Report")
+                        }
 
-                    // Transparency Notice
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "Source format displays file tags. Output format represents the active AudioTrack stream. High source sample rates depend on hardware audio HAL support.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(10.dp)
-                        )
-                    }
-                }
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                // Bottom Buttons: Copy Report & Close
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedButton(
-                        onClick = { copyDiagnosticsToClipboard(context, diagnostics) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Copy Report")
-                    }
-
-                    Button(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Close")
+                        Button(
+                            onClick = onDismiss,
+                            modifier = Modifier.weight(1f),
+                            shape = VedTuneShapeTokens.Pill
+                        ) {
+                            Text("Close")
+                        }
                     }
                 }
             }
@@ -244,33 +232,31 @@ fun AudioDiagnosticsDialog(
 }
 
 @Composable
-private fun DiagnosticsGroupCard(
+private fun DiagnosticsCategoryCard(
     title: String,
     icon: ImageVector,
     content: @Composable () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-        )
+    Surface(
+        shape = VedTuneShapeTokens.Medium,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(MaterialTheme.spacing.m),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs)
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(VedTuneIconSizes.Small)
                 )
                 Text(
                     text = title,
@@ -279,19 +265,16 @@ private fun DiagnosticsGroupCard(
                     color = MaterialTheme.colorScheme.primary
                 )
             }
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
             content()
         }
     }
 }
 
 @Composable
-private fun DiagnosticItem(
+private fun DiagnosticRow(
     label: String,
-    value: String,
-    isHighlighted: Boolean = false
+    value: String
 ) {
     Row(
         modifier = Modifier
@@ -302,61 +285,49 @@ private fun DiagnosticItem(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(0.42f)
+            modifier = Modifier.weight(1f)
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Medium,
+            style = MaterialTheme.typography.bodySmall,
             fontFamily = FontFamily.Monospace,
-            textAlign = TextAlign.End,
-            color = if (isHighlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(0.58f)
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
 
-private fun copyDiagnosticsToClipboard(context: Context, diagnostics: AudioDiagnostics) {
-    val report = buildString {
-        appendLine("=== VedTune Audio Diagnostics ===")
-        appendLine()
-        appendLine("[CURRENT TRACK]")
-        appendLine("Title:         ${diagnostics.source.title}")
-        appendLine("Artist:        ${diagnostics.source.artist}")
-        appendLine("Album:         ${diagnostics.source.album}")
-        appendLine()
-        appendLine("[SOURCE FORMAT]")
-        appendLine("Container:     ${diagnostics.source.container}")
-        appendLine("Codec:         ${diagnostics.source.codec}")
-        appendLine("Bitrate:       ${diagnostics.source.bitrate}")
-        appendLine("Sample Rate:   ${diagnostics.source.sampleRate}")
-        appendLine("Bit Depth:     ${diagnostics.source.bitDepth}")
-        appendLine("Channels:      ${diagnostics.source.channels}")
-        appendLine("Duration:      ${diagnostics.source.durationFormatted}")
-        appendLine("File Size:     ${diagnostics.source.fileSizeFormatted}")
-        appendLine()
-        appendLine("[PLAYBACK / DECODER]")
-        appendLine("Decoder:       ${diagnostics.output.decoderName}")
-        appendLine("Session ID:    ${diagnostics.output.audioSessionId}")
-        appendLine("Output Rate:   ${diagnostics.output.outputSampleRate}")
-        appendLine("Output Ch:     ${diagnostics.output.outputChannels}")
-        appendLine("Master Volume: ${diagnostics.output.masterVolume}")
-        appendLine("Bit-Perfect:   ${if (diagnostics.output.isBitPerfectTransparent) "YES" else "NO"}")
-        appendLine()
-        appendLine("[PROCESSING / DSP]")
-        appendLine("ReplayGain:    ${diagnostics.dsp.replayGain}")
-        appendLine("Equalizer:     ${diagnostics.dsp.equalizer}")
-        appendLine("Bass Boost:    ${diagnostics.dsp.bassBoost}")
-        appendLine("Virtualizer:   ${diagnostics.dsp.virtualizer}")
-        appendLine("Normalizer:    ${diagnostics.dsp.loudnessNormalization}")
-        appendLine("Limiter:       ${diagnostics.dsp.limiter}")
-        appendLine("Active DSPs:   ${diagnostics.dsp.activeDspCount}")
-    }
+private fun buildDiagnosticsReport(d: AudioDiagnostics): String {
+    return """
+        === VedTune Audio Diagnostics ===
+        [Source Track]
+        • Title: ${d.source.title}
+        • Artist: ${d.source.artist}
+        • Container: ${d.source.container}
+        • Codec: ${d.source.codec}
+        • Sample Rate: ${d.source.sampleRate}
+        • Bit Depth: ${d.source.bitDepth}
+        • Channels: ${d.source.channels}
+        • Bitrate: ${d.source.bitrate}
+        • File Size: ${d.source.fileSizeFormatted}
 
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-    val clip = ClipData.newPlainText("VedTune Audio Diagnostics", report)
-    clipboard?.setPrimaryClip(clip)
-    Toast.makeText(context, "Diagnostics report copied to clipboard", Toast.LENGTH_SHORT).show()
+        [Signal Processing (DSP)]
+        • Bit-Perfect Mode: ${if (d.output.isBitPerfectTransparent) "YES (Untouched)" else "NO (DSP Active)"}
+        • ReplayGain: ${d.dsp.replayGain}
+        • Loudness Normalization: ${d.dsp.loudnessNormalization}
+        • Equalizer: ${d.dsp.equalizer}
+        • Bass Boost: ${d.dsp.bassBoost}
+        • Virtualizer: ${d.dsp.virtualizer}
+        • Limiter: ${d.dsp.limiter}
+        • Active DSP Count: ${d.dsp.activeDspCount}
+
+        [Hardware Output]
+        • Decoder: ${d.output.decoderName}
+        • Sample Rate: ${d.output.outputSampleRate}
+        • Channels: ${d.output.outputChannels}
+        • Master Volume: ${d.output.masterVolume}
+        • Session ID: ${d.output.audioSessionId}
+    """.trimIndent()
 }

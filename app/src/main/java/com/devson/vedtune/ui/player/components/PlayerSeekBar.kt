@@ -24,6 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.devson.vedtune.domain.model.SeekBarStyle
 import com.devson.vedtune.ui.components.VedTuneSeekBar
+import com.devson.vedtune.ui.theme.VedTuneShapeTokens
+import com.devson.vedtune.ui.theme.VedTuneTextStyles
+import com.devson.vedtune.ui.theme.spacing
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
@@ -75,15 +78,15 @@ fun PlayerSeekBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp),
+                .padding(horizontal = MaterialTheme.spacing.xs),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = formatPlayerTime(sliderValue.toLong()),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                style = VedTuneTextStyles.Metadata,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
-                    .clip(MaterialTheme.shapes.small)
+                    .clip(VedTuneShapeTokens.Small)
                     .clickable { onToggleRemainingTime() }
             )
             val endLabel = if (showRemainingTime) {
@@ -93,10 +96,10 @@ fun PlayerSeekBar(
             }
             Text(
                 text = endLabel,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                style = VedTuneTextStyles.Metadata,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
-                    .clip(MaterialTheme.shapes.small)
+                    .clip(VedTuneShapeTokens.Small)
                     .clickable { onToggleRemainingTime() }
             )
         }

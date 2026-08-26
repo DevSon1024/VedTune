@@ -7,14 +7,19 @@ import com.devson.vedtune.domain.repository.MediaRepository
 import com.devson.vedtune.player.PlaybackConnection
 import com.devson.vedtune.ui.songs.SortOrder
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -22,6 +27,7 @@ enum class PlaylistSortBy {
     NAME, SONG_COUNT, DATE_CREATED
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class PlaylistsViewModel @Inject constructor(
     private val repository: MediaRepository,
@@ -65,6 +71,26 @@ class PlaylistsViewModel @Inject constructor(
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /**
+     * Reactively computes preview album IDs (up to 4 distinct) for each playlist for 2x2 collage presentation.
+     */
+    val playlistPreviews: StateFlow<Map<Long, List<Long>>> = repository.getAllPlaylists()
+        .flatMapLatest { playlistList ->
+            if (playlistList.isEmpty()) flowOf(emptyMap())
+            else {
+                val flows = playlistList.map { pl ->
+                    repository.getSongsByPlaylistId(pl.id).map { songs ->
+                        pl.id to songs.map { it.albumId }.filter { it > 0 }.distinct().take(4)
+                    }
+                }
+                combine(flows) { pairs ->
+                    pairs.toMap()
+                }
+            }
+        }
+        .flowOn(Dispatchers.IO)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     val totalItemCount: StateFlow<Int> = playlists
         .map { it.size }

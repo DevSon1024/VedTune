@@ -7,7 +7,7 @@ import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.domain.model.ViewPreferences
 
 enum class SortBy {
-    TITLE, ARTIST, ALBUM, DATE_ADDED
+    TITLE, ARTIST, ALBUM, DATE_ADDED, DURATION
 }
 
 enum class SortOrder {

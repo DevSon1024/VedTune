@@ -1,6 +1,8 @@
 package com.devson.vedtune.ui.settings
 
-import androidx.compose.foundation.clickable
+import android.content.Context
+import android.os.Build
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,56 +18,64 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Lyrics
+import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.SdCard
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Switch
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.devson.vedtune.domain.model.FolderFilterMode
+import coil.imageLoader
 import com.devson.vedtune.ui.components.VedTuneConfirmDialog
 import com.devson.vedtune.ui.components.VedTuneIconButton
 import com.devson.vedtune.ui.theme.VedTuneIconSizes
 import com.devson.vedtune.ui.theme.VedTuneShapeTokens
 import com.devson.vedtune.ui.theme.VedTuneTextStyles
 import com.devson.vedtune.ui.theme.spacing
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
+@OptIn(coil.annotation.ExperimentalCoilApi::class)
 @Composable
-fun LibrarySettingsScreen(
+fun StorageSettingsScreen(
     viewModel: SettingsViewModel,
     onNavigateBack: () -> Unit,
-    onNavigateToFolderSettings: () -> Unit,
-    onNavigateToLyricsConverter: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val autoSyncOnStartup by viewModel.autoSyncOnStartup.collectAsState()
-    val folderFilterMode by viewModel.folderFilterMode.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
-    var showResetDialog by remember { mutableStateOf(false) }
+    var showClearImageCacheDialog by remember { mutableStateOf(false) }
+    var showClearLyricsCacheDialog by remember { mutableStateOf(false) }
 
-    val folderModeLabel = when (folderFilterMode) {
-        FolderFilterMode.NONE -> "All folders included"
-        FolderFilterMode.WHITELIST -> "Whitelist active"
-        FolderFilterMode.BLACKLIST -> "Blacklist active"
+    val permissionStatus = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            "READ_MEDIA_AUDIO (Android 13+)"
+        } else {
+            "READ_EXTERNAL_STORAGE"
+        }
     }
 
     Column(
@@ -89,18 +99,11 @@ fun LibrarySettingsScreen(
             )
             Spacer(modifier = Modifier.width(MaterialTheme.spacing.s))
             Text(
-                text = "Library & Folders",
+                text = "Storage & Cache",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
-            )
-            VedTuneIconButton(
-                icon = Icons.Default.RestartAlt,
-                contentDescription = "Reset Library Settings",
-                onClick = { showResetDialog = true },
-                iconSize = VedTuneIconSizes.Medium,
-                tint = MaterialTheme.colorScheme.error
             )
         }
 
@@ -114,11 +117,11 @@ fun LibrarySettingsScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m)
         ) {
-            // MediaStore Sync Card
+            // Cache Management Card
             item {
-                LibrarySectionCard(
-                    title = "Media Synchronization",
-                    icon = Icons.Default.Sync
+                StorageSectionCard(
+                    title = "Temporary Cache",
+                    icon = Icons.Default.CleaningServices
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -127,92 +130,95 @@ fun LibrarySettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Auto-sync on Startup",
+                                text = "Artwork Image Cache",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Scan and sync device MediaStore audio on app launch",
+                                text = "Free memory and disk space used by decoded album covers",
                                 style = VedTuneTextStyles.Metadata,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Switch(
-                            checked = autoSyncOnStartup,
-                            onCheckedChange = { viewModel.setAutoSyncOnStartup(it) }
-                        )
+                        OutlinedButton(
+                            onClick = { showClearImageCacheDialog = true },
+                            shape = VedTuneShapeTokens.Pill
+                        ) {
+                            Text("Clear")
+                        }
                     }
-                }
-            }
 
-            // Folder Filtering Card
-            item {
-                LibrarySectionCard(
-                    title = "Folders & Scanning",
-                    icon = Icons.Default.Folder
-                ) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(onClick = onNavigateToFolderSettings)
-                            .padding(vertical = 4.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Folder Visibility & Filters",
+                                text = "Custom Lyrics Cache",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = folderModeLabel,
-                                style = VedTuneTextStyles.Metadata,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            // Lyrics Tools Card
-            item {
-                LibrarySectionCard(
-                    title = "Lyrics Management",
-                    icon = Icons.Default.Lyrics
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(onClick = onNavigateToLyricsConverter)
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "LRC Lyrics Batch Converter",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Scan and convert external .lrc files into synchronized tags",
+                                text = "Delete locally cached synchronized lyrics files",
                                 style = VedTuneTextStyles.Metadata,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        OutlinedButton(
+                            onClick = { showClearLyricsCacheDialog = true },
+                            shape = VedTuneShapeTokens.Pill
+                        ) {
+                            Text("Clear")
+                        }
+                    }
+                }
+            }
+
+            // Permissions & MediaStore Architecture Card
+            item {
+                StorageSectionCard(
+                    title = "Storage Permissions & Architecture",
+                    icon = Icons.Default.SdCard
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "Permission Scope",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Surface(
+                            shape = VedTuneShapeTokens.Pill,
+                            color = MaterialTheme.colorScheme.primaryContainer
+                        ) {
+                            Text(
+                                text = permissionStatus,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "MediaStore-First Principle",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "VedTune respects your privacy and uses Android's native MediaStore indexing instead of invasive recursive folder crawling, ensuring battery efficiency and zero unauthorized file modifications.",
+                            style = VedTuneTextStyles.Metadata,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -220,25 +226,54 @@ fun LibrarySettingsScreen(
         }
     }
 
-    // Reset Library Dialog
-    if (showResetDialog) {
+    // Clear Image Cache Confirmation
+    if (showClearImageCacheDialog) {
         VedTuneConfirmDialog(
-            title = "Reset Library Settings?",
-            message = "This will enable auto-sync on startup, clear all folder whitelist and blacklist rules, and include all folders in library scanning.",
-            confirmText = "Reset",
+            title = "Clear Artwork Cache?",
+            message = "This will clear memory and disk caches for album covers. Artwork will reload cleanly from audio metadata as needed.",
+            confirmText = "Clear Cache",
+            dismissText = "Cancel",
+            onConfirm = {
+                scope.launch(Dispatchers.IO) {
+                    context.imageLoader.diskCache?.clear()
+                    context.imageLoader.memoryCache?.clear()
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Artwork cache cleared", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                showClearImageCacheDialog = false
+            },
+            onDismiss = { showClearImageCacheDialog = false }
+        )
+    }
+
+    // Clear Lyrics Cache Confirmation
+    if (showClearLyricsCacheDialog) {
+        VedTuneConfirmDialog(
+            title = "Clear Lyrics Cache?",
+            message = "This will remove all downloaded and cached external lyrics files from app storage.",
+            confirmText = "Clear Lyrics",
             dismissText = "Cancel",
             isDestructive = true,
             onConfirm = {
-                viewModel.resetLibrarySettings()
-                showResetDialog = false
+                scope.launch(Dispatchers.IO) {
+                    val lyricsDir = File(context.cacheDir, "lyrics")
+                    if (lyricsDir.exists()) {
+                        lyricsDir.deleteRecursively()
+                    }
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Lyrics cache cleared", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                showClearLyricsCacheDialog = false
             },
-            onDismiss = { showResetDialog = false }
+            onDismiss = { showClearLyricsCacheDialog = false }
         )
     }
 }
 
 @Composable
-private fun LibrarySectionCard(
+private fun StorageSectionCard(
     title: String,
     icon: ImageVector,
     content: @Composable () -> Unit

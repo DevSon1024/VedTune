@@ -1,12 +1,9 @@
 package com.devson.vedtune.ui.settings
 
-import android.content.Context
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,31 +15,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.SdCard
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedButton
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -51,17 +41,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.devson.vedtune.ui.components.VedTuneConfirmDialog
 import com.devson.vedtune.ui.components.VedTuneTopAppBar
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.devson.vedtune.ui.theme.VedTuneIconSizes
+import com.devson.vedtune.ui.theme.VedTuneShapeTokens
+import com.devson.vedtune.ui.theme.VedTuneTextStyles
+import com.devson.vedtune.ui.theme.spacing
 
 @Composable
 fun SettingsScreen(
@@ -69,14 +58,16 @@ fun SettingsScreen(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     onNavigateToAppearanceSettings: () -> Unit = {},
-    onNavigateToPlayerInterfaceSettings: () -> Unit = {},
     onNavigateToPlaybackSettings: () -> Unit = {},
+    onNavigateToAudioSettings: () -> Unit = {},
     onNavigateToLibrarySettings: () -> Unit = {},
-    onNavigateToLyricsConverter: () -> Unit = {},
+    onNavigateToNotificationSettings: () -> Unit = {},
+    onNavigateToStorageSettings: () -> Unit = {},
+    onNavigateToPrivacySettings: () -> Unit = {},
     onNavigateToAbout: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    var queueClearedMessageVisible by remember { mutableStateOf(false) }
+    var showResetAllDialog by remember { mutableStateOf(false) }
 
     val versionName = remember(context) {
         runCatching {
@@ -105,12 +96,14 @@ fun SettingsScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
-                start = 16.dp,
-                top = 8.dp,
-                end = 16.dp,
-                bottom = contentPadding.calculateBottomPadding() + 16.dp
-            )
+                start = MaterialTheme.spacing.l,
+                top = MaterialTheme.spacing.s,
+                end = MaterialTheme.spacing.l,
+                bottom = contentPadding.calculateBottomPadding() + MaterialTheme.spacing.xxl
+            ),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m)
         ) {
+            // App Identity Hero Card
             item {
                 AppIdentityCard(
                     versionName = versionName,
@@ -119,202 +112,185 @@ fun SettingsScreen(
                 )
             }
 
-            // APPEARANCE SECTION
-            settingsSection("Appearance") {
-                item {
-                    SettingsGroupCard {
-                        SettingsItemRow(
-                            icon = Icons.Default.Palette,
-                            title = "Appearance & Theme",
-                            subtitle = "Theme mode, dynamic colors, album artwork display",
-                            onClick = onNavigateToAppearanceSettings
-                        )
-                    }
+            // 1. Appearance Section
+            item {
+                SettingsSectionContainer {
+                    SettingsNavigationTile(
+                        icon = Icons.Default.Palette,
+                        title = "Appearance",
+                        subtitle = "Theme mode, AMOLED pure black, dynamic colors, artwork display",
+                        onClick = onNavigateToAppearanceSettings
+                    )
                 }
             }
 
-            // PLAYER & PLAYBACK SECTION
-            settingsSection("Player & Playback") {
-                item {
-                    SettingsGroupCard {
-                        SettingsItemRow(
-                            icon = Icons.Default.Tune,
-                            title = "Player Interface",
-                            subtitle = "Seekbar styles, controls visibility, gesture options",
-                            onClick = onNavigateToPlayerInterfaceSettings
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 72.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-                        SettingsItemRow(
-                            icon = Icons.Default.PlayArrow,
-                            title = "Playback & Equalizer",
-                            subtitle = "Auto-resume, fade-in, gestures, system equalizer",
-                            onClick = onNavigateToPlaybackSettings
-                        )
-                    }
+            // 2. Playback Section
+            item {
+                SettingsSectionContainer {
+                    SettingsNavigationTile(
+                        icon = Icons.Default.PlayArrow,
+                        title = "Playback",
+                        subtitle = "Queue, gapless playback, crossfade, and startup options",
+                        onClick = onNavigateToPlaybackSettings
+                    )
                 }
             }
 
-            // LIBRARY & STORAGE SECTION
-            settingsSection("Library & Storage") {
-                item {
-                    SettingsGroupCard {
-                        SettingsItemRow(
-                            icon = Icons.Default.Folder,
-                            title = "Library & Folders",
-                            subtitle = "Auto-sync on startup, folder visibility filters",
-                            onClick = onNavigateToLibrarySettings
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 72.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.errorContainer),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp),
-                                        tint = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Clear Playback Queue",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Text(
-                                        text = "Clears active playback queue items and resets state",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
+            // 3. Audio Section
+            item {
+                SettingsSectionContainer {
+                    SettingsNavigationTile(
+                        icon = Icons.Default.GraphicEq,
+                        title = "Audio",
+                        subtitle = "Equalizer, ReplayGain, volume normalization, and DSP processing",
+                        onClick = onNavigateToAudioSettings
+                    )
+                }
+            }
 
-                            ElevatedButton(
-                                onClick = {
-                                    viewModel.clearPlaybackQueue()
-                                    queueClearedMessageVisible = true
-                                    CoroutineScope(Dispatchers.Main).launch {
-                                        delay(3000)
-                                        queueClearedMessageVisible = false
-                                    }
-                                },
-                                colors = ButtonDefaults.elevatedButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
-                                ),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(text = "Clear Queue Cache")
-                            }
+            // 4. Library Section
+            item {
+                SettingsSectionContainer {
+                    SettingsNavigationTile(
+                        icon = Icons.Default.LibraryMusic,
+                        title = "Library",
+                        subtitle = "Folder filters, auto-sync, scanner, and lyrics directory",
+                        onClick = onNavigateToLibrarySettings
+                    )
+                }
+            }
 
-                            if (queueClearedMessageVisible) {
-                                Text(
-                                    text = "Playback queue cache cleared successfully.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
-                            }
+            // 5. Notifications Section
+            item {
+                SettingsSectionContainer {
+                    SettingsNavigationTile(
+                        icon = Icons.Default.Notifications,
+                        title = "Notifications",
+                        subtitle = "Media notification style, lockscreen playback controls",
+                        onClick = onNavigateToNotificationSettings
+                    )
+                }
+            }
+
+            // 6. Storage Section
+            item {
+                SettingsSectionContainer {
+                    SettingsNavigationTile(
+                        icon = Icons.Default.SdCard,
+                        title = "Storage",
+                        subtitle = "Artwork cache, custom lyrics cache, and storage permissions",
+                        onClick = onNavigateToStorageSettings
+                    )
+                }
+            }
+
+            // 7. Privacy Section
+            item {
+                SettingsSectionContainer {
+                    SettingsNavigationTile(
+                        icon = Icons.Default.Shield,
+                        title = "Privacy",
+                        subtitle = "Listening history logging, crash diagnostics, and data controls",
+                        onClick = onNavigateToPrivacySettings
+                    )
+                }
+            }
+
+            // 8. About Section
+            item {
+                SettingsSectionContainer {
+                    SettingsNavigationTile(
+                        icon = Icons.Default.Info,
+                        title = "About",
+                        subtitle = "App version, developer info, open source licenses, credits",
+                        onClick = onNavigateToAbout
+                    )
+                }
+            }
+
+            // Reset All Settings Action Card
+            item {
+                Card(
+                    shape = VedTuneShapeTokens.Card,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(MaterialTheme.spacing.l),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Reset All Settings",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Text(
+                                text = "Restore all appearance, playback, audio, and library preferences to default",
+                                style = VedTuneTextStyles.Metadata,
+                                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                            )
                         }
-                    }
-                }
-            }
-
-            // TOOLS SECTION
-            settingsSection("Tools") {
-                item {
-                    SettingsGroupCard {
-                        SettingsItemRow(
-                            icon = Icons.Default.Build,
-                            title = "Lyrics Converter",
-                            subtitle = "Convert raw text lyrics to timed LRC format",
-                            onClick = onNavigateToLyricsConverter
-                        )
-                    }
-                }
-            }
-
-            // APP SECTION
-            settingsSection("App") {
-                item {
-                    SettingsGroupCard {
-                        SettingsItemRow(
-                            icon = Icons.Default.Info,
-                            title = "About VedTune",
-                            subtitle = "App version, device specs, open-source credits",
-                            onClick = onNavigateToAbout
-                        )
+                        Spacer(modifier = Modifier.width(MaterialTheme.spacing.m))
+                        OutlinedButton(
+                            onClick = { showResetAllDialog = true },
+                            shape = VedTuneShapeTokens.Pill
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.RestartAlt,
+                                contentDescription = null,
+                                modifier = Modifier.size(VedTuneIconSizes.Small)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Reset")
+                        }
                     }
                 }
             }
         }
     }
-}
 
-fun LazyListScope.settingsSection(
-    title: String,
-    content: LazyListScope.() -> Unit
-) {
-    item {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(start = 8.dp, top = 16.dp, bottom = 8.dp)
+    // Reset All Confirmation Dialog
+    if (showResetAllDialog) {
+        VedTuneConfirmDialog(
+            title = "Reset All Settings?",
+            message = "This will restore all application preferences back to defaults:\n\n• Appearance: System theme, dynamic colors, default start tab\n• Playback: Gapless enabled, crossfade off, standard seekbar\n• Audio: Bit-perfect mode (EQ, ReplayGain, LUFS, Limiter disabled)\n• Library: All folders included, auto-sync enabled\n\nYour actual music audio files and playlists will NOT be deleted.",
+            confirmText = "Reset Everything",
+            dismissText = "Cancel",
+            isDestructive = true,
+            onConfirm = {
+                viewModel.resetAllSettings()
+                showResetAllDialog = false
+            },
+            onDismiss = { showResetAllDialog = false }
         )
-    }
-    content()
-    item {
-        Spacer(modifier = Modifier.height(12.dp))
     }
 }
 
 @Composable
-fun SettingsGroupCard(
+private fun SettingsSectionContainer(
     modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable () -> Unit
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = VedTuneShapeTokens.Card,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        modifier = modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp)),
-            content = content
-        )
+        content()
     }
 }
 
 @Composable
-fun SettingsItemRow(
+private fun SettingsNavigationTile(
     icon: ImageVector,
     title: String,
     subtitle: String,
@@ -325,43 +301,47 @@ fun SettingsItemRow(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(MaterialTheme.spacing.l),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondaryContainer),
-            contentAlignment = Alignment.Center
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m),
+            modifier = Modifier.weight(1f)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSecondaryContainer
-            )
+            Surface(
+                shape = VedTuneShapeTokens.Small,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(VedTuneIconSizes.Medium)
+                    )
+                }
+            }
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = VedTuneTextStyles.Metadata,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
         Icon(
             imageVector = Icons.Default.ChevronRight,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp)
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -373,269 +353,59 @@ private fun AppIdentityCard(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = VedTuneShapeTokens.Card,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onClick() }
-                .padding(horizontal = 20.dp, vertical = 20.dp),
+                .padding(MaterialTheme.spacing.l),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Gradient app logo circle
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.secondary
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs)
+                ) {
+                    Text(
+                        text = "VedTune",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    if (isDebug) {
+                        Surface(
+                            shape = VedTuneShapeTokens.Pill,
+                            color = MaterialTheme.colorScheme.errorContainer
+                        ) {
+                            Text(
+                                text = "DEBUG",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
-                        )
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.LibraryMusic,
-                    contentDescription = null,
-                    modifier = Modifier.size(34.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
-            }
-
-            Column(modifier = Modifier.weight(1f)) {
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "VedTune",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(Modifier.height(3.dp))
-                Text(
-                    text = "Version $versionName",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "Version $versionName • MediaStore-First Music Player",
+                    style = VedTuneTextStyles.Metadata,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = if (isDebug) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.padding(end = 2.dp)
-            ) {
-                Text(
-                    text = if (isDebug) "DEBUG" else "STABLE",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (isDebug) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun SettingsCard(
-    title: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.padding(bottom = 12.dp)
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            content()
-        }
-    }
-}
-
-@Composable
-fun SettingsNavigationRow(
-    title: String,
-    description: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable { onClick() }
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
             )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Icon(
-            imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowForward,
-            contentDescription = "Navigate",
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(18.dp)
-        )
-    }
-}
-
-@Composable
-fun ThemeModeSelector(
-    currentMode: String,
-    onModeSelected: (String) -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = "Theme Mode",
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            listOf("SYSTEM" to "System", "LIGHT" to "Light", "DARK" to "Dark").forEach { (mode, label) ->
-                val isSelected = currentMode == mode
-                if (isSelected) {
-                    FilledTonalButton(
-                        onClick = { onModeSelected(mode) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(text = label)
-                    }
-                } else {
-                    OutlinedButton(
-                        onClick = { onModeSelected(mode) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(text = label)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun SettingSwitchRow(
-    title: String,
-    description: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Spacer(modifier = Modifier.width(16.dp))
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange
-        )
-    }
-}
-
-@Composable
-fun DefaultStartScreenSelector(
-    currentScreen: String,
-    onScreenSelected: (String) -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = "Default Start Screen",
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            listOf("songs" to "Songs", "albums" to "Albums", "artists" to "Artists", "playlists" to "Playlists").forEach { (screen, label) ->
-                val isSelected = currentScreen == screen
-                if (isSelected) {
-                    FilledTonalButton(
-                        onClick = { onScreenSelected(screen) },
-                        modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
-                    ) {
-                        Text(text = label, maxLines = 1, style = MaterialTheme.typography.bodySmall)
-                    }
-                } else {
-                    OutlinedButton(
-                        onClick = { onScreenSelected(screen) },
-                        modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
-                    ) {
-                        Text(text = label, maxLines = 1, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
         }
     }
 }

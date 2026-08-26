@@ -16,6 +16,7 @@ import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,6 +26,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.devson.vedtune.domain.model.Song
+import com.devson.vedtune.ui.theme.VedTuneIconSizes
+import com.devson.vedtune.ui.theme.VedTuneShapeTokens
+import com.devson.vedtune.ui.theme.spacing
 
 @Composable
 fun ClickableMetadata(
@@ -37,77 +41,93 @@ fun ClickableMetadata(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp),
+            .padding(horizontal = MaterialTheme.spacing.l),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Song Title with subtle clickable ripple and smooth marquee
         Text(
             text = song.title,
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
+            color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(MaterialTheme.shapes.small)
+                .clip(VedTuneShapeTokens.Small)
                 .clickable { onSongClick() }
-                .basicMarquee()
+                .basicMarquee(iterations = Int.MAX_VALUE)
         )
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.s))
 
+        // Artist & Album Pills Row
         Row(
-            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .clip(MaterialTheme.shapes.small)
-                .clickable { onArtistClick() }
-                .padding(horizontal = 8.dp, vertical = 2.dp)
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Rounded.Person,
-                contentDescription = "Artist",
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = song.artist,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
-                maxLines = 1,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.basicMarquee()
-            )
-        }
+            // Artist Pill
+            Surface(
+                onClick = onArtistClick,
+                shape = VedTuneShapeTokens.Pill,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m, vertical = MaterialTheme.spacing.xs),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Person,
+                        contentDescription = "Artist",
+                        modifier = Modifier.size(VedTuneIconSizes.Small),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.xs))
+                    Text(
+                        text = song.artist,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        modifier = Modifier.basicMarquee()
+                    )
+                }
+            }
 
-        Spacer(modifier = Modifier.height(2.dp))
+            if (song.album.isNotBlank() && song.album != "Unknown Album") {
+                Spacer(modifier = Modifier.width(MaterialTheme.spacing.s))
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .clip(MaterialTheme.shapes.small)
-                .clickable { onAlbumClick() }
-                .padding(horizontal = 8.dp, vertical = 2.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Album,
-                contentDescription = "Album",
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = song.album.ifBlank { "Unknown Album" },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
-                maxLines = 1,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.basicMarquee()
-            )
+                // Album Pill
+                Surface(
+                    onClick = onAlbumClick,
+                    shape = VedTuneShapeTokens.Pill,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m, vertical = MaterialTheme.spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Album,
+                            contentDescription = "Album",
+                            modifier = Modifier.size(VedTuneIconSizes.Small),
+                            tint = MaterialTheme.colorScheme.secondary
+                        )
+                        Spacer(modifier = Modifier.width(MaterialTheme.spacing.xs))
+                        Text(
+                            text = song.album,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            modifier = Modifier.basicMarquee()
+                        )
+                    }
+                }
+            }
         }
     }
 }

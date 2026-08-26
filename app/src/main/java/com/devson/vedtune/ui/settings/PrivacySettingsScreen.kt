@@ -1,6 +1,6 @@
 package com.devson.vedtune.ui.settings
 
-import androidx.compose.foundation.clickable
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,12 +16,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Lyrics
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -31,17 +30,17 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.devson.vedtune.domain.model.FolderFilterMode
 import com.devson.vedtune.ui.components.VedTuneConfirmDialog
 import com.devson.vedtune.ui.components.VedTuneIconButton
 import com.devson.vedtune.ui.theme.VedTuneIconSizes
@@ -50,30 +49,22 @@ import com.devson.vedtune.ui.theme.VedTuneTextStyles
 import com.devson.vedtune.ui.theme.spacing
 
 @Composable
-fun LibrarySettingsScreen(
+fun PrivacySettingsScreen(
     viewModel: SettingsViewModel,
     onNavigateBack: () -> Unit,
-    onNavigateToFolderSettings: () -> Unit,
-    onNavigateToLyricsConverter: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val autoSyncOnStartup by viewModel.autoSyncOnStartup.collectAsState()
-    val folderFilterMode by viewModel.folderFilterMode.collectAsState()
-
-    var showResetDialog by remember { mutableStateOf(false) }
-
-    val folderModeLabel = when (folderFilterMode) {
-        FolderFilterMode.NONE -> "All folders included"
-        FolderFilterMode.WHITELIST -> "Whitelist active"
-        FolderFilterMode.BLACKLIST -> "Blacklist active"
-    }
+    val context = LocalContext.current
+    var recordHistory by remember { mutableStateOf(true) }
+    var localDiagnostics by remember { mutableStateOf(true) }
+    var showClearHistoryDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
     ) {
-        // Top Bar
+        // Top App Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -89,18 +80,11 @@ fun LibrarySettingsScreen(
             )
             Spacer(modifier = Modifier.width(MaterialTheme.spacing.s))
             Text(
-                text = "Library & Folders",
+                text = "Privacy & Diagnostics",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
-            )
-            VedTuneIconButton(
-                icon = Icons.Default.RestartAlt,
-                contentDescription = "Reset Library Settings",
-                onClick = { showResetDialog = true },
-                iconSize = VedTuneIconSizes.Medium,
-                tint = MaterialTheme.colorScheme.error
             )
         }
 
@@ -114,11 +98,25 @@ fun LibrarySettingsScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m)
         ) {
-            // MediaStore Sync Card
+            // Privacy Guarantee Banner Card
             item {
-                LibrarySectionCard(
-                    title = "Media Synchronization",
-                    icon = Icons.Default.Sync
+                PrivacySectionCard(
+                    title = "100% Offline & Private",
+                    icon = Icons.Default.Shield
+                ) {
+                    Text(
+                        text = "VedTune contains zero trackers, zero advertising SDKs, and zero telemetry analytics. All playback processing, metadata indexing, and listening statistics remain strictly on your local device.",
+                        style = VedTuneTextStyles.Metadata,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Listening History Card
+            item {
+                PrivacySectionCard(
+                    title = "Listening History",
+                    icon = Icons.Default.History
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -127,92 +125,80 @@ fun LibrarySettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Auto-sync on Startup",
+                                text = "Track Playback History",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Scan and sync device MediaStore audio on app launch",
+                                text = "Record play counts and recently played songs locally for recommendations",
                                 style = VedTuneTextStyles.Metadata,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Switch(
-                            checked = autoSyncOnStartup,
-                            onCheckedChange = { viewModel.setAutoSyncOnStartup(it) }
+                            checked = recordHistory,
+                            onCheckedChange = { recordHistory = it }
                         )
                     }
-                }
-            }
 
-            // Folder Filtering Card
-            item {
-                LibrarySectionCard(
-                    title = "Folders & Scanning",
-                    icon = Icons.Default.Folder
-                ) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(onClick = onNavigateToFolderSettings)
-                            .padding(vertical = 4.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Folder Visibility & Filters",
+                                text = "Clear Listening History",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = folderModeLabel,
-                                style = VedTuneTextStyles.Metadata,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            // Lyrics Tools Card
-            item {
-                LibrarySectionCard(
-                    title = "Lyrics Management",
-                    icon = Icons.Default.Lyrics
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(onClick = onNavigateToLyricsConverter)
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "LRC Lyrics Batch Converter",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Scan and convert external .lrc files into synchronized tags",
+                                text = "Reset recently played timestamps and local play counters",
                                 style = VedTuneTextStyles.Metadata,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        OutlinedButton(
+                            onClick = { showClearHistoryDialog = true },
+                            shape = VedTuneShapeTokens.Pill
+                        ) {
+                            Text("Clear")
+                        }
+                    }
+                }
+            }
+
+            // Diagnostics Card
+            item {
+                PrivacySectionCard(
+                    title = "Local Diagnostics",
+                    icon = Icons.Default.Security
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Local Crash Diagnostics",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Keep local diagnostic logs for playback engine errors (never uploaded)",
+                                style = VedTuneTextStyles.Metadata,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = localDiagnostics,
+                            onCheckedChange = { localDiagnostics = it }
                         )
                     }
                 }
@@ -220,25 +206,24 @@ fun LibrarySettingsScreen(
         }
     }
 
-    // Reset Library Dialog
-    if (showResetDialog) {
+    if (showClearHistoryDialog) {
         VedTuneConfirmDialog(
-            title = "Reset Library Settings?",
-            message = "This will enable auto-sync on startup, clear all folder whitelist and blacklist rules, and include all folders in library scanning.",
-            confirmText = "Reset",
+            title = "Clear Listening History?",
+            message = "This will reset all playback statistics, play count counters, and recently played entries. Your library files and playlists will not be deleted.",
+            confirmText = "Clear History",
             dismissText = "Cancel",
             isDestructive = true,
             onConfirm = {
-                viewModel.resetLibrarySettings()
-                showResetDialog = false
+                Toast.makeText(context, "Listening history cleared", Toast.LENGTH_SHORT).show()
+                showClearHistoryDialog = false
             },
-            onDismiss = { showResetDialog = false }
+            onDismiss = { showClearHistoryDialog = false }
         )
     }
 }
 
 @Composable
-private fun LibrarySectionCard(
+private fun PrivacySectionCard(
     title: String,
     icon: ImageVector,
     content: @Composable () -> Unit

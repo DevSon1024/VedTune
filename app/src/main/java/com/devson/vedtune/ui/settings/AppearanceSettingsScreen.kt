@@ -1,36 +1,38 @@
 package com.devson.vedtune.ui.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Tab
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -39,440 +41,443 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.devson.vedtune.domain.model.AlbumArtClickAction
 import com.devson.vedtune.domain.model.AlbumArtQuality
+import com.devson.vedtune.ui.components.VedTuneConfirmDialog
+import com.devson.vedtune.ui.components.VedTuneIconButton
+import com.devson.vedtune.ui.components.VedTuneInfoDialog
+import com.devson.vedtune.ui.theme.VedTuneIconSizes
+import com.devson.vedtune.ui.theme.VedTuneShapeTokens
+import com.devson.vedtune.ui.theme.VedTuneTextStyles
+import com.devson.vedtune.ui.theme.spacing
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppearanceSettingsScreen(
     viewModel: SettingsViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val themeMode by viewModel.themeMode.collectAsState()
     val dynamicColorsEnabled by viewModel.dynamicColorsEnabled.collectAsState()
     val showAlbumArt by viewModel.showAlbumArt.collectAsState()
-    val keepScreenOnWithLyrics by viewModel.keepScreenOnWithLyrics.collectAsState()
-    val albumArtClickAction by viewModel.albumArtClickAction.collectAsState()
-    val playerBackgroundBlurRadius by viewModel.playerBackgroundBlurRadius.collectAsState()
-
-    // New settings flows
     val isAmoledDark by viewModel.isAmoledDark.collectAsState()
     val albumArtQuality by viewModel.albumArtQuality.collectAsState()
     val forceSquareArtwork by viewModel.forceSquareArtwork.collectAsState()
+    val defaultStartScreen by viewModel.defaultStartScreen.collectAsState()
 
-    val systemInDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val systemInDark = isSystemInDarkTheme()
     val showAmoledToggle = themeMode == "DARK" || (themeMode == "SYSTEM" && systemInDark)
 
     var showThemeDialog by remember { mutableStateOf(false) }
-    var showClickActionDialog by remember { mutableStateOf(false) }
+    var showStartTabDialog by remember { mutableStateOf(false) }
+    var showResetDialog by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Appearance & Theme",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+    ) {
+        // Top App Bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = MaterialTheme.spacing.s),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            VedTuneIconButton(
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Go Back",
+                onClick = onNavigateBack,
+                iconSize = VedTuneIconSizes.Medium
+            )
+            Spacer(modifier = Modifier.width(MaterialTheme.spacing.s))
+            Text(
+                text = "Appearance",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            VedTuneIconButton(
+                icon = Icons.Default.RestartAlt,
+                contentDescription = "Reset Appearance Settings",
+                onClick = { showResetDialog = true },
+                iconSize = VedTuneIconSizes.Medium,
+                tint = MaterialTheme.colorScheme.error
             )
         }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(innerPadding)
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = MaterialTheme.spacing.l,
+                end = MaterialTheme.spacing.l,
+                top = MaterialTheme.spacing.s,
+                bottom = MaterialTheme.spacing.xxl
+            ),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m)
         ) {
-            // SECTION 1: Theme Settings
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Theme",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
-                SettingsCard(
-                    title = "Theme Options",
+            // Theme Mode & Dynamic Colors Card
+            item {
+                AppearanceCard(
+                    title = "Theme & Palette",
                     icon = Icons.Default.Palette
                 ) {
-                    SettingsNavigationRow(
-                        title = "Theme Mode",
-                        description = when (themeMode) {
-                            "LIGHT" -> "Light Theme"
-                            "DARK" -> "Dark Theme"
-                            else -> "System Default"
-                        },
-                        onClick = { showThemeDialog = true }
-                    )
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-
-                    SettingSwitchRow(
-                        title = "Dynamic Material You Colors",
-                        description = "Match theme colors with device wallpaper (Android 12+).",
-                        checked = dynamicColorsEnabled,
-                        onCheckedChange = { viewModel.setDynamicColorsEnabled(it) },
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-
-                    if (showAmoledToggle) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 12.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-
-                        SettingSwitchRow(
-                            title = "AMOLED Dark Mode",
-                            description = "Use absolute black backgrounds for dark themes.",
-                            checked = isAmoledDark,
-                            onCheckedChange = { viewModel.setAmoledDark(it) },
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
-                    }
-                }
-            }
-
-            // SECTION 2: Album Art Settings
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Album Art",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
-                SettingsCard(
-                    title = "Artwork Customization",
-                    icon = Icons.Default.Palette
-                ) {
-                    SettingSwitchRow(
-                        title = "Show Album Artwork",
-                        description = "Display cover art inside player screens and lists.",
-                        checked = showAlbumArt,
-                        onCheckedChange = { viewModel.setShowAlbumArt(it) },
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-
-                    SettingsNavigationRow(
-                        title = "Album Art Click Action",
-                        description = when (albumArtClickAction) {
-                            AlbumArtClickAction.DO_NOTHING -> "Do Nothing"
-                            AlbumArtClickAction.SHOW_LYRICS -> "Show Lyrics"
-                            AlbumArtClickAction.VIEW_ALBUM_ART -> "View Album Art"
-                            AlbumArtClickAction.PLAY_PAUSE -> "Play/Pause"
-                        },
-                        onClick = { showClickActionDialog = true }
-                    )
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-
-                    var sliderValue by remember(playerBackgroundBlurRadius) { mutableStateOf(playerBackgroundBlurRadius) }
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showThemeDialog = true }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Background Blur Intensity",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "Adjust the blur radius of the player background.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "${sliderValue.toInt()} dp",
+                                text = "Theme Mode",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = when (themeMode) {
+                                    "LIGHT" -> "Light Mode"
+                                    "DARK" -> "Dark Mode"
+                                    else -> "System Default"
+                                },
+                                style = VedTuneTextStyles.Metadata,
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
+                    }
 
-                        Slider(
-                            value = sliderValue,
-                            onValueChange = { sliderValue = it },
-                            onValueChangeFinished = {
-                                viewModel.setPlayerBackgroundBlurRadius(sliderValue)
-                            },
-                            valueRange = 10f..100f,
-                            modifier = Modifier.fillMaxWidth()
+                    if (showAmoledToggle) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Pure Black (AMOLED)",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "True pitch-black backgrounds to conserve OLED battery",
+                                    style = VedTuneTextStyles.Metadata,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = isAmoledDark,
+                                onCheckedChange = { viewModel.setAmoledDark(it) }
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Dynamic Colors (Material You)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Extract theme accent colors from your system wallpaper",
+                                style = VedTuneTextStyles.Metadata,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = dynamicColorsEnabled,
+                            onCheckedChange = { viewModel.setDynamicColorsEnabled(it) }
+                        )
+                    }
+                }
+            }
+
+            // Artwork Display Card
+            item {
+                AppearanceCard(
+                    title = "Album Artwork",
+                    icon = Icons.Default.Image
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Show Album Art",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Display embedded album artwork across lists and cards",
+                                style = VedTuneTextStyles.Metadata,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = showAlbumArt,
+                            onCheckedChange = { viewModel.setShowAlbumArt(it) }
                         )
                     }
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
-                    AlbumArtQualitySelector(
-                        currentQuality = albumArtQuality,
-                        onQualitySelected = { viewModel.setAlbumArtQuality(it) }
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Enforce Square Artwork",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Crop non-standard ratio images to clean 1:1 squares",
+                                style = VedTuneTextStyles.Metadata,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = forceSquareArtwork,
+                            onCheckedChange = { viewModel.setForceSquareArtwork(it) }
+                        )
+                    }
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
-                    SettingSwitchRow(
-                        title = "Force Square Artwork",
-                        description = "Crop artwork to square. Disabling this shows the original portrait/landscape aspect ratio.",
-                        checked = forceSquareArtwork,
-                        onCheckedChange = { viewModel.setForceSquareArtwork(it) },
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs)) {
+                        Text(
+                            text = "Artwork Resolution & Cache Quality",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.s)
+                        ) {
+                            AlbumArtQuality.entries.forEach { quality ->
+                                FilterChip(
+                                    selected = (albumArtQuality == quality),
+                                    onClick = { viewModel.setAlbumArtQuality(quality) },
+                                    label = {
+                                        Text(
+                                            text = when (quality) {
+                                                AlbumArtQuality.SAVE_SPACE -> "Fast (128px)"
+                                                AlbumArtQuality.BALANCED -> "Balanced (256px)"
+                                                AlbumArtQuality.HIGH_QUALITY -> "High (512px)"
+                                            }
+                                        )
+                                    },
+                                    shape = VedTuneShapeTokens.Pill
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
-            // SECTION 3: Lyrics
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Lyrics Settings",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
-                SettingsCard(
-                    title = "Lyrics Preferences",
-                    icon = Icons.Default.Palette
+            // Navigation Defaults Card
+            item {
+                AppearanceCard(
+                    title = "Navigation & Startup",
+                    icon = Icons.Default.Tab
                 ) {
-                    SettingSwitchRow(
-                        title = "Keep Screen On",
-                        description = "Prevent the screen from sleeping while lyrics are visible.",
-                        checked = keepScreenOnWithLyrics,
-                        onCheckedChange = { viewModel.setKeepScreenOnWithLyrics(it) },
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showStartTabDialog = true }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Default Start Tab",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = when (defaultStartScreen.lowercase()) {
+                                    "home_tab" -> "Home"
+                                    "search_tab" -> "Search"
+                                    "library_tab", "songs" -> "Library"
+                                    else -> "Songs"
+                                },
+                                style = VedTuneTextStyles.Metadata,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                 }
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 
+    // Theme Picker Dialog
     if (showThemeDialog) {
-        ThemeSelectionDialog(
-            currentMode = themeMode,
+        VedTuneInfoDialog(
+            title = "Choose Theme",
             onDismiss = { showThemeDialog = false },
-            onSelectMode = { viewModel.setThemeMode(it) }
-        )
-    }
-
-    if (showClickActionDialog) {
-        ClickActionSelectionDialog(
-            currentAction = albumArtClickAction,
-            onDismiss = { showClickActionDialog = false },
-            onSelectAction = { viewModel.setAlbumArtClickAction(it) }
-        )
-    }
-}
-
-@Composable
-fun ThemeSelectionDialog(
-    currentMode: String,
-    onDismiss: () -> Unit,
-    onSelectMode: (String) -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        },
-        title = {
-            Text(
-                text = "Theme Mode",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            confirmButtonText = "Done"
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf(
                     "SYSTEM" to "System Default",
-                    "LIGHT" to "Light",
-                    "DARK" to "Dark"
+                    "LIGHT" to "Light Mode",
+                    "DARK" to "Dark Mode"
                 ).forEach { (mode, label) ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clip(VedTuneShapeTokens.Medium)
                             .clickable {
-                                onSelectMode(mode)
-                                onDismiss()
+                                viewModel.setThemeMode(mode)
+                                showThemeDialog = false
                             }
-                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                            .padding(vertical = 10.dp, horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
-                            selected = currentMode == mode,
+                            selected = (themeMode == mode),
                             onClick = {
-                                onSelectMode(mode)
-                                onDismiss()
+                                viewModel.setThemeMode(mode)
+                                showThemeDialog = false
                             }
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(MaterialTheme.spacing.s))
                         Text(
                             text = label,
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
             }
         }
-    )
-}
+    }
 
-@Composable
-fun ClickActionSelectionDialog(
-    currentAction: AlbumArtClickAction,
-    onDismiss: () -> Unit,
-    onSelectAction: (AlbumArtClickAction) -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        },
-        title = {
-            Text(
-                text = "Album Art Click Action",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                AlbumArtClickAction.entries.forEach { action ->
-                    val label = when (action) {
-                        AlbumArtClickAction.DO_NOTHING -> "Do Nothing"
-                        AlbumArtClickAction.SHOW_LYRICS -> "Show Lyrics"
-                        AlbumArtClickAction.VIEW_ALBUM_ART -> "View Album Art"
-                        AlbumArtClickAction.PLAY_PAUSE -> "Play/Pause"
-                    }
+    // Start Tab Picker Dialog
+    if (showStartTabDialog) {
+        VedTuneInfoDialog(
+            title = "Choose Default Tab",
+            onDismiss = { showStartTabDialog = false },
+            confirmButtonText = "Done"
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                listOf(
+                    "home_tab" to "Home",
+                    "search_tab" to "Search",
+                    "library_tab" to "Library"
+                ).forEach { (route, label) ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clip(VedTuneShapeTokens.Medium)
                             .clickable {
-                                onSelectAction(action)
-                                onDismiss()
+                                viewModel.setDefaultStartScreen(route)
+                                showStartTabDialog = false
                             }
-                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                            .padding(vertical = 10.dp, horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
-                            selected = currentAction == action,
+                            selected = (defaultStartScreen == route),
                             onClick = {
-                                onSelectAction(action)
-                                onDismiss()
+                                viewModel.setDefaultStartScreen(route)
+                                showStartTabDialog = false
                             }
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(MaterialTheme.spacing.s))
                         Text(
                             text = label,
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
             }
         }
-    )
+    }
+
+    // Reset Appearance Dialog
+    if (showResetDialog) {
+        VedTuneConfirmDialog(
+            title = "Reset Appearance Settings?",
+            message = "This will restore theme to System Default, disable pure black AMOLED, enable dynamic colors, and set default start tab to Home.",
+            confirmText = "Reset",
+            dismissText = "Cancel",
+            isDestructive = true,
+            onConfirm = {
+                viewModel.resetAppearanceSettings()
+                showResetDialog = false
+            },
+            onDismiss = { showResetDialog = false }
+        )
+    }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AlbumArtQualitySelector(
-    currentQuality: AlbumArtQuality,
-    onQualitySelected: (AlbumArtQuality) -> Unit
+private fun AppearanceCard(
+    title: String,
+    icon: ImageVector,
+    content: @Composable () -> Unit
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Card(
+        shape = VedTuneShapeTokens.Card,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+        ),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = "Album Art Quality",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = when (currentQuality) {
-                    AlbumArtQuality.SAVE_SPACE -> "Save Space: Reduces memory usage and loading times."
-                    AlbumArtQuality.BALANCED -> "Balanced: Good trade-off between detail and performance."
-                    AlbumArtQuality.HIGH_QUALITY -> "High Quality: Uses higher resolution images for clearer artwork."
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        SingleChoiceSegmentedButtonRow(
-            modifier = Modifier.fillMaxWidth()
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(MaterialTheme.spacing.l),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.s)
         ) {
-            AlbumArtQuality.entries.forEachIndexed { index, quality ->
-                val label = when (quality) {
-                    AlbumArtQuality.SAVE_SPACE -> "Save Space"
-                    AlbumArtQuality.BALANCED -> "Balanced"
-                    AlbumArtQuality.HIGH_QUALITY -> "High Quality"
-                }
-                SegmentedButton(
-                    selected = currentQuality == quality,
-                    onClick = { onQualitySelected(quality) },
-                    shape = SegmentedButtonDefaults.itemShape(
-                        index = index,
-                        count = AlbumArtQuality.entries.size
-                    )
-                ) {
-                    Text(text = label)
-                }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.s)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(VedTuneIconSizes.Medium)
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+            content()
         }
     }
 }
