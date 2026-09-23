@@ -102,6 +102,8 @@ import com.devson.vedtune.ui.theme.spacing
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SongsScreen(
@@ -114,10 +116,10 @@ fun SongsScreen(
     modifier: Modifier = Modifier,
     navigateToLocationEvent: SharedFlow<Long>? = null
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val currentSongId by viewModel.currentSongId.collectAsState()
-    val isPlaying by viewModel.isPlaying.collectAsState()
-    val playlists by viewModel.playlists.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val currentSongId by viewModel.currentSongId.collectAsStateWithLifecycle()
+    val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+    val playlists by viewModel.playlists.collectAsStateWithLifecycle()
 
     val lazyListState = rememberLazyListState()
     val lazyGridState = rememberLazyGridState()
@@ -654,15 +656,23 @@ fun BottomSheetOption(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 14.dp),
+            .padding(horizontal = 24.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = title,
-            tint = tint,
-            modifier = Modifier.size(24.dp)
-        )
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                tint = tint,
+                modifier = Modifier.size(20.dp)
+            )
+        }
         Spacer(modifier = Modifier.width(16.dp))
         Text(
             text = title,
@@ -678,9 +688,9 @@ fun SongPreviewDialog(
     viewModel: SongsViewModel,
     onDismiss: () -> Unit
 ) {
-    val isPlaying by viewModel.isPlaying.collectAsState()
-    val currentPositionLong by viewModel.playbackPosition.collectAsState()
-    val durationLong by viewModel.playbackDuration.collectAsState()
+    val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+    val currentPositionLong by viewModel.playbackPosition.collectAsStateWithLifecycle()
+    val durationLong by viewModel.playbackDuration.collectAsStateWithLifecycle()
 
     val currentPosition = currentPositionLong.toFloat()
     val duration = durationLong.toFloat()

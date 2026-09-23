@@ -11,6 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -74,11 +75,11 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val selectedIndex = pagerState.currentPage
 
-    val currentSong by mainViewModel.currentSong.collectAsState()
-    val isPlaying by mainViewModel.isPlaying.collectAsState()
-    val showAlbumArt by mainViewModel.showAlbumArt.collectAsState()
-    val showMiniPlayerProgress by mainViewModel.showMiniPlayerProgress.collectAsState()
-    val isGestureMiniPlayerEnabled by mainViewModel.isGestureMiniPlayerEnabled.collectAsState()
+    val currentSong by mainViewModel.currentSong.collectAsStateWithLifecycle()
+    val isPlaying by mainViewModel.isPlaying.collectAsStateWithLifecycle()
+    val showAlbumArt by mainViewModel.showAlbumArt.collectAsStateWithLifecycle()
+    val showMiniPlayerProgress by mainViewModel.showMiniPlayerProgress.collectAsStateWithLifecycle()
+    val isGestureMiniPlayerEnabled by mainViewModel.isGestureMiniPlayerEnabled.collectAsStateWithLifecycle()
 
     val progressProvider = remember(mainViewModel) {
         {

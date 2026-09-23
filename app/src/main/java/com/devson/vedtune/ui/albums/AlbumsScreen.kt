@@ -17,11 +17,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.devson.vedtune.domain.model.ViewPreferences
 import com.devson.vedtune.ui.components.SongArtwork
 import com.devson.vedtune.ui.components.VedTuneAlbumCard
@@ -40,8 +40,8 @@ fun AlbumsScreen(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
-    val albums by viewModel.albums.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
+    val albums by viewModel.albums.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val isGridView = viewPreferences.isGridView
     val showArtwork = viewPreferences.showAlbumArt
     val adaptiveInfo = rememberVedTuneAdaptiveInfo()
@@ -133,7 +133,7 @@ fun AlbumsScreen(
                                         showFallbackAnimation = false,
                                         modifier = Modifier
                                             .size(52.dp)
-                                            .clip(VedTuneShapeTokens.Small),
+                                            .clip(VedTuneShapeTokens.Medium),
                                         showArtwork = showArtwork
                                     )
                                 }

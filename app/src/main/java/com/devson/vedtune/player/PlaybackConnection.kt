@@ -169,7 +169,6 @@ class PlaybackConnection @Inject constructor(
             val controller = mediaController ?: return
             _playbackDuration.value = controller.duration.coerceAtLeast(0L)
             _playbackPosition.value = controller.currentPosition
-            updateQueue()
         }
 
         override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
@@ -304,6 +303,16 @@ class PlaybackConnection @Inject constructor(
                     playlist
                 }
                 
+                val songsMap = HashMap<Long, Song>(finalPlaylist.size).apply {
+                    finalPlaylist.forEach { put(it.id, it) }
+                }
+                _playlistQueue.value = finalPlaylist
+                _queueSongMap.value = songsMap
+                _currentSongId.value = song.id
+                _currentSong.value = song
+
+                val index = if (_shuffleModeEnabled.value) 0 else finalPlaylist.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+
                 val mediaItems = finalPlaylist.map { s ->
                     MediaItem.Builder()
                         .setMediaId(s.id.toString())
@@ -321,24 +330,10 @@ class PlaybackConnection @Inject constructor(
                         )
                         .build()
                 }
-                controller.setMediaItems(mediaItems)
-                
-                val index = if (_shuffleModeEnabled.value) 0 else finalPlaylist.indexOfFirst { it.id == song.id }
-                if (index != -1) {
-                    controller.seekTo(index, 0L)
-                }
+                controller.setMediaItems(mediaItems, index, 0L)
                 controller.prepare()
                 controller.volume = 1f
                 controller.play()
-                
-                // Update in-memory state immediately
-                val songsMap = HashMap<Long, Song>(finalPlaylist.size).apply {
-                    finalPlaylist.forEach { put(it.id, it) }
-                }
-                _playlistQueue.value = finalPlaylist
-                _queueSongMap.value = songsMap
-                _currentSongId.value = song.id
-                _currentSong.value = song
                 
                 scope.launch(Dispatchers.IO) {
                     try {
@@ -449,6 +444,14 @@ class PlaybackConnection @Inject constructor(
                 val remaining = playlist.filter { it.id != song.id }.shuffled()
                 val fullList = listOf(song) + remaining
                 
+                val songsMap = HashMap<Long, Song>(fullList.size).apply {
+                    fullList.forEach { put(it.id, it) }
+                }
+                _playlistQueue.value = fullList
+                _queueSongMap.value = songsMap
+                _currentSongId.value = song.id
+                _currentSong.value = song
+
                 val mediaItems = fullList.map { s ->
                     MediaItem.Builder()
                         .setMediaId(s.id.toString())
@@ -463,19 +466,10 @@ class PlaybackConnection @Inject constructor(
                         )
                         .build()
                 }
-                controller.setMediaItems(mediaItems)
-                controller.seekTo(0, 0L)
+                controller.setMediaItems(mediaItems, 0, 0L)
                 controller.prepare()
                 controller.volume = 1f
                 controller.play()
-                
-                val songsMap = HashMap<Long, Song>(fullList.size).apply {
-                    fullList.forEach { put(it.id, it) }
-                }
-                _playlistQueue.value = fullList
-                _queueSongMap.value = songsMap
-                _currentSongId.value = song.id
-                _currentSong.value = song
 
                 scope.launch(Dispatchers.IO) {
                     try {
@@ -640,8 +634,7 @@ class PlaybackConnection @Inject constructor(
                                 .build()
                         }
                         
-                        controller.setMediaItems(mediaItems)
-                        controller.seekTo(0, currentPosition)
+                        controller.setMediaItems(mediaItems, 0, currentPosition)
                         
                         _playlistQueue.value = finalPlaylist
                         repository.saveQueue(finalPlaylist)
@@ -671,10 +664,7 @@ class PlaybackConnection @Inject constructor(
                                 .build()
                         }
                         
-                        controller.setMediaItems(mediaItems)
-                        if (originalIndex != -1) {
-                            controller.seekTo(originalIndex, currentPosition)
-                        }
+                        controller.setMediaItems(mediaItems, if (originalIndex != -1) originalIndex else 0, currentPosition)
                         
                         _playlistQueue.value = originalQueue
                         repository.saveQueue(originalQueue)
@@ -733,19 +723,25 @@ class PlaybackConnection @Inject constructor(
         
         scope.launch(Dispatchers.Default) {
             try {
-                val songs = kotlinx.coroutines.withContext(Dispatchers.IO) { repository.getSongsByIds(songIds) }
-                val songsMap = HashMap<Long, Song>(songs.size).apply {
-                    songs.forEach { put(it.id, it) }
+                val currentMap = _queueSongMap.value
+                val missingIds = songIds.filter { !currentMap.containsKey(it) }
+                val fullMap = if (missingIds.isNotEmpty()) {
+                    val fetchedSongs = kotlinx.coroutines.withContext(Dispatchers.IO) { repository.getSongsByIds(missingIds) }
+                    HashMap(currentMap).apply {
+                        fetchedSongs.forEach { put(it.id, it) }
+                    }
+                } else {
+                    currentMap
                 }
                 val orderedSongs = ArrayList<Song>(songIds.size)
                 for (id in songIds) {
-                    songsMap[id]?.let { orderedSongs.add(it) }
+                    fullMap[id]?.let { orderedSongs.add(it) }
                 }
                 _playlistQueue.value = orderedSongs
-                _queueSongMap.value = songsMap
+                _queueSongMap.value = fullMap
                 val curId = _currentSongId.value
                 if (curId != null && (_currentSong.value == null || _currentSong.value?.id != curId)) {
-                    _currentSong.value = songsMap[curId]
+                    _currentSong.value = fullMap[curId]
                 }
             } catch (e: Exception) {
                 e.printStackTrace()

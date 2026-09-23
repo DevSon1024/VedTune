@@ -1,6 +1,8 @@
 package com.devson.vedtune.ui.genres
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,18 +20,21 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -38,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.devson.vedtune.core.formatDuration
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.ui.MainViewModel
@@ -57,17 +63,17 @@ fun GenreDetailsScreen(
     onNavigateToPlayer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val songs by viewModel.songs.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    val songs by viewModel.songs.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
-    val currentSongId by viewModel.currentSongId.collectAsState()
-    val isPlaying by viewModel.isPlaying.collectAsState()
+    val currentSongId by viewModel.currentSongId.collectAsStateWithLifecycle()
+    val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
 
-    val currentSong by mainViewModel.currentSong.collectAsState()
-    val mainIsPlaying by mainViewModel.isPlaying.collectAsState()
-    val showArtworkFlow by mainViewModel.showAlbumArt.collectAsState()
-    val showMiniPlayerProgress by mainViewModel.showMiniPlayerProgress.collectAsState()
-    val isGestureMiniPlayerEnabled by mainViewModel.isGestureMiniPlayerEnabled.collectAsState()
+    val currentSong by mainViewModel.currentSong.collectAsStateWithLifecycle()
+    val mainIsPlaying by mainViewModel.isPlaying.collectAsStateWithLifecycle()
+    val showArtworkFlow by mainViewModel.showAlbumArt.collectAsStateWithLifecycle()
+    val showMiniPlayerProgress by mainViewModel.showMiniPlayerProgress.collectAsStateWithLifecycle()
+    val isGestureMiniPlayerEnabled by mainViewModel.isGestureMiniPlayerEnabled.collectAsStateWithLifecycle()
 
     val progressProvider = remember(mainViewModel) {
         {
@@ -131,22 +137,29 @@ fun GenreDetailsScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(MaterialTheme.spacing.l),
+                                .padding(horizontal = MaterialTheme.spacing.l, vertical = MaterialTheme.spacing.m),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Box(
+                            ElevatedCard(
                                 modifier = Modifier
                                     .size(160.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
-                                contentAlignment = Alignment.Center
+                                    .border(BorderStroke(2.dp, MaterialTheme.colorScheme.tertiaryContainer), CircleShape),
+                                shape = CircleShape,
+                                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.MusicNote,
-                                    contentDescription = viewModel.genreName,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(80.dp)
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(MaterialTheme.colorScheme.tertiaryContainer),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.MusicNote,
+                                        contentDescription = viewModel.genreName,
+                                        tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                        modifier = Modifier.size(80.dp)
+                                    )
+                                }
                             }
 
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.m))
@@ -159,11 +172,22 @@ fun GenreDetailsScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
 
-                            Text(
-                                text = "${songs.size} ${if (songs.size == 1) "Song" else "Songs"}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.xs))
+
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                modifier = Modifier.padding(top = 4.dp)
+                            ) {
+                                val songText = if (songs.size == 1) "1 song" else "${songs.size} songs"
+                                Text(
+                                    text = songText,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                                )
+                            }
 
                             Spacer(modifier = Modifier.height(MaterialTheme.spacing.l))
 
@@ -199,7 +223,8 @@ fun GenreDetailsScreen(
                             song = song,
                             isCurrentSong = isCurrentSong,
                             isPlaying = isPlaying,
-                            onClick = { viewModel.playSong(song) }
+                            onClick = { viewModel.playSong(song) },
+                            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m, vertical = 2.dp)
                         )
                     }
                 }
@@ -241,11 +266,20 @@ fun GenreTrackItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val rowShape = RoundedCornerShape(12.dp)
+    val backgroundColor = if (isCurrentSong) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+    } else {
+        androidx.compose.ui.graphics.Color.Transparent
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .clip(rowShape)
+            .background(backgroundColor)
             .clickable(onClick = onClick)
-            .padding(horizontal = MaterialTheme.spacing.l, vertical = MaterialTheme.spacing.s),
+            .padding(horizontal = MaterialTheme.spacing.m, vertical = MaterialTheme.spacing.s),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (isCurrentSong) {
@@ -272,10 +306,10 @@ fun GenreTrackItem(
             Text(
                 text = song.title,
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = if (isCurrentSong) FontWeight.Bold else FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface
+                color = if (isCurrentSong) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = song.artist,

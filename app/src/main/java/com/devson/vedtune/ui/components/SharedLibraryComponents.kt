@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Sort
@@ -277,11 +278,12 @@ fun LibraryUtilityRow(
                     modifier = Modifier.size(VedTuneIconSizes.Small)
                 )
             },
-            shape = VedTuneShapeTokens.Small,
+            shape = CircleShape,
+            border = null,
             colors = AssistChipDefaults.assistChipColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
             ),
-            modifier = Modifier.height(28.dp)
+            modifier = Modifier.height(30.dp)
         )
 
         Row(

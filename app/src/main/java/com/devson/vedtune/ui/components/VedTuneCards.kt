@@ -1,6 +1,7 @@
 package com.devson.vedtune.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -185,14 +187,15 @@ fun VedTuneArtistCard(
 ) {
     val subtitle = "${artist.songCount} ${if (artist.songCount == 1) "song" else "songs"}"
 
-    Card(
-        shape = VedTuneShapeTokens.Card,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+    ElevatedCard(
+        shape = VedTuneShapeTokens.Large,
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
         modifier = modifier
             .fillMaxWidth()
-            .clip(VedTuneShapeTokens.Card)
+            .clip(VedTuneShapeTokens.Large)
             .clickable(onClick = onClick)
     ) {
         Column(
@@ -205,6 +208,12 @@ fun VedTuneArtistCard(
                         .fillMaxWidth(0.85f)
                         .aspectRatio(1f)
                         .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .border(
+                            width = 2.dp,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                            shape = CircleShape
+                        )
                 ) {
                     SongArtwork(
                         albumId = -1L,

@@ -33,48 +33,59 @@ class SearchViewModel @Inject constructor(
             initialValue = true
         )
 
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class, kotlinx.coroutines.FlowPreview::class)
-    val searchResults: StateFlow<SearchResults> = searchQuery
-        .debounce(300)
-        .flatMapLatest { query ->
-            if (query.isBlank()) {
-                flowOf(SearchResults())
-            } else {
-                combine(
-                    repository.getAllSongs(),
-                    repository.getAllAlbums(),
-                    repository.getAllArtists(),
-                    flow { emit(repository.getUniqueGenres()) }
-                ) { songs, albums, artists, genres ->
-                    val filteredSongs = songs.filter {
-                        it.title.contains(query, ignoreCase = true) ||
-                        it.artist.contains(query, ignoreCase = true) ||
-                        it.album.contains(query, ignoreCase = true)
-                    }
-                    val filteredAlbums = albums.filter {
-                        it.title.contains(query, ignoreCase = true) ||
-                        it.artist.contains(query, ignoreCase = true)
-                    }
-                    val filteredArtists = artists.filter {
-                        it.name.contains(query, ignoreCase = true)
-                    }
-                    val filteredGenres = genres.filter {
-                        it.contains(query, ignoreCase = true)
-                    }
-                    SearchResults(
-                        songs = filteredSongs,
-                        albums = filteredAlbums,
-                        artists = filteredArtists,
-                        genres = filteredGenres
-                    )
-                }
+    private val allSongs = repository.getAllSongs()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val allAlbums = repository.getAllAlbums()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val allArtists = repository.getAllArtists()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val allGenres = flow { emit(repository.getUniqueGenres()) }
+        .flowOn(kotlinx.coroutines.Dispatchers.IO)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
+    val searchResults: StateFlow<SearchResults> = combine(
+        searchQuery.debounce(150),
+        allSongs,
+        allAlbums,
+        allArtists,
+        allGenres
+    ) { query, songs, albums, artists, genres ->
+        if (query.isBlank()) {
+            SearchResults()
+        } else {
+            val trimmedQuery = query.trim()
+            val filteredSongs = songs.filter {
+                it.title.contains(trimmedQuery, ignoreCase = true) ||
+                it.artist.contains(trimmedQuery, ignoreCase = true) ||
+                it.album.contains(trimmedQuery, ignoreCase = true)
             }
+            val filteredAlbums = albums.filter {
+                it.title.contains(trimmedQuery, ignoreCase = true) ||
+                it.artist.contains(trimmedQuery, ignoreCase = true)
+            }
+            val filteredArtists = artists.filter {
+                it.name.contains(trimmedQuery, ignoreCase = true)
+            }
+            val filteredGenres = genres.filter {
+                it.contains(trimmedQuery, ignoreCase = true)
+            }
+            SearchResults(
+                songs = filteredSongs,
+                albums = filteredAlbums,
+                artists = filteredArtists,
+                genres = filteredGenres
+            )
         }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = SearchResults()
-        )
+    }.flowOn(kotlinx.coroutines.Dispatchers.Default)
+    .stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = SearchResults()
+    )
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
