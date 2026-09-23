@@ -102,6 +102,8 @@ import com.devson.vedtune.ui.theme.spacing
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SongsScreen(
@@ -114,10 +116,10 @@ fun SongsScreen(
     modifier: Modifier = Modifier,
     navigateToLocationEvent: SharedFlow<Long>? = null
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val currentSongId by viewModel.currentSongId.collectAsState()
-    val isPlaying by viewModel.isPlaying.collectAsState()
-    val playlists by viewModel.playlists.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val currentSongId by viewModel.currentSongId.collectAsStateWithLifecycle()
+    val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+    val playlists by viewModel.playlists.collectAsStateWithLifecycle()
 
     val lazyListState = rememberLazyListState()
     val lazyGridState = rememberLazyGridState()

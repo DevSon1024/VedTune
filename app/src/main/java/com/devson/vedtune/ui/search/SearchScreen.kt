@@ -51,6 +51,8 @@ import com.devson.vedtune.ui.components.VedTuneSongRow
 import com.devson.vedtune.ui.theme.VedTuneShapeTokens
 import com.devson.vedtune.ui.theme.spacing
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 @Composable
 fun SearchScreen(
     viewModel: SearchViewModel,
@@ -60,11 +62,11 @@ fun SearchScreen(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val results by viewModel.searchResults.collectAsState()
-    val currentSongId by viewModel.currentSongId.collectAsState()
-    val isPlaying by viewModel.isPlaying.collectAsState()
-    val showArtwork by viewModel.showArtwork.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val results by viewModel.searchResults.collectAsStateWithLifecycle()
+    val currentSongId by viewModel.currentSongId.collectAsStateWithLifecycle()
+    val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+    val showArtwork by viewModel.showArtwork.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier

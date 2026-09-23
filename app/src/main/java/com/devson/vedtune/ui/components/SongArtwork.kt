@@ -115,7 +115,16 @@ class BlurTransformation(
         if (radius <= 0f) return input
         val safeRadius = radius.coerceIn(1f, 25f).toInt()
         return try {
-            stackBlur(input, safeRadius)
+            val maxDimension = 128
+            val targetBitmap = if (input.width > maxDimension || input.height > maxDimension) {
+                val scale = maxDimension.toFloat() / maxOf(input.width, input.height)
+                val targetW = (input.width * scale).toInt().coerceAtLeast(1)
+                val targetH = (input.height * scale).toInt().coerceAtLeast(1)
+                Bitmap.createScaledBitmap(input, targetW, targetH, true)
+            } else {
+                input
+            }
+            stackBlur(targetBitmap, safeRadius)
         } catch (e: Exception) {
             e.printStackTrace()
             input

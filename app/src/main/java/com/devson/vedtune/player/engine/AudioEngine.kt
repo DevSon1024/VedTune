@@ -88,16 +88,18 @@ class AudioEngine @Inject constructor(
 
     private val customProcessors = CopyOnWriteArrayList<AudioProcessorModule>()
 
+    private val coreProcessors: List<AudioProcessorModule> = listOf(
+        masterVolumeProcessor,
+        replayGainProcessor,
+        equalizerProcessor,
+        bassBoostProcessor,
+        virtualizerProcessor,
+        loudnessProcessor,
+        limiterProcessor
+    )
+
     private val allProcessors: List<AudioProcessorModule>
-        get() = listOf(
-            masterVolumeProcessor,
-            replayGainProcessor,
-            equalizerProcessor,
-            bassBoostProcessor,
-            virtualizerProcessor,
-            loudnessProcessor,
-            limiterProcessor
-        ) + customProcessors
+        get() = if (customProcessors.isEmpty()) coreProcessors else coreProcessors + customProcessors
 
     private val playerListener = object : Player.Listener {
         override fun onAudioSessionIdChanged(audioSessionId: Int) {

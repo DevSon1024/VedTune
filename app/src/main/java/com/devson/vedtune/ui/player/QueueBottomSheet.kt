@@ -38,6 +38,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import com.devson.vedtune.ui.components.ArtworkThumbnailSize
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -238,13 +239,13 @@ fun QueueBottomSheet(
                 ) {
                     itemsIndexed(
                         items = localQueue,
-                        key = { _, song -> song.id }
+                        key = { index, song -> "${song.id}_$index" }
                     ) { index, song ->
                         val isNowPlaying = (song.id == currentSong?.id)
 
                         ReorderableItem(
                             state = reorderableLazyListState,
-                            key = song.id
+                            key = "${song.id}_$index"
                         ) { isItemDragging ->
                             val scale by animateFloatAsState(
                                 targetValue = if (isItemDragging) 1.02f else 1f,
@@ -397,8 +398,10 @@ private fun QueueTrackRow(
             ) {
                 SongArtwork(
                     albumId = song.albumId,
+                    lastModified = song.dateModified,
                     modifier = Modifier.fillMaxSize(),
-                    showArtwork = showArtwork
+                    showArtwork = showArtwork,
+                    thumbnailSize = ArtworkThumbnailSize.SMALL
                 )
                 if (isNowPlaying) {
                     Box(

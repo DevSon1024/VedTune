@@ -25,14 +25,26 @@ object PlayerModule {
     }
 
     @Provides
+    @Singleton
     fun provideExoPlayer(
         @ApplicationContext context: Context,
         audioAttributes: AudioAttributes
     ): ExoPlayer {
+        val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                /* minBufferMs = */ 1000,
+                /* maxBufferMs = */ 4000,
+                /* bufferForPlaybackMs = */ 250,
+                /* bufferForPlaybackAfterRebufferMs = */ 500
+            )
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .build()
+
         return ExoPlayer.Builder(context)
             .setAudioAttributes(audioAttributes, true)
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_LOCAL)
+            .setLoadControl(loadControl)
             .build()
     }
 }

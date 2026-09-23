@@ -89,6 +89,8 @@ import com.devson.vedtune.ui.theme.rememberVedTuneAdaptiveInfo
 import com.devson.vedtune.ui.theme.spacing
 import java.util.Calendar
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeTabScreen(
@@ -104,20 +106,22 @@ fun HomeTabScreen(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
-    val recentlyAddedAlbums by viewModel.recentlyAddedAlbums.collectAsState()
-    val jumpBackInSongs by viewModel.jumpBackInSongs.collectAsState()
-    val latestSongs by viewModel.latestSongs.collectAsState()
-    val allPlaylists by viewModel.allPlaylists.collectAsState()
-    val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val currentSongId by viewModel.currentSongId.collectAsState()
-    val isPlaying by viewModel.isPlaying.collectAsState()
-    val showArtwork by viewModel.showArtwork.collectAsState()
+    val recentlyAddedAlbums by viewModel.recentlyAddedAlbums.collectAsStateWithLifecycle()
+    val jumpBackInSongs by viewModel.jumpBackInSongs.collectAsStateWithLifecycle()
+    val latestSongs by viewModel.latestSongs.collectAsStateWithLifecycle()
+    val allPlaylists by viewModel.allPlaylists.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val currentSongId by viewModel.currentSongId.collectAsStateWithLifecycle()
+    val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+    val showArtwork by viewModel.showArtwork.collectAsStateWithLifecycle()
 
-    val totalSongs by viewModel.totalSongsCount.collectAsState()
-    val totalAlbums by viewModel.totalAlbumsCount.collectAsState()
-    val totalArtists by viewModel.totalArtistsCount.collectAsState()
-    val totalPlaylists by viewModel.totalPlaylistsCount.collectAsState()
-    val favoriteSongsCount by viewModel.favoriteSongsCount.collectAsState()
+    val totalSongs by viewModel.totalSongsCount.collectAsStateWithLifecycle()
+    val totalAlbums by viewModel.totalAlbumsCount.collectAsStateWithLifecycle()
+    val totalArtists by viewModel.totalArtistsCount.collectAsStateWithLifecycle()
+    val totalPlaylists by viewModel.totalPlaylistsCount.collectAsStateWithLifecycle()
+    val favoriteSongsCount by viewModel.favoriteSongsCount.collectAsStateWithLifecycle()
+
+    val latestSongsDisplay = remember(latestSongs) { latestSongs.take(8) }
 
     var selectedSongForOptions by remember { mutableStateOf<Song?>(null) }
     var showAddToPlaylistDialog by remember { mutableStateOf(false) }
@@ -313,7 +317,7 @@ fun HomeTabScreen(
                             }
 
                             items(
-                                items = latestSongs.take(8),
+                                items = latestSongsDisplay,
                                 key = { it.id }
                             ) { song ->
                                 val isCurrentSong = song.id == currentSongId

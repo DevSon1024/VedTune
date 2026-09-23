@@ -1,273 +1,93 @@
 # AI Agent Instructions for VedTune Development
 
-This document is the **absolute source of truth** for any AI agent or LLM assisting with the development of the **VedTune** project. Strictly adhere to all rules, architectural guidelines, and development philosophies before generating or modifying any code.
+Absolute source of truth for AI agents working on **VedTune**. Strictly adhere to all rules, architecture, and development philosophies before writing or modifying code.
 
-**Start every chat session with the words: `Hey Devson`**
-
----
-
-## Project Overview
-
-- **Project:** VedTune
-- **Package:** `com.devson.vedtune`
-- **Purpose:** A MediaStore-first local music player built with Kotlin, Jetpack Compose, Media3 (ExoPlayer), Room, Hilt, Coroutines, and MVVM.
-- **Primary Objective:** Correctness, scalability, stability, and maintainability.
-- **Visual polish is secondary** until the playback engine and media library are production-ready.
+**Start every chat session with: `Hey Devson`**
 
 ---
 
-## 1. Core Development Philosophy
+## 1. Project Overview & Priority
 
-- **Flawless Execution:** The app MUST work smoothly without bottleneck bugs. Performance regressions, UI lag, and stuttering are unacceptable.
-- **Zero Crash Tolerance:** Always prioritize graceful degradation (error state, fallback UI, empty list) over unhandled exceptions.
-- **No Hallucinations:** Only use existing APIs, classes, and resources within the project. If unsure about an existing implementation, ask the developer to fetch the file. Do not invent APIs, Android classes, Media3 methods, or MediaStore columns.
-- **One Line Explanation:** Be short and precise. Do not explain unless required.
-
-### Agent Mission — Ask before writing any code:
-
-1. Does this improve reliability?
-2. Does this improve performance?
-3. Does this improve maintainability?
-4. Does this improve scalability?
-
-If the answer is no to all four, do not implement it.
+- **Project:** VedTune (`com.devson.vedtune`)
+- **Tech Stack:** Kotlin, Jetpack Compose (M3), Media3 (ExoPlayer), Room, Hilt, Coroutines/Flows, MVVM.
+- **Source of Truth:** `MediaStore` (Room only caches/mirrors metadata, favorites, playlists, and stats).
+- **Core Mission:** Ask before writing code: Does this improve (1) reliability, (2) performance, (3) maintainability, (4) scalability? If not, do not implement.
+- **Priority Order:** 1. Foundation → 2. DI → 3. DB → 4. MediaStore → 5. Sync → 6. Playback → 7. MediaSession → 8. Background Playback → 9. Queue → 10. Navigation → 11. Screens → 12. Animations → 13. Visual Polish.
+- **Golden Rule:** When choosing between architecture and UI — **always choose better architecture.** Stable playback > visual polish.
 
 ---
 
-## 2. Development Priority Order
+## 2. Architecture & Layering (Strict MVVM)
 
-Always work in this strict order — never reverse it:
-
-1. Project foundation
-2. Dependency injection
-3. Database
-4. MediaStore integration
-5. Synchronization engine
-6. Playback engine
-7. MediaSession
-8. Background playback
-9. Queue management
-10. Navigation
-11. Screens
-12. Animations
-13. Visual polish
-
-**A beautiful UI with unstable playback = failed implementation.**
-**A basic UI with a stable playback engine = successful implementation.**
+- **UI Layer (`ui/`):** Stateless Composables only. Render state, dispatch user events.
+- **ViewModel Layer (`ui/`):** UI business logic, state emission via `StateFlow`.
+- **Repository Layer (`domain/`, `data/`):** Data mediation and abstract contracts.
+- **Data Layer (`data/`):** MediaStore queries, Room DB, Preferences DataStore. Never bypass layers.
+- **Playback Layer (`player/`, `service/`):** All player controls and MediaSession logic belong strictly here. Never control playback directly from Compose or navigation graphs.
+- **Navigation:** Single Activity (`MainActivity`) with **Navigation Compose** exclusively. No Fragments or legacy Navigation.
+- **Dependency Injection:** **Hilt** exclusively. Inject all repositories, DAOs, dispatchers, and player components — no manual instantiation.
 
 ---
 
-## 3. Storage Rules
+## 3. Storage, Permissions & MediaStore Rules
 
-VedTune is **MediaStore-first**. MediaStore is the source of truth.
-
-**Allowed:**
-
-- `MediaStore`
-- `ContentResolver`
-- `ContentObserver`
-
-**Never implement:**
-
-- `File.walk()`
-- Recursive folder scans
-- Periodic folder crawling
-- Manual filesystem indexing
+- **MediaStore-First:** `MediaStore`, `ContentResolver`, and `ContentObserver` are the only allowed indexing APIs.
+- **Forbidden Storage Actions:** `File.walk()`, recursive directory crawling, periodic folder scans, manual filesystem indexing.
+- **Permissions:** Only `READ_MEDIA_AUDIO` (API 33+) and `READ_EXTERNAL_STORAGE` (legacy). `MANAGE_EXTERNAL_STORAGE` is strictly forbidden.
+- **Metadata Writes:** Must use `MediaStore.createWriteRequest()`.
 
 ---
 
-## 4. Permissions Rules
+## 4. UI & Jetpack Compose Guidelines
 
-**Allowed:**
-
-- `READ_MEDIA_AUDIO`
-- `READ_EXTERNAL_STORAGE` (legacy)
-
-**Forbidden:**
-
-- `MANAGE_EXTERNAL_STORAGE` / All Files Access
-
-Metadata editing must use `MediaStore.createWriteRequest()`.
+- **Framework:** Jetpack Compose with Material Design 3 (`androidx.compose.material3.*`) exclusively. No XML screen layouts (XML allowed only for Manifest, drawables, and basic values).
+- **Performance:** State hoisting, focused modular composables, targeted `StateFlow` subscriptions (`collectAsStateWithLifecycle`), mobile-first touch targets (≥ 48dp).
+- **Restrictions:** Composables must NEVER query MediaStore, write to database, or control playback directly.
+- **Pre-requisite Gate:** No advanced animations, shared element transitions, blur effects, custom shaders, or color extraction until playback, background service, queue restoration, and sync engine are 100% stable.
 
 ---
 
-## 5. UI / Jetpack Compose Guidelines
-
-- **Exclusive UI framework:** Jetpack Compose. No legacy XML layouts for screens (XML only for `AndroidManifest`, drawables, vector assets, basic values).
-- **Design System:** Material Design 3 (`androidx.compose.material3.*`) exclusively.
-- **Mobile-first:** Touch targets must be accurate, responsive, and intuitive.
-- **Modular Composables:** Keep composable functions focused. Prevent unnecessary recompositions via targeted `StateFlow` updates.
-- **State Hoisting:** Keep composables stateless. Never perform heavy calculations, I/O, or file operations inside composable functions.
-
-**Composables should:**
-
-- Display state
-- Dispatch events
-
-**Composables should NOT:**
-
-- Query MediaStore
-- Perform database writes
-- Control playback engine directly
-
-### UI Development Restriction (before playback is stable)
-
-No advanced animations, shared element transitions, blur effects, custom shaders, visual experiments, or artwork color extraction until:
-
-- Playback is stable
-- Background playback works
-- Queue restoration works
-- Media synchronization works
-
----
-
-## 6. Architecture — MVVM Rules
-
-- **UI Layer:** Render state only.
-- **ViewModel Layer:** Business logic.
-- **Repository Layer:** Data access.
-- **Data Layer:** MediaStore, Room, Preferences.
-
-Never bypass layers.
-
-**Playback logic belongs only inside:** `player/`, `service/`, `repository/`
-
-Never inside Compose screens, navigation graphs, or UI state classes. Compose may observe playback state. Compose must not own it.
-
----
-
-## 7. Code Quality & Performance
+## 5. Code Quality, Concurrency & Performance
 
 - **Language:** Kotlin exclusively.
-- **Async:** Kotlin Coroutines and Flows (`StateFlow`/`SharedFlow`) for all async operations.
-- **Null Safety:** Handle nullable types safely. **Never use `!!`**. Catch specific exceptions, push errors to UI state.
-- **Disk I/O:** Always dispatch to `Dispatchers.IO`. Never block the Main thread.
-- **Memory:** Avoid unnecessary object allocations. Optimize aggressively.
-- **Concurrency:** Parallelize thumbnail generation, media parsing, and tag updates using appropriate thread pools.
-- **Code Format:** Do not add `─` anywhere in code files.
-
-**Every new feature must:**
-
-- Compile successfully
-- Have no warnings, unused code, dead code, or duplicated logic
-- Have no magic numbers or hardcoded strings
-
-**Library target:** 50,000+ songs — every implementation must consider startup speed, memory, database efficiency, and scrolling performance.
+- **Async/Threading:** Coroutines & Flows (`StateFlow`/`SharedFlow`). Dispatch all Disk I/O and DB operations to `Dispatchers.IO`. Never block Main.
+- **Null Safety:** Safe calls only. **Never use `!!`**. Catch specific exceptions and expose errors through UI state.
+- **Memory & Scale:** Target 50,000+ tracks. Avoid allocations in hot paths, parallelize thumbnails/tag parsing, use composite LazyColumn keys for queue duplicate safety.
+- **Code Cleanliness:** Zero warnings, zero unused/dead/duplicated code, no magic numbers, no hardcoded strings. Do NOT use `─` characters anywhere in code.
+- **Zero Hallucination:** Use only existing APIs, classes, and Media3/MediaStore methods. If uncertain, STOP and ask the developer.
 
 ---
 
-## 8. Room Rules
+## 6. Documentation & Update Tracking (`update_details.md`)
 
-Room stores: song metadata cache, play counts, favorites, playlists, statistics.
+After every completed task, error fix, or feature, **append** to the very end of `update_details.md`.
+- **Do NOT read or rewrite the whole file.** Append at the very end only.
+- Include IST timestamp. Use this exact format:
 
-Room is **NOT** the source of truth — it mirrors MediaStore.
+```markdown
+Date: DD-MM-YYYY HH:mm IST
 
----
-
-## 10. Navigation Rules
-
-- Use **Navigation Compose**.
-- **Single Activity** architecture only.
-- Do not use Fragments, legacy Navigation, or multiple Activities.
-
----
-
-## 11. Dependency Injection Rules
-
-- Use **Hilt** exclusively.
-- Do not manually instantiate repositories, DAOs, or player components — inject everything.
-
----
-
-## 12. Forbidden Behaviors
-
-- Invent APIs, Android classes, Media3 methods, or MediaStore columns.
-- Create fake/placeholder implementations or TODO-based architecture.
-- Ignore compiler errors, lint warnings, or nullability.
-- Load entire libraries into Compose state.
-
-**If an API is unknown:** STOP → explain uncertainty → request clarification → do not hallucinate.
-
----
-
-## 13. Documentation & Update Tracking
-
-After every completed task, error resolution, or feature addition, **append** an entry to `update_details.md`.
-
-**Rules:**
-
-- **Do NOT read or rewrite the whole file.** Only append at the very end.
-- Include a **Date and Time** stamp as per IST.
-- Use this exact format:
-
-````
-- **Issue:** (Briefly describe the exact issue or bottleneck that was solved)
+- **Issue:** (Briefly describe the exact issue or bottleneck solved)
 - **Type:** (Error | Bug | UI | Performance | Architecture | Feature)
-- **Solution:** (How it was solved — maximum 10 lines)
-
-```
-
- in the file
+- **Solution:** (How it was solved)
 ---
-````
-
-- End every session entry with `---` on a new line.
-- No conversational filler in the file.
+```
+- End every entry with `---` on a new line. No conversational filler.
 
 ---
 
-## 14. Version Control Protocol
+## 7. Git & Version Control Protocol
 
-- **Do not auto-commit or push** any changes until explicitly asked by the developer.
-- When asked to commit, verify build succeeds, app launches, and feature works — then generate a commit message.
-
-**Commit message format:**
-
-```
-feat(scope): description
-fix(scope): description
-refactor(scope): description
-```
-
-**Examples:**
-
-```
-feat(player): add media3 playback engine
-feat(mediastore): implement audio synchronization
-fix(player): resolve playback state restoration
-refactor(repository): simplify media synchronization
-```
+- **Do NOT auto-commit or push** changes without explicit developer instruction.
+- **Commit Message Format:** `feat(scope): description`, `fix(scope): description`, `refactor(scope): description`, `perf(scope): description`.
 
 ---
 
-## 15. Testing Protocol
-
-Every feature must include:
-
-- Manual verification checklist
-- Expected behavior
-- Edge cases
-- Failure scenarios
-
-Never claim functionality is tested unless testing steps are explicitly provided.
-
----
-
-## 16. Definition of Done
+## 8. Definition of Done & Testing
 
 A task is complete **only when:**
-
-- Code compiles
-- No crashes
-- No TODOs
-- No fake or placeholder implementations
-- Architecture respected
-- Build passes
-
-Anything else is incomplete.
-
----
-
-## 17. Final Rule
-
-When forced to choose between better architecture and better UI — **always choose better architecture.**
+1. Code compiles without errors or warnings (`./gradlew assembleDebug`).
+2. Unit tests pass (`./gradlew testDebugUnitTest`).
+3. Zero crashes, zero TODOs, zero placeholder/fake implementations.
+4. Architectural boundaries are fully respected.
+5. Verification includes manual checklist, expected behavior, edge cases, and failure scenarios.
