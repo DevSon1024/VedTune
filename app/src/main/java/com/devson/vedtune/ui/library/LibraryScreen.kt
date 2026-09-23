@@ -75,6 +75,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.devson.vedtune.domain.model.Song
@@ -350,30 +351,26 @@ fun LibraryScreen(
 
                             Box(
                                 modifier = Modifier
+                                    .zIndex(1f)
                                     .fillMaxWidth()
                                     .wrapContentSize(Alignment.CenterStart)
                                     .offset(x = left + 4.dp)
                                     .width((currentTabWidth - 8.dp).coerceAtLeast(0.dp))
                                     .height(38.dp)
                                     .clip(VedTuneShapeTokens.Pill)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
-                                    .border(
-                                        width = 1.5.dp,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        shape = VedTuneShapeTokens.Pill
-                                    )
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
                             )
                         }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
+                        .height(52.dp)
                 ) {
                     tabs.forEachIndexed { index, tab ->
                         val isSelected = pagerState.currentPage == index
                         val contentColor by animateColorAsState(
                             targetValue = if (isSelected) {
-                                MaterialTheme.colorScheme.primary
+                                MaterialTheme.colorScheme.onPrimaryContainer
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
@@ -389,10 +386,11 @@ fun LibraryScreen(
                                 }
                             },
                             modifier = Modifier
+                                .zIndex(2f)
                                 .clip(VedTuneShapeTokens.Pill)
                                 .height(40.dp)
                                 .padding(horizontal = 2.dp),
-                            selectedContentColor = MaterialTheme.colorScheme.primary,
+                            selectedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                             unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         ) {
                             Row(

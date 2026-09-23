@@ -8,13 +8,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -26,16 +24,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.rounded.Category
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,8 +38,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.devson.vedtune.domain.model.ViewPreferences
 import com.devson.vedtune.ui.components.VedTuneEmptyState
+import com.devson.vedtune.ui.components.VedTuneListItem
 import com.devson.vedtune.ui.theme.VedTuneIconSizes
 import com.devson.vedtune.ui.theme.VedTuneShapeTokens
 import com.devson.vedtune.ui.theme.VedTuneTextStyles
@@ -60,8 +57,8 @@ fun GenresScreen(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
-    val genres by viewModel.genres.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    val genres by viewModel.genres.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val isGridView = viewPreferences.isGridView
     val adaptiveInfo = rememberVedTuneAdaptiveInfo()
 
@@ -147,14 +144,17 @@ private fun GenreGridCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        shape = VedTuneShapeTokens.Card,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+    ElevatedCard(
+        shape = VedTuneShapeTokens.Medium,
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = 1.dp
         ),
         modifier = modifier
             .fillMaxWidth()
-            .clip(VedTuneShapeTokens.Card)
+            .clip(VedTuneShapeTokens.Medium)
             .clickable(onClick = onClick)
     ) {
         Column(
@@ -199,24 +199,11 @@ private fun GenreListRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    ListItem(
-        headlineContent = {
-            Text(
-                text = genreName.ifBlank { "Unknown Genre" },
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        },
-        supportingContent = {
-            Text(
-                text = "Genre",
-                style = VedTuneTextStyles.Metadata,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
+    VedTuneListItem(
+        primaryText = genreName.ifBlank { "Unknown Genre" },
+        secondaryText = "Genre",
+        onClick = onClick,
+        modifier = modifier,
         leadingContent = {
             Box(
                 modifier = Modifier
@@ -232,13 +219,6 @@ private fun GenreListRow(
                     modifier = Modifier.size(VedTuneIconSizes.Medium)
                 )
             }
-        },
-        colors = ListItemDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(VedTuneShapeTokens.Medium)
-            .clickable(onClick = onClick)
+        }
     )
 }

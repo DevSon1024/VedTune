@@ -412,9 +412,9 @@ private fun HomeGreetingHeader(
     val greeting = remember {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         when (hour) {
-            in 5..11 -> "Good morning"
-            in 12..16 -> "Good afternoon"
-            else -> "Good evening"
+            in 5..11 -> "Good Morning"
+            in 12..16 -> "Good Afternoon"
+            else -> "Good Evening"
         }
     }
 
@@ -443,23 +443,45 @@ private fun HomeGreetingHeader(
         }
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.s),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            VedTuneIconButton(
-                icon = Icons.Default.Search,
-                contentDescription = "Search music",
-                onClick = onSearchClick,
-                iconSize = VedTuneIconSizes.Standard,
-                tint = MaterialTheme.colorScheme.onSurface
-            )
-            VedTuneIconButton(
-                icon = Icons.Default.Settings,
-                contentDescription = "Settings",
-                onClick = onSettingsClick,
-                iconSize = VedTuneIconSizes.Standard,
-                tint = MaterialTheme.colorScheme.onSurface
-            )
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                tonalElevation = 2.dp,
+                onClick = onSearchClick
+            ) {
+                Box(
+                    modifier = Modifier.size(42.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search music",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(VedTuneIconSizes.Standard)
+                    )
+                }
+            }
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                tonalElevation = 2.dp,
+                onClick = onSettingsClick
+            ) {
+                Box(
+                    modifier = Modifier.size(42.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(VedTuneIconSizes.Standard)
+                    )
+                }
+            }
         }
     }
 }
@@ -546,8 +568,13 @@ private fun QuickAccessChip(
     Surface(
         onClick = onClick,
         shape = VedTuneShapeTokens.Pill,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = modifier.height(38.dp)
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 1.dp,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        ),
+        modifier = modifier.height(40.dp)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m, vertical = MaterialTheme.spacing.xs),
@@ -558,7 +585,7 @@ private fun QuickAccessChip(
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconColor,
-                modifier = Modifier.size(VedTuneIconSizes.Small)
+                modifier = Modifier.size(18.dp)
             )
             Text(
                 text = label,
@@ -567,11 +594,17 @@ private fun QuickAccessChip(
                 color = MaterialTheme.colorScheme.onSurface
             )
             if (count != null) {
-                Text(
-                    text = "($count)",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f)
+                ) {
+                    Text(
+                        text = "$count",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
             }
         }
     }
@@ -589,16 +622,21 @@ private fun JumpBackInSongCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    ElevatedCard(
         onClick = onClick,
-        shape = VedTuneShapeTokens.Medium,
-        color = if (isCurrentSong) {
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerLow
-        },
+        shape = VedTuneShapeTokens.Large,
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = if (isCurrentSong) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            }
+        ),
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = if (isCurrentSong) 3.dp else 1.dp
+        ),
         modifier = modifier
-            .width(132.dp)
+            .width(140.dp)
             .wrapContentHeight()
     ) {
         Column(modifier = Modifier.padding(MaterialTheme.spacing.s)) {

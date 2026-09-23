@@ -1,6 +1,7 @@
 package com.devson.vedtune.ui.artists
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,28 +25,22 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.devson.vedtune.domain.model.Artist
 import com.devson.vedtune.domain.model.ViewPreferences
 import com.devson.vedtune.ui.components.VedTuneArtistCard
 import com.devson.vedtune.ui.components.VedTuneEmptyState
-import com.devson.vedtune.ui.theme.VedTuneIconSizes
-import com.devson.vedtune.ui.theme.VedTuneShapeTokens
-import com.devson.vedtune.ui.theme.VedTuneTextStyles
+import com.devson.vedtune.ui.components.VedTuneListItem
 import com.devson.vedtune.ui.theme.rememberVedTuneAdaptiveInfo
 import com.devson.vedtune.ui.theme.spacing
 
@@ -58,8 +53,8 @@ fun ArtistsScreen(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
-    val artists by viewModel.artists.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
+    val artists by viewModel.artists.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val isGridView = viewPreferences.isGridView
     val adaptiveInfo = rememberVedTuneAdaptiveInfo()
 
@@ -155,7 +150,7 @@ fun ArtistListItem(
         }
     }
 
-    com.devson.vedtune.ui.components.VedTuneListItem(
+    VedTuneListItem(
         primaryText = artist.name,
         secondaryText = subtitle,
         onClick = onClick,
@@ -163,9 +158,10 @@ fun ArtistListItem(
         leadingContent = {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(52.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                    .background(MaterialTheme.colorScheme.secondaryContainer)
+                    .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(

@@ -656,15 +656,23 @@ fun BottomSheetOption(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 14.dp),
+            .padding(horizontal = 24.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = title,
-            tint = tint,
-            modifier = Modifier.size(24.dp)
-        )
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                tint = tint,
+                modifier = Modifier.size(20.dp)
+            )
+        }
         Spacer(modifier = Modifier.width(16.dp))
         Text(
             text = title,
@@ -680,9 +688,9 @@ fun SongPreviewDialog(
     viewModel: SongsViewModel,
     onDismiss: () -> Unit
 ) {
-    val isPlaying by viewModel.isPlaying.collectAsState()
-    val currentPositionLong by viewModel.playbackPosition.collectAsState()
-    val durationLong by viewModel.playbackDuration.collectAsState()
+    val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+    val currentPositionLong by viewModel.playbackPosition.collectAsStateWithLifecycle()
+    val durationLong by viewModel.playbackDuration.collectAsStateWithLifecycle()
 
     val currentPosition = currentPositionLong.toFloat()
     val duration = durationLong.toFloat()

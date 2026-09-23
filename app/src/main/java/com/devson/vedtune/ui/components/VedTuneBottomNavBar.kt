@@ -74,7 +74,7 @@ fun VedTuneBottomNavBar(
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
-        tonalElevation = 3.dp,
+        tonalElevation = 4.dp,
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
@@ -82,11 +82,17 @@ fun VedTuneBottomNavBar(
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.navigationBars)
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+            )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(58.dp)
-                    .padding(horizontal = MaterialTheme.spacing.s),
+                    .height(64.dp)
+                    .padding(horizontal = MaterialTheme.spacing.m),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -118,14 +124,14 @@ private fun RowScope.VedTuneNavBarItem(
     val interactionSource = remember { MutableInteractionSource() }
 
     val iconScale by animateFloatAsState(
-        targetValue = if (isSelected) 1.05f else 1.0f,
-        animationSpec = VedTuneMotion.standardTween(200),
+        targetValue = if (isSelected) 1.08f else 1.0f,
+        animationSpec = VedTuneMotion.snappySpring(),
         label = "iconScale"
     )
 
     val indicatorWidthScale by animateFloatAsState(
         targetValue = if (isSelected) 1f else 0f,
-        animationSpec = VedTuneMotion.standardTween(250),
+        animationSpec = VedTuneMotion.bouncySpring(),
         label = "indicatorWidthScale"
     )
 
@@ -135,7 +141,7 @@ private fun RowScope.VedTuneNavBarItem(
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         },
-        animationSpec = VedTuneMotion.standardTween(200),
+        animationSpec = VedTuneMotion.standardTween(VedTuneMotion.DurationShort),
         label = "contentColor"
     )
 
@@ -158,8 +164,8 @@ private fun RowScope.VedTuneNavBarItem(
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .height(28.dp)
-                    .width(48.dp)
+                    .height(32.dp)
+                    .width(56.dp)
             ) {
                 if (indicatorWidthScale > 0.01f) {
                     Box(
@@ -181,12 +187,12 @@ private fun RowScope.VedTuneNavBarItem(
                 )
             }
 
-            Spacer(modifier = Modifier.height(MaterialTheme.spacing.xxs))
+            Spacer(modifier = Modifier.height(2.dp))
 
             Text(
                 text = item.label,
-                style = VedTuneTextStyles.Badge.copy(
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
                 ),
                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                 maxLines = 1

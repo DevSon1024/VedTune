@@ -15,7 +15,7 @@
 
 </div>
 
-## 📱 Screenshots & App Preview
+## Screenshots & App Preview
 
 <div align="center">
 
@@ -31,35 +31,35 @@
 
 ---
 
-## ✨ Features
+## Features
 
-### 🎧 Core Playback & Audio Engine
+### Core Playback & Audio Engine
 
 - **Media3 / ExoPlayer Engine**: Seamless gapless audio playback with MediaSession background service integration and lock screen controls.
 - **Transparent Audio Pipeline**: Bit-perfect offline audio reproduction directly from Media3/ExoPlayer decoder with zero unwanted DSP compression, dynamic limiting, or artificial coloration.
 - **Queue & Playback Persistence**: Remembers queue state, shuffle/repeat modes, and active position across app restarts.
 
-### 🎙️ Complete Lyrics Suite
+### Complete Lyrics Suite
 
 - **Synchronized Lyrics**: Millisecond-accurate LRC lyrics display with smooth auto-scroll and dynamic lead compensation.
 - **Interactive Lyrics Syncer**: Tap-to-sync tool to easily align raw text lyrics with audio timestamps in real time.
 - **LRC Editor & Converter**: Built-in editor to manually modify LRC files and convert between lyric formats.
 - **Lyrics Finder**: Fast search tool to locate and attach local or online lyrics to your music library.
 
-### 📁 MediaStore-First Library & Tagging
+### MediaStore-First Library & Tagging
 
 - **MediaStore Source of Truth**: Non-blocking audio synchronization engine with debounced change detection.
 - **Scoped Storage ID3 Tag Editor**: Safely edit title, artist, album, genre, year, composer, lyricist, and track numbers using temporary cached file buffers to prevent corruption on Scoped Storage.
 - **Audio Inspector**: Detailed bottom sheet displaying play counts, last played timestamps, and deep technical specs (bitrate, sample rate, encoding, channels, file size) via `jaudiotagger`.
 
-### 🎨 Modern UI & Customization
+### Modern UI & Customization
 
 - **100% Jetpack Compose & Material 3**: Sleek dark mode, fluid micro-interactions, responsive touch targets, and stateless composables.
 - **Categorized Settings**: Dedicated sub-screens for **Appearance & Theme**, **Playback Preferences**, and **Library & Folders**.
 
 ---
 
-## 🛠️ Tech Stack & Architecture
+## Tech Stack & Architecture
 
 - **Language**: Kotlin 2.0+
 - **Architecture**: MVVM + Clean Architecture principles
@@ -72,7 +72,7 @@
 
 ---
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 com.devson.vedtune/
