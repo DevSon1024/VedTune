@@ -47,6 +47,8 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -73,9 +75,13 @@ import com.devson.vedtune.ui.theme.VedTuneIconSizes
 import com.devson.vedtune.ui.theme.VedTuneShapeTokens
 import com.devson.vedtune.ui.theme.VedTuneTextStyles
 import com.devson.vedtune.ui.theme.spacing
-import kotlinx.coroutines.delay
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+
+private data class QueueItemEntry(
+    val entryId: Long,
+    val song: Song
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,10 +98,11 @@ fun QueueBottomSheet(
 
     val lazyListState = rememberLazyListState()
 
-    var localQueue by remember { mutableStateOf<List<Song>>(emptyList()) }
-    var isDragging by remember { mutableStateOf(false) }
-    var isWaitingForSync by remember { mutableStateOf(false) }
-    var dragStartIndex by remember { mutableStateOf<Int?>(null) }
+    var nextEntryId by remember { mutableLongStateOf(1L) }
+    var localQueue by remember { mutableStateOf<List<QueueItemEntry>>(emptyList()) }
+    var isDraggingAnyItem by remember { mutableStateOf(false) }
+    var dragStartIndex by remember { mutableIntStateOf(-1) }
+    var dragEndIndex by remember { mutableIntStateOf(-1) }
 
     var showSaveQueueDialog by remember { mutableStateOf(false) }
     var showClearQueueConfirm by remember { mutableStateOf(false) }
@@ -104,34 +111,34 @@ fun QueueBottomSheet(
     val haptics = LocalHapticFeedback.current
 
     LaunchedEffect(playlistQueue) {
-        if (playlistQueue.isEmpty()) {
-            localQueue = emptyList()
-            isDragging = false
-            isWaitingForSync = false
-        } else {
-            if (!isDragging) {
-                localQueue = playlistQueue
-            } else if (isWaitingForSync) {
-                if (playlistQueue.size == localQueue.size && playlistQueue == localQueue) {
-                    isDragging = false
-                    isWaitingForSync = false
+        if (!isDraggingAnyItem) {
+            val existingPool = localQueue.toMutableList()
+            val newEntries = playlistQueue.map { song ->
+                val matchIndex = existingPool.indexOfFirst { it.song.id == song.id }
+                if (matchIndex != -1) {
+                    existingPool.removeAt(matchIndex)
+                } else {
+                    QueueItemEntry(entryId = nextEntryId++, song = song)
                 }
             }
+            localQueue = newEntries
         }
     }
 
-    LaunchedEffect(isWaitingForSync) {
-        if (isWaitingForSync) {
-            delay(1000)
-            if (isWaitingForSync) {
-                isDragging = false
-                isWaitingForSync = false
-                localQueue = playlistQueue
-            }
+    val currentSongIndex = remember(localQueue, currentSong) {
+        localQueue.indexOfFirst { it.song.id == currentSong?.id }
+    }
+    LaunchedEffect(Unit) {
+        if (currentSongIndex > 0) {
+            lazyListState.animateScrollToItem((currentSongIndex - 1).coerceAtLeast(0))
         }
     }
 
     val reorderableLazyListState = rememberReorderableLazyListState(lazyListState) { from, to ->
+        if (dragStartIndex == -1) {
+            dragStartIndex = from.index
+        }
+        dragEndIndex = to.index
         localQueue = localQueue.toMutableList().apply {
             add(to.index, removeAt(from.index))
         }
@@ -239,39 +246,44 @@ fun QueueBottomSheet(
                 ) {
                     itemsIndexed(
                         items = localQueue,
-                        key = { index, song -> "${song.id}_$index" }
-                    ) { index, song ->
+                        key = { _, item -> item.entryId }
+                    ) { index, item ->
+                        val song = item.song
                         val isNowPlaying = (song.id == currentSong?.id)
 
                         ReorderableItem(
                             state = reorderableLazyListState,
-                            key = "${song.id}_$index"
+                            key = item.entryId
                         ) { isItemDragging ->
+                            val isDraggingPrev = remember { mutableStateOf(false) }
+                            LaunchedEffect(isItemDragging) {
+                                if (isItemDragging) {
+                                    isDraggingAnyItem = true
+                                } else if (isDraggingPrev.value) {
+                                    isDraggingAnyItem = false
+                                    if (dragStartIndex != -1 && dragEndIndex != -1 && dragStartIndex != dragEndIndex) {
+                                        viewModel.moveQueueItem(dragStartIndex, dragEndIndex)
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    }
+                                    dragStartIndex = -1
+                                    dragEndIndex = -1
+                                }
+                                isDraggingPrev.value = isItemDragging
+                            }
+
                             val scale by animateFloatAsState(
-                                targetValue = if (isItemDragging) 1.02f else 1f,
+                                targetValue = if (isItemDragging) 1.03f else 1f,
                                 label = "queueDragScale"
                             )
                             val elevation by animateDpAsState(
-                                targetValue = if (isItemDragging) 6.dp else 0.dp,
+                                targetValue = if (isItemDragging) 8.dp else 0.dp,
                                 label = "queueDragElevation"
                             )
 
                             val dragHandleModifier = Modifier
                                 .draggableHandle(
                                     onDragStarted = {
-                                        isDragging = true
-                                        dragStartIndex = index
                                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    },
-                                    onDragStopped = {
-                                        val start = dragStartIndex
-                                        dragStartIndex = null
-                                        if (start != null && start != index) {
-                                            isWaitingForSync = true
-                                            viewModel.moveQueueItem(start, index)
-                                        } else {
-                                            isDragging = false
-                                        }
                                     }
                                 )
                                 .padding(MaterialTheme.spacing.s)
@@ -284,7 +296,7 @@ fun QueueBottomSheet(
                                 isDragging = isItemDragging,
                                 elevation = elevation,
                                 dragHandleModifier = dragHandleModifier,
-                                onPlay = { viewModel.playQueueItemById(song.id) },
+                                onPlay = { viewModel.playQueueItemByIndex(index) },
                                 onPlayNext = { viewModel.playNext(song) },
                                 onAddToPlaylist = { songForPlaylist = song },
                                 onRemoveFromQueue = { viewModel.removeQueueItem(index) },

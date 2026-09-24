@@ -294,6 +294,10 @@ class PlayerViewModel @Inject constructor(
         playbackConnection.playQueueItemById(songId)
     }
 
+    fun playQueueItemByIndex(index: Int) {
+        playbackConnection.playQueueItemByIndex(index)
+    }
+
     fun skipToQueueItem(index: Int) {
         val queue = playlistQueue.value
         if (index in queue.indices) {
