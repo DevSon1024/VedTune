@@ -48,8 +48,8 @@ fun PlayerArtworkPager(
     onPlayPause: () -> Unit,
     onViewAlbumArt: () -> Unit,
     modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 28.dp),
-    overlapOffset: Dp = 20.dp
+    contentPadding: PaddingValues = PaddingValues(horizontal = 48.dp),
+    overlapOffset: Dp = 16.dp
 ) {
     if (queue.isEmpty()) return
 
@@ -76,12 +76,13 @@ fun PlayerArtworkPager(
     }
 
     val overlapPx = with(LocalDensity.current) { overlapOffset.toPx() }
+    val cardShape = MaterialTheme.shapes.extraLarge
 
     HorizontalPager(
         state = pagerState,
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(1f),
+            .graphicsLayer { clip = false },
         contentPadding = contentPadding,
         pageSize = PageSize.Fill,
         beyondViewportPageCount = 2,
@@ -95,7 +96,7 @@ fun PlayerArtworkPager(
         // Interpolate scale and alpha based on MULTI_PAGE_OVERLAP physics
         val minScale = 0.85f * artworkScale
         val scale = lerp(start = minScale, stop = artworkScale, fraction = 1f - normalizedOffset)
-        val alpha = lerp(start = 0.6f, stop = 1f, fraction = 1f - normalizedOffset)
+        val alpha = lerp(start = 0.55f, stop = 1f, fraction = 1f - normalizedOffset)
         val translationX = rawOffset * overlapPx
         val zIndex = 1f - normalizedOffset
 
@@ -114,16 +115,18 @@ fun PlayerArtworkPager(
 
         Box(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .aspectRatio(1f)
                 .zIndex(zIndex)
                 .graphicsLayer {
                     this.scaleX = scale
                     this.scaleY = scale
                     this.alpha = alpha
                     this.translationX = translationX
-                    this.shadowElevation = if (normalizedOffset < 0.1f) 12.dp.toPx() else 4.dp.toPx()
+                    this.shadowElevation = if (normalizedOffset < 0.1f) 16.dp.toPx() else 4.dp.toPx()
+                    this.shape = cardShape
+                    this.clip = true
                 }
-                .clip(MaterialTheme.shapes.extraLarge)
                 .then(clickModifier),
             contentAlignment = Alignment.Center
         ) {

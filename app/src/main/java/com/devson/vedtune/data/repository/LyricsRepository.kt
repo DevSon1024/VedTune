@@ -4,19 +4,32 @@ import com.devson.vedtune.data.remote.api.LrcLibApi
 import com.devson.vedtune.data.remote.model.LrcLibResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 enum class LrcSearchField(val label: String) {
     TRACK_NAME("Track Name"),
     ARTIST_NAME("Artist Name"),
-    ALBUM_NAME("Album Name")
+    ALBUM_NAME("Album Name"),
+    QUERY("All / Freeform")
 }
 
 @Singleton
 class LyricsRepository @Inject constructor(
     private val api: LrcLibApi
 ) {
+
+    private fun mapNetworkException(e: Exception): Exception {
+        return when (e) {
+            is UnknownHostException -> Exception("Unable to connect to LRCLIB. Please check your internet connection and try again.")
+            is SocketTimeoutException -> Exception("Connection to LRCLIB timed out. Please check your network and try again.")
+            is ConnectException -> Exception("Could not reach LRCLIB server. Please check your network.")
+            else -> Exception(e.message ?: "An unexpected network error occurred.")
+        }
+    }
 
     suspend fun fetchLyricsForSong(
         trackName: String,
@@ -63,7 +76,7 @@ class LyricsRepository @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(mapNetworkException(e))
         }
     }
 
@@ -77,16 +90,25 @@ class LyricsRepository @Inject constructor(
                 return@withContext Result.success(emptyList())
             }
 
+            val queryParam = if (field == LrcSearchField.QUERY) trimmedQuery else null
             val trackParam = if (field == LrcSearchField.TRACK_NAME) trimmedQuery else null
             val artistParam = if (field == LrcSearchField.ARTIST_NAME) trimmedQuery else null
             val albumParam = if (field == LrcSearchField.ALBUM_NAME) trimmedQuery else null
 
-            val response = api.searchLyrics(
-                query = null,
+            var response = api.searchLyrics(
+                query = queryParam,
                 trackName = trackParam,
                 artistName = artistParam,
                 albumName = albumParam
             )
+
+            // If specific track name search returned empty, fallback to broad freeform query search
+            if (response.isSuccessful && response.body().isNullOrEmpty() && field == LrcSearchField.TRACK_NAME) {
+                val fallbackResponse = api.searchLyrics(query = trimmedQuery)
+                if (fallbackResponse.isSuccessful && !fallbackResponse.body().isNullOrEmpty()) {
+                    response = fallbackResponse
+                }
+            }
 
             if (response.code() == 429) {
                 return@withContext Result.failure(Exception("Rate limit exceeded. Try again later."))
@@ -99,7 +121,7 @@ class LyricsRepository @Inject constructor(
             val body = response.body() ?: emptyList()
             Result.success(body)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(mapNetworkException(e))
         }
     }
 }

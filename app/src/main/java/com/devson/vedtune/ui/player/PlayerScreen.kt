@@ -28,10 +28,12 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import android.os.Build
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -41,11 +43,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
+import com.devson.vedtune.ui.theme.DarkColorScheme
 import com.devson.vedtune.ui.components.AddToPlaylistDialog
 import com.devson.vedtune.ui.components.ArtworkThumbnailSize
 import com.devson.vedtune.ui.components.AudioDiagnosticsDialog
@@ -181,36 +187,113 @@ fun PlayerScreen(
         }
     }
 
-    Box(
-        modifier = modifier.fillMaxSize()
+    // Ensure light/white status bar and navigation bar icons on PlayerScreen against dark scrims
+    val view = LocalView.current
+    DisposableEffect(view) {
+        var ctx = view.context
+        while (ctx is ContextWrapper) {
+            if (ctx is Activity) break
+            ctx = ctx.baseContext
+        }
+        val window = (ctx as? Activity)?.window
+        val controller = window?.let { WindowCompat.getInsetsController(it, view) }
+        val prevLightStatusBars = controller?.isAppearanceLightStatusBars ?: false
+        val prevLightNavBars = controller?.isAppearanceLightNavigationBars ?: false
+
+        controller?.isAppearanceLightStatusBars = false
+        controller?.isAppearanceLightNavigationBars = false
+
+        onDispose {
+            controller?.isAppearanceLightStatusBars = prevLightStatusBars
+            controller?.isAppearanceLightNavigationBars = prevLightNavBars
+        }
+    }
+
+    val playerColorScheme = remember(context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            dynamicDarkColorScheme(context)
+        } else {
+            DarkColorScheme
+        }
+    }
+
+    MaterialTheme(
+        colorScheme = playerColorScheme
     ) {
-        // 1. Dynamic Contrast-Safe Blurred Artwork Background
-        Crossfade(targetState = song?.albumId, label = "BackgroundTransition") { albumId ->
-            if (albumId != null) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    SongArtwork(
-                        albumId = albumId,
-                        modifier = Modifier.fillMaxSize(),
-                        showArtwork = showArtworkState,
-                        blurRadius = playerBackgroundBlurRadius.toInt(),
-                        thumbnailSize = ArtworkThumbnailSize.SMALL,
-                        isPlaying = isPlaying,
-                        showFallbackAnimation = false
-                    )
-                    val isDark = MaterialTheme.colorScheme.surface.let {
-                        (it.red * 0.299f + it.green * 0.587f + it.blue * 0.114f) < 0.5f
+        Box(
+            modifier = modifier.fillMaxSize()
+        ) {
+            // 1. Dynamic Contrast-Safe Blurred Artwork Background
+            Crossfade(targetState = song?.albumId, label = "BackgroundTransition") { albumId ->
+                if (albumId != null) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        SongArtwork(
+                            albumId = albumId,
+                            modifier = Modifier.fillMaxSize(),
+                            showArtwork = showArtworkState,
+                            blurRadius = playerBackgroundBlurRadius.toInt(),
+                            thumbnailSize = ArtworkThumbnailSize.SMALL,
+                            isPlaying = isPlaying,
+                            showFallbackAnimation = false
+                        )
+                        // Ambient base darkening: keeps artwork colors vibrant while avoiding harsh glare
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.25f))
+                        )
                     }
-                    val gradientBrush = remember(isDark) {
-                        ArtworkColorExtractor.playerBackgroundGradient(isDark)
-                    }
+                } else {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(gradientBrush)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color(0xFF0F172A),
+                                        Color(0xFF020617)
+                                    )
+                                )
+                            )
                     )
                 }
             }
-        }
+
+            // Top Black Blur / Scrim Gradient: ensures device status bar and top header are clearly legible
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .align(Alignment.TopCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = 0.85f),
+                                Color.Black.copy(alpha = 0.60f),
+                                Color.Black.copy(alpha = 0.25f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+
+            // Bottom Black Blur / Scrim Gradient: ensures seekbar, timestamps, action bar, and playback controls are clearly legible
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.55f)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.30f),
+                                Color.Black.copy(alpha = 0.70f),
+                                Color.Black.copy(alpha = 0.92f)
+                            )
+                        )
+                    )
+            )
 
         // 2. Main Content (Adaptive Portrait vs Landscape Layout)
         val currentActiveSong = song
@@ -368,7 +451,7 @@ fun PlayerScreen(
                         .fillMaxSize()
                         .statusBarsPadding()
                         .navigationBarsPadding()
-                        .padding(horizontal = MaterialTheme.spacing.m, vertical = MaterialTheme.spacing.xs),
+                        .padding(vertical = MaterialTheme.spacing.xs),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Header
@@ -376,7 +459,8 @@ fun PlayerScreen(
                         sleepTimerRemaining = sleepTimerRemaining,
                         onBackClick = onBackClick,
                         onQueueClick = { showQueueSheet = true },
-                        onOptionsClick = { sheetState = PlayerSheetState.Options }
+                        onOptionsClick = { sheetState = PlayerSheetState.Options },
+                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m)
                     )
 
                     Spacer(modifier = Modifier.height(MaterialTheme.spacing.xs))
@@ -403,7 +487,8 @@ fun PlayerScreen(
                                         viewModel = viewModel,
                                         activeSong = displayedSong,
                                         onToggleLyrics = { showLyrics = false },
-                                        onEditLyricsClick = { onNavigateToLyricsEditor(displayedSong.id) }
+                                        onEditLyricsClick = { onNavigateToLyricsEditor(displayedSong.id) },
+                                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m)
                                     )
                                 } else {
                                     if (playlistQueue.isNotEmpty()) {
@@ -418,7 +503,8 @@ fun PlayerScreen(
                                             onSkipToQueueItem = { newIndex -> viewModel.skipToQueueItem(newIndex) },
                                             onToggleLyrics = { showLyrics = true },
                                             onPlayPause = { viewModel.togglePlayPause() },
-                                            onViewAlbumArt = { showViewAlbumArtOverlay = true }
+                                            onViewAlbumArt = { showViewAlbumArtOverlay = true },
+                                            modifier = Modifier.fillMaxWidth()
                                         )
                                     } else {
                                         ArtworkCard(
@@ -433,7 +519,8 @@ fun PlayerScreen(
                                             onPlayPause = { viewModel.togglePlayPause() },
                                             onViewAlbumArt = { showViewAlbumArtOverlay = true },
                                             onSwipeNext = { viewModel.skipToNext() },
-                                            onSwipePrevious = { viewModel.skipToPrevious() }
+                                            onSwipePrevious = { viewModel.skipToPrevious() },
+                                            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m)
                                         )
                                     }
                                 }
@@ -477,7 +564,8 @@ fun PlayerScreen(
                             }
                             viewModel.setRepeatMode(nextMode)
                         },
-                        onToggleLyrics = { showLyrics = !showLyrics }
+                        onToggleLyrics = { showLyrics = !showLyrics },
+                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m)
                     )
 
                     Spacer(modifier = Modifier.height(MaterialTheme.spacing.s))
@@ -490,7 +578,8 @@ fun PlayerScreen(
                         style = seekbarStyle,
                         isPlaying = isPlaying,
                         onSeek = { viewModel.seekTo(it) },
-                        onToggleRemainingTime = { viewModel.toggleRemainingTime() }
+                        onToggleRemainingTime = { viewModel.toggleRemainingTime() },
+                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m)
                     )
 
                     Spacer(modifier = Modifier.height(MaterialTheme.spacing.s))
@@ -503,7 +592,8 @@ fun PlayerScreen(
                         onBackwardClick = { viewModel.skipBackward() },
                         onPlayPauseClick = { viewModel.togglePlayPause() },
                         onForwardClick = { viewModel.skipForward() },
-                        onNextClick = { viewModel.skipToNext() }
+                        onNextClick = { viewModel.skipToNext() },
+                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m)
                     )
                 }
             }
@@ -672,5 +762,6 @@ fun PlayerScreen(
             viewModel = viewModel,
             onDismiss = { showQueueSheet = false }
         )
+    }
     }
 }

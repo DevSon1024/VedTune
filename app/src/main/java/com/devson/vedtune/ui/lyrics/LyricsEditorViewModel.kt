@@ -129,6 +129,7 @@ class LyricsEditorViewModel @Inject constructor(
             LrcSearchField.TRACK_NAME -> song.title
             LrcSearchField.ARTIST_NAME -> song.artist
             LrcSearchField.ALBUM_NAME -> song.album ?: ""
+            LrcSearchField.QUERY -> "${song.title} ${song.artist}".trim()
         }.trim()
     }
 

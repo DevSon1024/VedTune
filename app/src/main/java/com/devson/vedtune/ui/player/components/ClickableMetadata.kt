@@ -41,7 +41,7 @@ fun ClickableMetadata(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = MaterialTheme.spacing.l),
+            .padding(horizontal = MaterialTheme.spacing.m),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Song Title with subtle clickable ripple and smooth marquee
@@ -71,7 +71,7 @@ fun ClickableMetadata(
             Surface(
                 onClick = onArtistClick,
                 shape = VedTuneShapeTokens.Pill,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
                 modifier = Modifier.weight(1f, fill = false)
             ) {
                 Row(
@@ -103,7 +103,7 @@ fun ClickableMetadata(
                 Surface(
                     onClick = onAlbumClick,
                     shape = VedTuneShapeTokens.Pill,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
                     modifier = Modifier.weight(1f, fill = false)
                 ) {
                     Row(
