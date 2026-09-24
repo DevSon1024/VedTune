@@ -1,5 +1,6 @@
 package com.devson.vedtune.ui.player.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,6 +18,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -127,6 +129,7 @@ fun PlayerArtworkPager(
                     this.shape = cardShape
                     this.clip = true
                 }
+                .background(Color(0xFF1E293B), cardShape)
                 .then(clickModifier),
             contentAlignment = Alignment.Center
         ) {

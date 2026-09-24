@@ -89,7 +89,7 @@ class SettingsViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AlbumArtClickAction.SHOW_LYRICS)
 
     val playerBackgroundBlurRadius: StateFlow<Float> = settingsRepository.playerBackgroundBlurRadius
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 40f)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 35f)
 
     val isAmoledDark: StateFlow<Boolean> = settingsRepository.isAmoledDark
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)

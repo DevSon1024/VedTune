@@ -113,9 +113,11 @@ class BlurTransformation(
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         if (radius <= 0f) return input
+        val isDeepBlur = radius >= 20f
+        // For deep ambient blur (backgrounds), downsample to 48px to diffuse shapes into smooth color gradients
+        val maxDimension = if (radius >= 35f) 48 else if (radius >= 20f) 64 else 128
         val safeRadius = radius.coerceIn(1f, 25f).toInt()
         return try {
-            val maxDimension = 128
             val targetBitmap = if (input.width > maxDimension || input.height > maxDimension) {
                 val scale = maxDimension.toFloat() / maxOf(input.width, input.height)
                 val targetW = (input.width * scale).toInt().coerceAtLeast(1)
@@ -124,7 +126,12 @@ class BlurTransformation(
             } else {
                 input
             }
-            stackBlur(targetBitmap, safeRadius)
+            var blurred = stackBlur(targetBitmap, safeRadius)
+            if (isDeepBlur) {
+                // Secondary pass removes all remaining sharp high-frequency edges/poster shapes
+                blurred = stackBlur(blurred, minOf(safeRadius, 18))
+            }
+            blurred
         } catch (e: Exception) {
             e.printStackTrace()
             input
@@ -449,15 +456,17 @@ fun SongArtwork(
                 modifier = modifier
             )
         } else {
+            val fallbackBgColor = if (blurRadius > 0) androidx.compose.ui.graphics.Color(0xFF0F172A) else MaterialTheme.colorScheme.surfaceContainerHigh
+            val fallbackIconTint = if (blurRadius > 0) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             Box(
                 modifier = modifier
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    .background(fallbackBgColor),
                 contentAlignment = Alignment.Center
             ) {
                 androidx.compose.material3.Icon(
                     imageVector = fallbackIcon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    tint = fallbackIconTint,
                     modifier = Modifier.size(24.dp)
                 )
             }

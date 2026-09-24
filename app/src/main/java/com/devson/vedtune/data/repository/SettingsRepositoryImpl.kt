@@ -176,7 +176,7 @@ class SettingsRepositoryImpl @Inject constructor(
     }
 
     override val playerBackgroundBlurRadius: Flow<Float> = dataStore.data.map { preferences ->
-        preferences[KEY_PLAYER_BACKGROUND_BLUR_RADIUS] ?: 40f
+        preferences[KEY_PLAYER_BACKGROUND_BLUR_RADIUS] ?: 35f
     }
 
     override val isAmoledDark: Flow<Boolean> = dataStore.data.map { preferences ->

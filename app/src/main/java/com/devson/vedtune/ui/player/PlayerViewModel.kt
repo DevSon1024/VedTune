@@ -87,7 +87,7 @@ class PlayerViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AlbumArtClickAction.SHOW_LYRICS)
 
     val playerBackgroundBlurRadius: StateFlow<Float> = settingsRepository.playerBackgroundBlurRadius
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 40f)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 35f)
 
     val showLyricsButton: StateFlow<Boolean> = settingsRepository.showLyricsButton
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
@@ -225,6 +225,12 @@ class PlayerViewModel @Inject constructor(
     fun setSeekInterval(seconds: Int) {
         _seekInterval.value = seconds.coerceIn(5, 60)
         sharedPrefs.edit().putInt("seek_interval", seconds.coerceIn(5, 60)).apply()
+    }
+
+    fun setPlayerBackgroundBlurRadius(radius: Float) {
+        viewModelScope.launch {
+            settingsRepository.setPlayerBackgroundBlurRadius(radius)
+        }
     }
 
     fun skipForward() {

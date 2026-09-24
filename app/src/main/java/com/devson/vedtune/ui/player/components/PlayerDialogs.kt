@@ -26,7 +26,12 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,10 +86,16 @@ fun SleepTimerDialog(
 fun PlayerSettingsDialog(
     showSeekButtons: Boolean,
     seekInterval: Int,
+    blurRadius: Float = 35f,
     onToggleSeekButtons: (Boolean) -> Unit,
     onSeekIntervalChange: (Int) -> Unit,
+    onBlurRadiusChange: (Float) -> Unit,
     onDismiss: () -> Unit
 ) {
+    var localShowSeekButtons by remember(showSeekButtons) { mutableStateOf(showSeekButtons) }
+    var localSeekInterval by remember(seekInterval) { mutableIntStateOf(seekInterval) }
+    var localBlurRadius by remember(blurRadius) { mutableFloatStateOf(blurRadius) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Player Settings") },
@@ -100,8 +111,8 @@ fun PlayerSettingsDialog(
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Switch(
-                        checked = showSeekButtons,
-                        onCheckedChange = onToggleSeekButtons
+                        checked = localShowSeekButtons,
+                        onCheckedChange = { localShowSeekButtons = it }
                     )
                 }
 
@@ -116,24 +127,68 @@ fun PlayerSettingsDialog(
                             style = MaterialTheme.typography.bodyLarge
                         )
                         Text(
-                            text = "${seekInterval}s",
+                            text = "${localSeekInterval}s",
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
                     Slider(
-                        value = seekInterval.toFloat(),
-                        onValueChange = { onSeekIntervalChange(it.toInt()) },
+                        value = localSeekInterval.toFloat(),
+                        onValueChange = { localSeekInterval = kotlin.math.round(it).toInt() },
                         valueRange = 5f..60f,
-                        steps = 55,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Background Blur",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            text = "${localBlurRadius.toInt()} dp",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                    Slider(
+                        value = localBlurRadius,
+                        onValueChange = { localBlurRadius = kotlin.math.round(it) },
+                        valueRange = 5f..60f,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Done") }
+            TextButton(
+                onClick = {
+                    if (localShowSeekButtons != showSeekButtons) {
+                        onToggleSeekButtons(localShowSeekButtons)
+                    }
+                    if (localSeekInterval != seekInterval) {
+                        onSeekIntervalChange(localSeekInterval)
+                    }
+                    if (localBlurRadius != blurRadius) {
+                        onBlurRadiusChange(localBlurRadius)
+                    }
+                    onDismiss()
+                }
+            ) {
+                Text("Done")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
         }
     )
 }

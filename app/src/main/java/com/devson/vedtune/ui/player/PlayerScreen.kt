@@ -10,10 +10,18 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,8 +51,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
@@ -221,15 +231,40 @@ fun PlayerScreen(
         colorScheme = playerColorScheme
     ) {
         Box(
-            modifier = modifier.fillMaxSize()
+            modifier = modifier
+                .fillMaxSize()
+                .background(Color.Black)
         ) {
             // 1. Dynamic Contrast-Safe Blurred Artwork Background
-            Crossfade(targetState = song?.albumId, label = "BackgroundTransition") { albumId ->
-                if (albumId != null) {
-                    Box(modifier = Modifier.fillMaxSize()) {
+            Crossfade(
+                targetState = song?.albumId,
+                animationSpec = tween(400, easing = FastOutSlowInEasing),
+                label = "BackgroundTransition",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            ) { albumId ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black)
+                ) {
+                    if (albumId != null) {
                         SongArtwork(
                             albumId = albumId,
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    scaleX = 1.15f
+                                    scaleY = 1.15f
+                                }
+                                .then(
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && playerBackgroundBlurRadius > 0f) {
+                                        Modifier.blur(playerBackgroundBlurRadius.dp)
+                                    } else {
+                                        Modifier
+                                    }
+                                ),
                             showArtwork = showArtworkState,
                             blurRadius = playerBackgroundBlurRadius.toInt(),
                             thumbnailSize = ArtworkThumbnailSize.SMALL,
@@ -240,22 +275,22 @@ fun PlayerScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.25f))
+                                .background(Color.Black.copy(alpha = 0.20f))
                         )
-                    }
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color(0xFF0F172A),
-                                        Color(0xFF020617)
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color(0xFF0F172A),
+                                            Color(0xFF020617)
+                                        )
                                     )
                                 )
-                            )
-                    )
+                        )
+                    }
                 }
             }
 
@@ -263,14 +298,14 @@ fun PlayerScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp)
+                    .height(130.dp)
                     .align(Alignment.TopCenter)
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                Color.Black.copy(alpha = 0.85f),
-                                Color.Black.copy(alpha = 0.60f),
-                                Color.Black.copy(alpha = 0.25f),
+                                Color.Black.copy(alpha = 0.65f),
+                                Color.Black.copy(alpha = 0.38f),
+                                Color.Black.copy(alpha = 0.12f),
                                 Color.Transparent
                             )
                         )
@@ -281,15 +316,15 @@ fun PlayerScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.55f)
+                    .fillMaxHeight(0.44f)
                     .align(Alignment.BottomCenter)
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
                                 Color.Transparent,
-                                Color.Black.copy(alpha = 0.30f),
-                                Color.Black.copy(alpha = 0.70f),
-                                Color.Black.copy(alpha = 0.92f)
+                                Color.Black.copy(alpha = 0.20f),
+                                Color.Black.copy(alpha = 0.50f),
+                                Color.Black.copy(alpha = 0.80f)
                             )
                         )
                     )
@@ -333,43 +368,53 @@ fun PlayerScreen(
                             .fillMaxHeight(),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (showLyrics) {
-                            LyricsPanel(
-                                viewModel = viewModel,
-                                activeSong = currentActiveSong,
-                                onToggleLyrics = { showLyrics = false },
-                                onEditLyricsClick = { onNavigateToLyricsEditor(currentActiveSong.id) }
-                            )
-                        } else {
-                            if (playlistQueue.isNotEmpty()) {
-                                PlayerArtworkPager(
-                                    queue = playlistQueue,
-                                    currentQueueIndex = currentQueueIndex,
-                                    isPlaying = isPlaying,
-                                    artworkScale = artworkScale,
-                                    showArtwork = showArtworkState,
-                                    albumArtClickAction = albumArtClickAction,
-                                    playbackProgress = progressProvider,
-                                    onSkipToQueueItem = { newIndex -> viewModel.skipToQueueItem(newIndex) },
-                                    onToggleLyrics = { showLyrics = true },
-                                    onPlayPause = { viewModel.togglePlayPause() },
-                                    onViewAlbumArt = { showViewAlbumArtOverlay = true }
+                        AnimatedContent(
+                            targetState = showLyrics,
+                            transitionSpec = {
+                                (fadeIn(animationSpec = tween(240)) + scaleIn(initialScale = 0.96f, animationSpec = tween(240)))
+                                    .togetherWith(fadeOut(animationSpec = tween(180)) + scaleOut(targetScale = 0.96f, animationSpec = tween(180)))
+                            },
+                            label = "LandscapeLyricsArtworkToggle",
+                            modifier = Modifier.fillMaxSize()
+                        ) { isLyricsActive ->
+                            if (isLyricsActive) {
+                                LyricsPanel(
+                                    viewModel = viewModel,
+                                    activeSong = currentActiveSong,
+                                    onToggleLyrics = { showLyrics = false },
+                                    onEditLyricsClick = { onNavigateToLyricsEditor(currentActiveSong.id) }
                                 )
                             } else {
-                                ArtworkCard(
-                                    song = currentActiveSong,
-                                    showArtwork = showArtworkState,
-                                    isPlaying = isPlaying,
-                                    artworkScale = artworkScale,
-                                    enableSwipeToSkip = enableSwipeToSkip,
-                                    albumArtClickAction = albumArtClickAction,
-                                    playbackProgress = progressProvider,
-                                    onToggleLyrics = { showLyrics = true },
-                                    onPlayPause = { viewModel.togglePlayPause() },
-                                    onViewAlbumArt = { showViewAlbumArtOverlay = true },
-                                    onSwipeNext = { viewModel.skipToNext() },
-                                    onSwipePrevious = { viewModel.skipToPrevious() }
-                                )
+                                if (playlistQueue.isNotEmpty()) {
+                                    PlayerArtworkPager(
+                                        queue = playlistQueue,
+                                        currentQueueIndex = currentQueueIndex,
+                                        isPlaying = isPlaying,
+                                        artworkScale = artworkScale,
+                                        showArtwork = showArtworkState,
+                                        albumArtClickAction = albumArtClickAction,
+                                        playbackProgress = progressProvider,
+                                        onSkipToQueueItem = { newIndex -> viewModel.skipToQueueItem(newIndex) },
+                                        onToggleLyrics = { showLyrics = true },
+                                        onPlayPause = { viewModel.togglePlayPause() },
+                                        onViewAlbumArt = { showViewAlbumArtOverlay = true }
+                                    )
+                                } else {
+                                    ArtworkCard(
+                                        song = currentActiveSong,
+                                        showArtwork = showArtworkState,
+                                        isPlaying = isPlaying,
+                                        artworkScale = artworkScale,
+                                        enableSwipeToSkip = enableSwipeToSkip,
+                                        albumArtClickAction = albumArtClickAction,
+                                        playbackProgress = progressProvider,
+                                        onToggleLyrics = { showLyrics = true },
+                                        onPlayPause = { viewModel.togglePlayPause() },
+                                        onViewAlbumArt = { showViewAlbumArtOverlay = true },
+                                        onSwipeNext = { viewModel.skipToNext() },
+                                        onSwipePrevious = { viewModel.skipToPrevious() }
+                                    )
+                                }
                             }
                         }
                     }
@@ -391,12 +436,18 @@ fun PlayerScreen(
                             onOptionsClick = { sheetState = PlayerSheetState.Options }
                         )
 
-                        ClickableMetadata(
-                            song = currentActiveSong,
-                            onSongClick = { sheetState = PlayerSheetState.SongInfo },
-                            onArtistClick = { onNavigateToArtist(currentActiveSong.artist) },
-                            onAlbumClick = { onNavigateToAlbum(currentActiveSong.albumId) }
-                        )
+                        Crossfade(
+                            targetState = currentActiveSong,
+                            animationSpec = tween(280, easing = FastOutSlowInEasing),
+                            label = "LandscapeMetadataCrossfade"
+                        ) { displayedSong ->
+                            ClickableMetadata(
+                                song = displayedSong,
+                                onSongClick = { sheetState = PlayerSheetState.SongInfo },
+                                onArtistClick = { onNavigateToArtist(displayedSong.artist) },
+                                onAlbumClick = { onNavigateToAlbum(displayedSong.albumId) }
+                            )
+                        }
 
                         ActionControlsStrip(
                             isFav = isFav,
@@ -466,76 +517,80 @@ fun PlayerScreen(
                     Spacer(modifier = Modifier.height(MaterialTheme.spacing.xs))
 
                     // Center Hero Artwork / Lyrics Container
-                    Crossfade(
-                        targetState = currentActiveSong,
-                        modifier = Modifier.weight(1f),
-                        label = "CenterContentTransition"
-                    ) { displayedSong ->
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (showLyrics) {
-                                    LyricsPanel(
-                                        viewModel = viewModel,
-                                        activeSong = displayedSong,
-                                        onToggleLyrics = { showLyrics = false },
-                                        onEditLyricsClick = { onNavigateToLyricsEditor(displayedSong.id) },
-                                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AnimatedContent(
+                            targetState = showLyrics,
+                            transitionSpec = {
+                                (fadeIn(animationSpec = tween(240)) + scaleIn(initialScale = 0.96f, animationSpec = tween(240)))
+                                    .togetherWith(fadeOut(animationSpec = tween(180)) + scaleOut(targetScale = 0.96f, animationSpec = tween(180)))
+                            },
+                            label = "PortraitLyricsArtworkToggle",
+                            modifier = Modifier.fillMaxSize()
+                        ) { isLyricsActive ->
+                            if (isLyricsActive) {
+                                LyricsPanel(
+                                    viewModel = viewModel,
+                                    activeSong = currentActiveSong,
+                                    onToggleLyrics = { showLyrics = false },
+                                    onEditLyricsClick = { onNavigateToLyricsEditor(currentActiveSong.id) },
+                                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m)
+                                )
+                            } else {
+                                if (playlistQueue.isNotEmpty()) {
+                                    PlayerArtworkPager(
+                                        queue = playlistQueue,
+                                        currentQueueIndex = currentQueueIndex,
+                                        isPlaying = isPlaying,
+                                        artworkScale = artworkScale,
+                                        showArtwork = showArtworkState,
+                                        albumArtClickAction = albumArtClickAction,
+                                        playbackProgress = progressProvider,
+                                        onSkipToQueueItem = { newIndex -> viewModel.skipToQueueItem(newIndex) },
+                                        onToggleLyrics = { showLyrics = true },
+                                        onPlayPause = { viewModel.togglePlayPause() },
+                                        onViewAlbumArt = { showViewAlbumArtOverlay = true },
+                                        modifier = Modifier.fillMaxWidth()
                                     )
                                 } else {
-                                    if (playlistQueue.isNotEmpty()) {
-                                        PlayerArtworkPager(
-                                            queue = playlistQueue,
-                                            currentQueueIndex = currentQueueIndex,
-                                            isPlaying = isPlaying,
-                                            artworkScale = artworkScale,
-                                            showArtwork = showArtworkState,
-                                            albumArtClickAction = albumArtClickAction,
-                                            playbackProgress = progressProvider,
-                                            onSkipToQueueItem = { newIndex -> viewModel.skipToQueueItem(newIndex) },
-                                            onToggleLyrics = { showLyrics = true },
-                                            onPlayPause = { viewModel.togglePlayPause() },
-                                            onViewAlbumArt = { showViewAlbumArtOverlay = true },
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                    } else {
-                                        ArtworkCard(
-                                            song = displayedSong,
-                                            showArtwork = showArtworkState,
-                                            isPlaying = isPlaying,
-                                            artworkScale = artworkScale,
-                                            enableSwipeToSkip = enableSwipeToSkip,
-                                            albumArtClickAction = albumArtClickAction,
-                                            playbackProgress = progressProvider,
-                                            onToggleLyrics = { showLyrics = true },
-                                            onPlayPause = { viewModel.togglePlayPause() },
-                                            onViewAlbumArt = { showViewAlbumArtOverlay = true },
-                                            onSwipeNext = { viewModel.skipToNext() },
-                                            onSwipePrevious = { viewModel.skipToPrevious() },
-                                            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m)
-                                        )
-                                    }
+                                    ArtworkCard(
+                                        song = currentActiveSong,
+                                        showArtwork = showArtworkState,
+                                        isPlaying = isPlaying,
+                                        artworkScale = artworkScale,
+                                        enableSwipeToSkip = enableSwipeToSkip,
+                                        albumArtClickAction = albumArtClickAction,
+                                        playbackProgress = progressProvider,
+                                        onToggleLyrics = { showLyrics = true },
+                                        onPlayPause = { viewModel.togglePlayPause() },
+                                        onViewAlbumArt = { showViewAlbumArtOverlay = true },
+                                        onSwipeNext = { viewModel.skipToNext() },
+                                        onSwipePrevious = { viewModel.skipToPrevious() },
+                                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m)
+                                    )
                                 }
                             }
+                        }
+                    }
 
-                            // Metadata directly beneath artwork
-                            if (!showLyrics) {
-                                Spacer(modifier = Modifier.height(MaterialTheme.spacing.m))
-                                ClickableMetadata(
-                                    song = displayedSong,
-                                    onSongClick = { sheetState = PlayerSheetState.SongInfo },
-                                    onArtistClick = { onNavigateToArtist(displayedSong.artist) },
-                                    onAlbumClick = { onNavigateToAlbum(displayedSong.albumId) }
-                                )
-                            }
+                    // Metadata directly beneath artwork
+                    if (!showLyrics) {
+                        Spacer(modifier = Modifier.height(MaterialTheme.spacing.m))
+                        Crossfade(
+                            targetState = currentActiveSong,
+                            animationSpec = tween(280, easing = FastOutSlowInEasing),
+                            label = "PortraitMetadataCrossfade"
+                        ) { displayedSong ->
+                            ClickableMetadata(
+                                song = displayedSong,
+                                onSongClick = { sheetState = PlayerSheetState.SongInfo },
+                                onArtistClick = { onNavigateToArtist(displayedSong.artist) },
+                                onAlbumClick = { onNavigateToAlbum(displayedSong.albumId) }
+                            )
                         }
                     }
 
@@ -621,8 +676,10 @@ fun PlayerScreen(
         PlayerSettingsDialog(
             showSeekButtons = showForwardBackward,
             seekInterval = seekInterval,
+            blurRadius = playerBackgroundBlurRadius,
             onToggleSeekButtons = { viewModel.setShowForwardBackward(it) },
             onSeekIntervalChange = { viewModel.setSeekInterval(it) },
+            onBlurRadiusChange = { viewModel.setPlayerBackgroundBlurRadius(it) },
             onDismiss = { showPlayerSettingsDialog = false }
         )
     }
