@@ -67,6 +67,12 @@ import com.devson.vedtune.ui.components.ArtworkThumbnailSize
 import com.devson.vedtune.ui.components.AudioDiagnosticsDialog
 import com.devson.vedtune.ui.components.SongArtwork
 import com.devson.vedtune.ui.components.VedTuneConfirmDialog
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import com.devson.vedtune.ui.player.components.ActionControlsStrip
 import com.devson.vedtune.ui.player.components.ArtworkCard
 import com.devson.vedtune.ui.player.components.ClickableMetadata
@@ -75,12 +81,12 @@ import com.devson.vedtune.ui.player.components.OptionsSheetContent
 import com.devson.vedtune.ui.player.components.PlaybackControls
 import com.devson.vedtune.ui.player.components.PlayerArtworkPager
 import com.devson.vedtune.ui.player.components.PlayerHeader
+import com.devson.vedtune.ui.player.components.interactiveSwipeDown
 import com.devson.vedtune.ui.player.components.PlayerSeekBar
 import com.devson.vedtune.ui.player.components.PlayerSettingsDialog
 import com.devson.vedtune.ui.player.components.SleepTimerDialog
 import com.devson.vedtune.ui.player.components.ViewAlbumArtOverlay
 import com.devson.vedtune.ui.songs.SongInfoBottomSheet
-import com.devson.vedtune.ui.theme.ArtworkColorExtractor
 import com.devson.vedtune.ui.theme.VedTuneShapeTokens
 import com.devson.vedtune.ui.theme.rememberVedTuneAdaptiveInfo
 import com.devson.vedtune.ui.theme.spacing
@@ -227,15 +233,90 @@ fun PlayerScreen(
         }
     }
 
+    val coroutineScope = rememberCoroutineScope()
+    val swipeOffsetY = remember { Animatable(0f) }
+    var isDismissing by remember { mutableStateOf(false) }
+
+    val handleDismiss: () -> Unit = {
+        if (!isDismissing) {
+            isDismissing = true
+            onBackClick()
+        }
+    }
+
     MaterialTheme(
         colorScheme = playerColorScheme
     ) {
-        Box(
+        BoxWithConstraints(
             modifier = modifier
                 .fillMaxSize()
-                .background(Color.Black)
+                .background(Color.Transparent)
         ) {
-            // 1. Dynamic Contrast-Safe Blurred Artwork Background
+            val screenHeightPx = constraints.maxHeight.toFloat()
+            val dismissThresholdPx = screenHeightPx * 0.18f
+
+            val dismissPlayer: () -> Unit = {
+                if (!isDismissing) {
+                    isDismissing = true
+                    coroutineScope.launch {
+                        swipeOffsetY.animateTo(
+                            targetValue = screenHeightPx,
+                            animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing)
+                        )
+                        onBackClick()
+                    }
+                }
+            }
+
+            val hasOpenSheetOrDialog = showSleepTimerDialog || showPlayerSettingsDialog ||
+                showDeleteConfirmDialog || showViewAlbumArtOverlay ||
+                sheetState != PlayerSheetState.Hidden || showQueueSheet
+
+            BackHandler(enabled = !hasOpenSheetOrDialog) {
+                if (showLyrics) {
+                    showLyrics = false
+                } else {
+                    dismissPlayer()
+                }
+            }
+
+            val interactiveDragModifier = Modifier.interactiveSwipeDown(
+                offsetY = swipeOffsetY,
+                maxOffsetPx = screenHeightPx,
+                dismissThresholdPx = dismissThresholdPx,
+                coroutineScope = coroutineScope,
+                onDismiss = handleDismiss
+            )
+
+            val progress = if (screenHeightPx > 0f) (swipeOffsetY.value / screenHeightPx).coerceIn(0f, 1f) else 0f
+            val cornerRadiusDp = (progress * 32f).coerceAtMost(32f).dp
+            val scale = 1f - (progress * 0.05f)
+
+            // Dimmed backdrop scrim visible during dragging
+            if (progress > 0.001f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = (1f - progress) * 0.55f))
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationY = swipeOffsetY.value
+                        scaleX = scale
+                        scaleY = scale
+                        if (progress > 0.005f) {
+                            shape = RoundedCornerShape(topStart = cornerRadiusDp, topEnd = cornerRadiusDp)
+                            clip = true
+                            shadowElevation = 24.dp.toPx()
+                        }
+                    }
+                    .background(Color.Black)
+            ) {
+                // 1. Dynamic Contrast-Safe Blurred Artwork Background
             Crossfade(
                 targetState = song?.albumId,
                 animationSpec = tween(400, easing = FastOutSlowInEasing),
@@ -431,7 +512,7 @@ fun PlayerScreen(
                     ) {
                         PlayerHeader(
                             sleepTimerRemaining = sleepTimerRemaining,
-                            onBackClick = onBackClick,
+                            onBackClick = dismissPlayer,
                             onQueueClick = { showQueueSheet = true },
                             onOptionsClick = { sheetState = PlayerSheetState.Options }
                         )
@@ -502,16 +583,27 @@ fun PlayerScreen(
                         .fillMaxSize()
                         .statusBarsPadding()
                         .navigationBarsPadding()
-                        .padding(vertical = MaterialTheme.spacing.xs),
+                        .padding(vertical = MaterialTheme.spacing.xs)
+                        .then(
+                            if (!showLyrics) {
+                                interactiveDragModifier
+                            } else {
+                                Modifier
+                            }
+                        ),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Header
                     PlayerHeader(
                         sleepTimerRemaining = sleepTimerRemaining,
-                        onBackClick = onBackClick,
+                        onBackClick = dismissPlayer,
                         onQueueClick = { showQueueSheet = true },
                         onOptionsClick = { sheetState = PlayerSheetState.Options },
-                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m)
+                        modifier = Modifier
+                            .padding(horizontal = MaterialTheme.spacing.m)
+                            .then(
+                                if (showLyrics) interactiveDragModifier else Modifier
+                            )
                     )
 
                     Spacer(modifier = Modifier.height(MaterialTheme.spacing.xs))
@@ -653,6 +745,7 @@ fun PlayerScreen(
                 }
             }
         }
+    }
     }
 
     // Sleep Timer Dialog

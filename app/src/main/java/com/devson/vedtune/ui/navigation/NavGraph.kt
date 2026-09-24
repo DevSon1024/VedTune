@@ -124,6 +124,28 @@ private val horizontalPopExitTransition: AnimatedContentTransitionScope<androidx
     ) + fadeOut(animationSpec = tween(180))
 }
 
+private val exitTowardsPlayerTransition: AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.() -> androidx.compose.animation.ExitTransition = {
+    if (targetState.destination.route == Screen.Player.route) {
+        androidx.compose.animation.ExitTransition.None
+    } else {
+        slideOutHorizontally(
+            targetOffsetX = { -it / 6 },
+            animationSpec = tween(250, easing = FastOutSlowInEasing)
+        ) + fadeOut(animationSpec = tween(180))
+    }
+}
+
+private val popEnterFromPlayerTransition: AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.() -> androidx.compose.animation.EnterTransition = {
+    if (initialState.destination.route == Screen.Player.route) {
+        androidx.compose.animation.EnterTransition.None
+    } else {
+        slideInHorizontally(
+            initialOffsetX = { -it / 6 },
+            animationSpec = tween(250, easing = FastOutSlowInEasing)
+        ) + fadeIn(animationSpec = tween(200))
+    }
+}
+
 @Composable
 fun NavGraph(
     navController: NavHostController,
@@ -137,7 +159,23 @@ fun NavGraph(
         enterTransition = { fadeIn(animationSpec = tween(250, easing = FastOutSlowInEasing)) },
         exitTransition = { fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing)) }
     ) {
-        composable(Screen.Home.route) {
+        composable(
+            route = Screen.Home.route,
+            exitTransition = {
+                if (targetState.destination.route == Screen.Player.route) {
+                    androidx.compose.animation.ExitTransition.None
+                } else {
+                    fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing))
+                }
+            },
+            popEnterTransition = {
+                if (initialState.destination.route == Screen.Player.route) {
+                    androidx.compose.animation.EnterTransition.None
+                } else {
+                    fadeIn(animationSpec = tween(250, easing = FastOutSlowInEasing))
+                }
+            }
+        ) {
             val defaultStartScreen by mainViewModel.defaultStartScreen.collectAsState()
             HomeScreen(
                 navController = navController,
@@ -339,8 +377,8 @@ fun NavGraph(
                 navArgument("artistName") { type = NavType.StringType }
             ),
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition,
-            popEnterTransition = horizontalPopEnterTransition,
+            exitTransition = exitTowardsPlayerTransition,
+            popEnterTransition = popEnterFromPlayerTransition,
             popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: ArtistDetailsViewModel = hiltViewModel()
@@ -356,20 +394,23 @@ fun NavGraph(
             enterTransition = {
                 slideIntoContainer(
                     AnimatedContentTransitionScope.SlideDirection.Up,
-                    animationSpec = tween(280, easing = FastOutSlowInEasing)
-                ) + fadeIn(animationSpec = tween(200))
+                    animationSpec = tween(320, easing = FastOutSlowInEasing)
+                )
             },
             exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Down,
+                slideOutHorizontally(
+                    targetOffsetX = { -it / 6 },
                     animationSpec = tween(250, easing = FastOutSlowInEasing)
                 ) + fadeOut(animationSpec = tween(180))
             },
-            popExitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Down,
+            popEnterTransition = {
+                slideInHorizontally(
+                    initialOffsetX = { -it / 6 },
                     animationSpec = tween(250, easing = FastOutSlowInEasing)
-                ) + fadeOut(animationSpec = tween(180))
+                ) + fadeIn(animationSpec = tween(200))
+            },
+            popExitTransition = {
+                fadeOut(animationSpec = tween(60))
             }
         ) {
             val viewModel: PlayerViewModel = hiltViewModel()
@@ -400,8 +441,8 @@ fun NavGraph(
                 navArgument("albumId") { type = NavType.LongType }
             ),
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition,
-            popEnterTransition = horizontalPopEnterTransition,
+            exitTransition = exitTowardsPlayerTransition,
+            popEnterTransition = popEnterFromPlayerTransition,
             popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: AlbumDetailsViewModel = hiltViewModel()
@@ -418,8 +459,8 @@ fun NavGraph(
                 navArgument("playlistId") { type = NavType.LongType }
             ),
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition,
-            popEnterTransition = horizontalPopEnterTransition,
+            exitTransition = exitTowardsPlayerTransition,
+            popEnterTransition = popEnterFromPlayerTransition,
             popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: PlaylistDetailsViewModel = hiltViewModel()
@@ -482,8 +523,8 @@ fun NavGraph(
                 navArgument("genreName") { type = NavType.StringType }
             ),
             enterTransition = horizontalEnterTransition,
-            exitTransition = horizontalExitTransition,
-            popEnterTransition = horizontalPopEnterTransition,
+            exitTransition = exitTowardsPlayerTransition,
+            popEnterTransition = popEnterFromPlayerTransition,
             popExitTransition = horizontalPopExitTransition
         ) {
             val viewModel: GenreDetailsViewModel = hiltViewModel()
@@ -529,7 +570,7 @@ fun NavController.navigateSafe(route: String) {
 
 fun NavController.popBackStackSafe() {
     val currentEntry = currentBackStackEntry
-    if (currentEntry != null && currentEntry.lifecycle.currentState == Lifecycle.State.RESUMED) {
+    if (currentEntry != null && currentEntry.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
         if (previousBackStackEntry != null) {
             popBackStack()
         }

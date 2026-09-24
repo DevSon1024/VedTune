@@ -274,6 +274,15 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    fun seekToImmediate(positionMs: Long) {
+        seekJob?.cancel()
+        playbackConnection.seekTo(positionMs)
+    }
+
+    fun play() {
+        playbackConnection.play()
+    }
+
     fun setRepeatMode(repeatMode: Int) {
         playbackConnection.setRepeatMode(repeatMode)
     }

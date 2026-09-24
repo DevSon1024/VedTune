@@ -33,6 +33,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -46,9 +48,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -126,6 +131,8 @@ fun LyricsPanel(
     val alignmentState by viewModel.lyricsAlignment.collectAsStateWithLifecycle()
     val positionState = viewModel.playbackPosition
     val context = LocalContext.current
+    val sharedPrefs = remember { context.getSharedPreferences("lyrics_settings", android.content.Context.MODE_PRIVATE) }
+    var showTimestamps by remember { mutableStateOf(sharedPrefs.getBoolean("show_timestamps", false)) }
     @Suppress("DEPRECATION")
     val clipboardManager = LocalClipboardManager.current
 
@@ -183,7 +190,10 @@ fun LyricsPanel(
             .fillMaxSize()
             .clip(MaterialTheme.shapes.extraLarge)
             .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f))
-            .clickable { onToggleLyrics() }
+            .detectPlayerArtworkGestures(
+                onSingleTap = onToggleLyrics,
+                onDoublePointerTap = { viewModel.togglePlayPause() }
+            )
     ) {
         // Floating Edit Lyrics bar (top left)
         Row(
@@ -337,39 +347,85 @@ fun LyricsPanel(
                         }
                     }
 
+                    val haptic = LocalHapticFeedback.current
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
                         horizontalAlignment = horizontalAlign,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         item { Spacer(modifier = Modifier.height(100.dp)) }
 
                         itemsIndexed(parsedLines) { index, line ->
                             val isActive = index == activeLineIndex
+                            val isSynced = line.timestamp >= 0L
                             val alpha by animateFloatAsState(
                                 targetValue = if (isActive) 1f else 0.4f,
                                 label = "LyricsAlpha"
                             )
                             val lineScale by animateFloatAsState(
-                                targetValue = if (isActive) 1.08f else 0.95f,
+                                targetValue = if (isActive) 1.05f else 0.96f,
                                 label = "LyricsScale"
                             )
-                            Text(
-                                text = line.text,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontSize = fontSize,
-                                    textAlign = textAlign
-                                ),
-                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isActive) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSecondaryContainer,
+
+                            Surface(
+                                onClick = {
+                                    if (isSynced) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        viewModel.seekToImmediate(line.timestamp)
+                                        viewModel.play()
+                                    }
+                                },
+                                shape = MaterialTheme.shapes.medium,
+                                color = if (isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .scale(lineScale)
-                                    .graphicsLayer { this.alpha = alpha }
-                                    .padding(horizontal = 8.dp)
-                            )
+                                    .padding(horizontal = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = when (alignmentState) {
+                                        "Left" -> Arrangement.Start
+                                        "Right" -> Arrangement.End
+                                        else -> Arrangement.Center
+                                    }
+                                ) {
+                                    if (showTimestamps && isSynced) {
+                                        Surface(
+                                            shape = MaterialTheme.shapes.small,
+                                            color = if (isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                            modifier = Modifier.padding(end = 8.dp)
+                                        ) {
+                                            Text(
+                                                text = com.devson.vedtune.core.formatLrcTime(line.timestamp, includeBrackets = false),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = if (isActive) MaterialTheme.colorScheme.primary
+                                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontWeight = FontWeight.SemiBold,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Text(
+                                        text = line.text,
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontSize = fontSize,
+                                            textAlign = textAlign
+                                        ),
+                                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isActive) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier
+                                            .scale(lineScale)
+                                            .graphicsLayer { this.alpha = alpha }
+                                    )
+                                }
+                            }
                         }
 
                         item { Spacer(modifier = Modifier.height(100.dp)) }
@@ -383,9 +439,14 @@ fun LyricsPanel(
         LyricsFormattingDialog(
             currentSize = fontSizeState,
             currentAlignment = alignmentState,
+            showTimestamps = showTimestamps,
             onDismiss = { showFormattingDialog = false },
             onSelectSize = { viewModel.setLyricsFontSize(it) },
-            onSelectAlignment = { viewModel.setLyricsAlignment(it) }
+            onSelectAlignment = { viewModel.setLyricsAlignment(it) },
+            onToggleTimestamps = {
+                showTimestamps = it
+                sharedPrefs.edit().putBoolean("show_timestamps", it).apply()
+            }
         )
     }
 
@@ -406,9 +467,11 @@ fun LyricsPanel(
 fun LyricsFormattingDialog(
     currentSize: String,
     currentAlignment: String,
+    showTimestamps: Boolean,
     onDismiss: () -> Unit,
     onSelectSize: (String) -> Unit,
-    onSelectAlignment: (String) -> Unit
+    onSelectAlignment: (String) -> Unit,
+    onToggleTimestamps: (Boolean) -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -472,6 +535,29 @@ fun LyricsFormattingDialog(
                             }
                         }
                     }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Show Timestamps",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Display timestamp tags for lines",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = showTimestamps,
+                        onCheckedChange = onToggleTimestamps
+                    )
                 }
             }
         },

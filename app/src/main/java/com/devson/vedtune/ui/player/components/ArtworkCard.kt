@@ -53,12 +53,19 @@ fun ArtworkCard(
         dragOffset.snapTo(0f)
     }
 
-    val clickModifier = when (albumArtClickAction) {
-        AlbumArtClickAction.DO_NOTHING -> Modifier
-        AlbumArtClickAction.SHOW_LYRICS -> Modifier.clickable { onToggleLyrics() }
-        AlbumArtClickAction.PLAY_PAUSE -> Modifier.clickable { onPlayPause() }
-        AlbumArtClickAction.VIEW_ALBUM_ART -> Modifier.clickable { onViewAlbumArt() }
-    }
+    val gestureModifier = Modifier.detectPlayerArtworkGestures(
+        onSingleTap = {
+            when (albumArtClickAction) {
+                AlbumArtClickAction.DO_NOTHING -> Unit
+                AlbumArtClickAction.SHOW_LYRICS -> onToggleLyrics()
+                AlbumArtClickAction.PLAY_PAUSE -> onPlayPause()
+                AlbumArtClickAction.VIEW_ALBUM_ART -> onViewAlbumArt()
+            }
+        },
+        onDoublePointerTap = {
+            onPlayPause()
+        }
+    )
 
     BoxWithConstraints(
         modifier = modifier
@@ -147,7 +154,7 @@ fun ArtworkCard(
                 }
                 .clip(MaterialTheme.shapes.extraLarge)
                 .then(swipeModifier)
-                .then(clickModifier)
+                .then(gestureModifier)
         ) {
             SongArtwork(
                 albumId = song.albumId,

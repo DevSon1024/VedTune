@@ -104,13 +104,20 @@ fun PlayerArtworkPager(
 
         val isCenter = page == pagerState.currentPage
 
-        val clickModifier = if (isCenter) {
-            when (albumArtClickAction) {
-                AlbumArtClickAction.DO_NOTHING -> Modifier
-                AlbumArtClickAction.SHOW_LYRICS -> Modifier.clickable { onToggleLyrics() }
-                AlbumArtClickAction.PLAY_PAUSE -> Modifier.clickable { onPlayPause() }
-                AlbumArtClickAction.VIEW_ALBUM_ART -> Modifier.clickable { onViewAlbumArt() }
-            }
+        val gestureModifier = if (isCenter) {
+            Modifier.detectPlayerArtworkGestures(
+                onSingleTap = {
+                    when (albumArtClickAction) {
+                        AlbumArtClickAction.DO_NOTHING -> Unit
+                        AlbumArtClickAction.SHOW_LYRICS -> onToggleLyrics()
+                        AlbumArtClickAction.PLAY_PAUSE -> onPlayPause()
+                        AlbumArtClickAction.VIEW_ALBUM_ART -> onViewAlbumArt()
+                    }
+                },
+                onDoublePointerTap = {
+                    onPlayPause()
+                }
+            )
         } else {
             Modifier.clickable { onSkipToQueueItem(page) }
         }
@@ -130,7 +137,7 @@ fun PlayerArtworkPager(
                     this.clip = true
                 }
                 .background(Color(0xFF1E293B), cardShape)
-                .then(clickModifier),
+                .then(gestureModifier),
             contentAlignment = Alignment.Center
         ) {
             SongArtwork(

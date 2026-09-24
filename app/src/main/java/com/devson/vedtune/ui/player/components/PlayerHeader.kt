@@ -2,6 +2,7 @@ package com.devson.vedtune.ui.player.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -43,6 +44,17 @@ fun PlayerHeader(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Visual affordance: Bottom-sheet style drag handle pill
+        Box(
+            modifier = Modifier
+                .padding(top = 4.dp, bottom = 2.dp)
+                .width(36.dp)
+                .height(4.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
+                    shape = VedTuneShapeTokens.Pill
+                )
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
