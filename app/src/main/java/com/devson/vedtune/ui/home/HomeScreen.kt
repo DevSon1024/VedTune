@@ -9,6 +9,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,6 +47,7 @@ fun HomeScreen(
     onNavigateToEditTags: (Long) -> Unit,
     onNavigateToLyricsConverter: () -> Unit,
     onNavigateToAbout: () -> Unit = {},
+    onNavigateToHistory: () -> Unit = {},
     defaultStartScreen: String,
     mainViewModel: MainViewModel,
     modifier: Modifier = Modifier
@@ -130,6 +132,17 @@ fun HomeScreen(
             }
         }
     ) { innerPadding ->
+        var selectedLibraryTab by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+        var libraryTabRequestSeq by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            mainViewModel.targetLibraryTabEvent.collect { tabIndex ->
+                selectedLibraryTab = tabIndex
+                libraryTabRequestSeq++
+                pagerState.scrollToPage(2)
+            }
+        }
+
         HorizontalPager(
             state = pagerState,
             userScrollEnabled = false,
@@ -144,10 +157,9 @@ fun HomeScreen(
                         onNavigateToArtist = onNavigateToArtist,
                         onNavigateToPlaylist = onNavigateToPlaylist,
                         onNavigateToGenre = onNavigateToGenre,
+                        onNavigateToHistory = onNavigateToHistory,
                         onNavigateToLibraryTab = { tabIndex ->
-                            scope.launch {
-                                pagerState.scrollToPage(2)
-                            }
+                            mainViewModel.openLibraryTab(tabIndex)
                         },
                         onNavigateToSearch = {
                             scope.launch {
@@ -182,8 +194,12 @@ fun HomeScreen(
                         onNavigateToPlaylist = onNavigateToPlaylist,
                         onNavigateToGenre = onNavigateToGenre,
                         onNavigateToEditTags = onNavigateToEditTags,
+                        onNavigateToHistory = onNavigateToHistory,
                         navigateToLocationEvent = mainViewModel.navigateToLocationEvent,
+                        targetLibraryTabEvent = mainViewModel.targetLibraryTabEvent,
                         contentPadding = innerPadding,
+                        selectedTab = selectedLibraryTab,
+                        tabRequestSeq = libraryTabRequestSeq,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -193,6 +209,7 @@ fun HomeScreen(
                         viewModel = viewModel,
                         onNavigateToAppearanceSettings = onNavigateToAppearanceSettings,
                         onNavigateToPlaybackSettings = onNavigateToPlaybackSettings,
+                        onNavigateToPlayerInterfaceSettings = onNavigateToPlayerInterfaceSettings,
                         onNavigateToAudioSettings = onNavigateToAudioSettings,
                         onNavigateToLibrarySettings = onNavigateToLibrarySettings,
                         onNavigateToNotificationSettings = onNavigateToNotificationSettings,

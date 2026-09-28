@@ -56,6 +56,20 @@ class MediaRepositoryImpl @Inject constructor(
         songDao.clearPlaybackHistory(songId)
     }
 
+    override suspend fun removeSongFromHistory(songId: Long) {
+        songDao.removeSongFromHistory(songId)
+    }
+
+    override suspend fun clearAllPlaybackHistory() {
+        songDao.clearAllPlaybackHistory()
+    }
+
+    override fun getRecentlyPlayedSongs(): Flow<List<Song>> {
+        return songDao.getRecentlyPlayedSongs().map { entities ->
+            entities.map { it.toSong() }
+        }
+    }
+
     override suspend fun synchronizeLibrary() {
         syncEngine.performSync()
     }

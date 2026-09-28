@@ -138,4 +138,14 @@ class MainViewModel @Inject constructor(
     fun navigateToLocation(songId: Long) {
         _navigateToLocationEvent.tryEmit(songId)
     }
+
+    private val _targetLibraryTabEvent = MutableSharedFlow<Int>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
+    )
+    val targetLibraryTabEvent = _targetLibraryTabEvent.asSharedFlow()
+
+    fun openLibraryTab(tabIndex: Int) {
+        _targetLibraryTabEvent.tryEmit(tabIndex)
+    }
 }

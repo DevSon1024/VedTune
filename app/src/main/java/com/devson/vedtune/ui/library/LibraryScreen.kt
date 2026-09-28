@@ -79,6 +79,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.devson.vedtune.domain.model.Playlist
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.ui.albums.AlbumSortBy
 import com.devson.vedtune.ui.albums.AlbumsScreen
@@ -122,9 +123,14 @@ fun LibraryScreen(
     onNavigateToPlaylist: (Long) -> Unit,
     onNavigateToGenre: (String) -> Unit,
     onNavigateToEditTags: (Long) -> Unit,
+    onNavigateToHistory: () -> Unit = {},
     navigateToLocationEvent: kotlinx.coroutines.flow.SharedFlow<Long>?,
+    targetLibraryTabEvent: kotlinx.coroutines.flow.SharedFlow<Int>? = null,
     contentPadding: PaddingValues,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    initialTab: Int = 0,
+    selectedTab: Int = initialTab,
+    tabRequestSeq: Int = 0
 ) {
     val songsViewModel: SongsViewModel = hiltViewModel()
     val albumsViewModel: AlbumsViewModel = hiltViewModel()
@@ -149,6 +155,9 @@ fun LibraryScreen(
     var songForPlaylist by remember { mutableStateOf<Song?>(null) }
     var songToDeletePermanently by remember { mutableStateOf<Song?>(null) }
     val playlists by playlistsViewModel.playlists.collectAsStateWithLifecycle()
+    val favoritesPlaylistId = remember(playlists) {
+        playlists.firstOrNull { it.id == Playlist.FAVORITES_PLAYLIST_ID || it.name.equals(Playlist.FAVORITES_PLAYLIST_NAME, ignoreCase = true) }?.id ?: Playlist.FAVORITES_PLAYLIST_ID
+    }
     val context = LocalContext.current
 
     val tabs = listOf(
@@ -161,9 +170,23 @@ fun LibraryScreen(
     )
 
     val pagerState = rememberPagerState(
-        initialPage = 0,
+        initialPage = selectedTab.coerceIn(0, (tabs.size - 1).coerceAtLeast(0)),
         pageCount = { tabs.size }
     )
+
+    androidx.compose.runtime.LaunchedEffect(tabRequestSeq) {
+        if (tabRequestSeq > 0 && selectedTab in tabs.indices) {
+            pagerState.scrollToPage(selectedTab)
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(targetLibraryTabEvent) {
+        targetLibraryTabEvent?.collect { targetTab ->
+            if (targetTab in tabs.indices) {
+                pagerState.scrollToPage(targetTab)
+            }
+        }
+    }
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
@@ -286,7 +309,7 @@ fun LibraryScreen(
                         iconColor = MaterialTheme.colorScheme.error,
                         modifier = Modifier.weight(1f),
                         onClick = {
-                            scope.launch { pagerState.scrollToPage(5) }
+                            onNavigateToPlaylist(favoritesPlaylistId)
                         }
                     )
                     LibraryQuickCard(
@@ -295,10 +318,7 @@ fun LibraryScreen(
                         containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
                         iconColor = MaterialTheme.colorScheme.onTertiaryContainer,
                         modifier = Modifier.weight(1f),
-                        onClick = {
-                            songsViewModel.setSortBy(SortBy.DATE_ADDED)
-                            scope.launch { pagerState.scrollToPage(0) }
-                        }
+                        onClick = onNavigateToHistory
                     )
                     LibraryQuickCard(
                         title = "Folders",

@@ -69,6 +69,7 @@ fun PlaybackSettingsScreen(
     val autoplayOnStartup by viewModel.autoplayOnStartup.collectAsStateWithLifecycle()
     val audioFadeInEnabled by viewModel.audioFadeInEnabled.collectAsStateWithLifecycle()
     val enableSwipeToSkip by viewModel.enableSwipeToSkip.collectAsStateWithLifecycle()
+    val isGestureMiniPlayerEnabled by viewModel.isGestureMiniPlayerEnabled.collectAsStateWithLifecycle()
     val seekbarStyle by viewModel.seekbarStyle.collectAsStateWithLifecycle()
 
     var showResetDialog by remember { mutableStateOf(false) }
@@ -381,6 +382,45 @@ fun PlaybackSettingsScreen(
                         Switch(
                             checked = enableSwipeToSkip,
                             onCheckedChange = { viewModel.setEnableSwipeToSkip(it) }
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                    // Mini Player Gestures
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.s),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(VedTuneIconSizes.Medium)
+                            )
+                            Column {
+                                Text(
+                                    text = "Mini Player Gestures",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Swipe left/right to skip songs, double tap to play/pause in mini player",
+                                    style = VedTuneTextStyles.Metadata,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = isGestureMiniPlayerEnabled,
+                            onCheckedChange = { viewModel.setGestureMiniPlayerEnabled(it) }
                         )
                     }
                 }

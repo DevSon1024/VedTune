@@ -192,7 +192,7 @@ fun LyricsPanel(
             .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f))
             .detectPlayerArtworkGestures(
                 onSingleTap = onToggleLyrics,
-                onDoublePointerTap = { viewModel.togglePlayPause() }
+                onDoubleTap = { viewModel.togglePlayPause() }
             )
     ) {
         // Floating Edit Lyrics bar (top left)

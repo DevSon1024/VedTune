@@ -50,6 +50,8 @@ import com.devson.vedtune.ui.settings.AboutScreen
 import com.devson.vedtune.ui.settings.CreditsScreen
 import com.devson.vedtune.ui.genres.GenreDetailsScreen
 import com.devson.vedtune.ui.genres.GenreDetailsViewModel
+import com.devson.vedtune.ui.history.HistoryScreen
+import com.devson.vedtune.ui.history.HistoryViewModel
 
 sealed class Screen(val route: String) {
     data object Home : Screen("home")
@@ -94,6 +96,7 @@ sealed class Screen(val route: String) {
     data object GenreDetails : Screen("genre_details/{genreName}") {
         fun createRoute(genreName: String) = "genre_details/${android.net.Uri.encode(genreName)}"
     }
+    data object History : Screen("history")
 }
 
 private val horizontalEnterTransition: AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.() -> androidx.compose.animation.EnterTransition = {
@@ -226,6 +229,9 @@ fun NavGraph(
                 },
                 onNavigateToGenre = { genreName ->
                     navController.navigateSafe(Screen.GenreDetails.createRoute(genreName))
+                },
+                onNavigateToHistory = {
+                    navController.navigateSafe(Screen.History.route)
                 },
                 defaultStartScreen = defaultStartScreen,
                 mainViewModel = mainViewModel,
@@ -556,6 +562,27 @@ fun NavGraph(
         ) {
             CreditsScreen(
                 onBack = { navController.popBackStackSafe() }
+            )
+        }
+        composable(
+            route = Screen.History.route,
+            enterTransition = horizontalEnterTransition,
+            exitTransition = exitTowardsPlayerTransition,
+            popEnterTransition = popEnterFromPlayerTransition,
+            popExitTransition = horizontalPopExitTransition
+        ) {
+            val viewModel: HistoryViewModel = hiltViewModel()
+            HistoryScreen(
+                viewModel = viewModel,
+                mainViewModel = mainViewModel,
+                onBackClick = { navController.popBackStackSafe() },
+                onNavigateToPlayer = { navController.navigateSafe(Screen.Player.route) },
+                onNavigateToAlbum = { albumId ->
+                    navController.navigateSafe(Screen.AlbumDetails.createRoute(albumId))
+                },
+                onNavigateToArtist = { artistName ->
+                    navController.navigateSafe(Screen.ArtistDetails.createRoute(artistName))
+                }
             )
         }
     }

@@ -97,6 +97,17 @@ class HomeViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    val mostPlayedSongs: StateFlow<List<Song>> = allSongs
+        .map { songs ->
+            songs.sortedByDescending { it.playCount }.take(20)
+        }
+        .flowOn(Dispatchers.Default)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     val totalSongsCount: StateFlow<Int> = allSongs
         .map { it.size }
         .flowOn(Dispatchers.Default)
@@ -129,6 +140,10 @@ class HomeViewModel @Inject constructor(
         playbackConnection.playSong(song, latestSongs.value)
     }
 
+    fun playSongFromList(song: Song, list: List<Song>) {
+        playbackConnection.playSong(song, list)
+    }
+
     fun playJumpBackInSong(song: Song) {
         playbackConnection.playSong(song, jumpBackInSongs.value)
     }
@@ -155,8 +170,21 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun playAllFromList(songs: List<Song>) {
+        if (songs.isNotEmpty()) {
+            playbackConnection.playSong(songs.first(), songs)
+        }
+    }
+
     fun shuffleAll() {
         val songs = latestSongs.value
+        if (songs.isNotEmpty()) {
+            val shuffled = songs.shuffled()
+            playbackConnection.playSong(shuffled.first(), shuffled)
+        }
+    }
+
+    fun shuffleAllFromList(songs: List<Song>) {
         if (songs.isNotEmpty()) {
             val shuffled = songs.shuffled()
             playbackConnection.playSong(shuffled.first(), shuffled)
@@ -171,6 +199,16 @@ class HomeViewModel @Inject constructor(
         val list = latestSongs.value
         if (list.isNotEmpty()) {
             playbackConnection.playShuffle(song, list)
+        }
+    }
+
+    fun toggleFavorite(song: Song) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repository.toggleFavorite(song.id)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 

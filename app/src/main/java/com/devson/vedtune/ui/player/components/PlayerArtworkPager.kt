@@ -114,7 +114,7 @@ fun PlayerArtworkPager(
                         AlbumArtClickAction.VIEW_ALBUM_ART -> onViewAlbumArt()
                     }
                 },
-                onDoublePointerTap = {
+                onDoubleTap = {
                     onPlayPause()
                 }
             )

@@ -40,6 +40,15 @@ interface SongDao {
     @Query("UPDATE songs SET playCount = 0, lastPlayed = 0 WHERE id = :songId")
     suspend fun clearPlaybackHistory(songId: Long)
 
+    @Query("UPDATE songs SET lastPlayed = 0 WHERE id = :songId")
+    suspend fun removeSongFromHistory(songId: Long)
+
+    @Query("UPDATE songs SET lastPlayed = 0")
+    suspend fun clearAllPlaybackHistory()
+
+    @Query("SELECT * FROM songs WHERE lastPlayed > 0 ORDER BY lastPlayed DESC")
+    fun getRecentlyPlayedSongs(): Flow<List<SongEntity>>
+
     @Query("SELECT albumId, album, artist, COUNT(*) as songCount FROM songs GROUP BY albumId ORDER BY album ASC")
     fun getAllAlbums(): Flow<List<AlbumEntity>>
 

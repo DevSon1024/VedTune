@@ -5,6 +5,10 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,11 +30,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAddCheck
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MusicNote
@@ -39,10 +45,13 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
@@ -51,11 +60,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -69,15 +80,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.devson.vedtune.domain.model.Album
+import com.devson.vedtune.domain.model.Playlist
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.ui.components.AddToPlaylistDialog
 import com.devson.vedtune.ui.components.PlayingIndicator
 import com.devson.vedtune.ui.components.SongArtwork
 import com.devson.vedtune.ui.components.VedTuneBottomSheetHeader
 import com.devson.vedtune.ui.components.VedTuneEmptyState
-import com.devson.vedtune.ui.components.VedTuneIconButton
 import com.devson.vedtune.ui.components.VedTuneOverlapCarousel
 import com.devson.vedtune.ui.components.VedTunePrimaryButton
 import com.devson.vedtune.ui.components.VedTuneSecondaryButton
@@ -89,8 +102,6 @@ import com.devson.vedtune.ui.theme.rememberVedTuneAdaptiveInfo
 import com.devson.vedtune.ui.theme.spacing
 import java.util.Calendar
 
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeTabScreen(
@@ -99,6 +110,7 @@ fun HomeTabScreen(
     onNavigateToArtist: (String) -> Unit = {},
     onNavigateToPlaylist: (Long) -> Unit = {},
     onNavigateToGenre: (String) -> Unit = {},
+    onNavigateToHistory: () -> Unit = {},
     onNavigateToLibraryTab: (Int) -> Unit = {},
     onNavigateToSearch: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
@@ -109,6 +121,7 @@ fun HomeTabScreen(
     val recentlyAddedAlbums by viewModel.recentlyAddedAlbums.collectAsStateWithLifecycle()
     val jumpBackInSongs by viewModel.jumpBackInSongs.collectAsStateWithLifecycle()
     val latestSongs by viewModel.latestSongs.collectAsStateWithLifecycle()
+    val mostPlayedSongs by viewModel.mostPlayedSongs.collectAsStateWithLifecycle()
     val allPlaylists by viewModel.allPlaylists.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val currentSongId by viewModel.currentSongId.collectAsStateWithLifecycle()
@@ -121,7 +134,13 @@ fun HomeTabScreen(
     val totalPlaylists by viewModel.totalPlaylistsCount.collectAsStateWithLifecycle()
     val favoriteSongsCount by viewModel.favoriteSongsCount.collectAsStateWithLifecycle()
 
-    val latestSongsDisplay = remember(latestSongs) { latestSongs.take(8) }
+    var selectedTrackTab by remember { mutableIntStateOf(0) } // 0: Fresh Tracks, 1: Most Played
+    val currentTrackList = if (selectedTrackTab == 0) latestSongs else mostPlayedSongs
+    val currentTrackDisplay = remember(currentTrackList) { currentTrackList.take(8) }
+
+    val favoritesPlaylistId = remember(allPlaylists) {
+        allPlaylists.firstOrNull { it.id == Playlist.FAVORITES_PLAYLIST_ID || it.name.equals(Playlist.FAVORITES_PLAYLIST_NAME, ignoreCase = true) }?.id ?: Playlist.FAVORITES_PLAYLIST_ID
+    }
 
     var selectedSongForOptions by remember { mutableStateOf<Song?>(null) }
     var showAddToPlaylistDialog by remember { mutableStateOf(false) }
@@ -190,29 +209,34 @@ fun HomeTabScreen(
                             top = MaterialTheme.spacing.m,
                             bottom = contentPadding.calculateBottomPadding() + MaterialTheme.spacing.xxl
                         ),
-                        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xxl)
+                        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.l)
                     ) {
-                        // 1. Header with contextual greeting, brand title, and action icons
+                        // 1. Contextual Greeting Header with Stats & Actions
                         item {
                             HomeGreetingHeader(
+                                totalSongs = totalSongs,
+                                totalAlbums = totalAlbums,
+                                totalArtists = totalArtists,
                                 onSearchClick = onNavigateToSearch,
                                 onSettingsClick = onNavigateToSettings,
                                 modifier = Modifier.padding(horizontal = horizontalPadding)
                             )
                         }
 
-                        // 2. Quick Access destinations
+                        // 2. Quick Access Shortcut Shelf
                         item {
                             QuickAccessRow(
                                 favoriteCount = favoriteSongsCount,
                                 albumCount = totalAlbums,
                                 artistCount = totalArtists,
                                 playlistCount = totalPlaylists,
-                                onFavoritesClick = { onNavigateToLibraryTab(4) },
+                                onFavoritesClick = {
+                                    onNavigateToPlaylist(favoritesPlaylistId)
+                                },
                                 onAlbumsClick = { onNavigateToLibraryTab(1) },
                                 onArtistsClick = { onNavigateToLibraryTab(2) },
-                                onPlaylistsClick = { onNavigateToLibraryTab(4) },
-                                onFoldersClick = onNavigateToFolderSettings,
+                                onPlaylistsClick = { onNavigateToLibraryTab(5) },
+                                onFoldersClick = { onNavigateToLibraryTab(4) },
                                 contentPadding = PaddingValues(horizontal = horizontalPadding)
                             )
                         }
@@ -223,8 +247,8 @@ fun HomeTabScreen(
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     VedTuneSectionHeader(
                                         title = "Jump Back In",
-                                        actionText = "Play All",
-                                        onActionClick = { viewModel.playJumpBackInSong(jumpBackInSongs.first()) },
+                                        actionText = "See All",
+                                        onActionClick = onNavigateToHistory,
                                         modifier = Modifier.padding(horizontal = horizontalPadding)
                                     )
                                     Spacer(modifier = Modifier.height(MaterialTheme.spacing.s))
@@ -243,7 +267,8 @@ fun HomeTabScreen(
                                                 isCurrentSong = isCurrentSong,
                                                 isPlaying = isPlaying && isCurrentSong,
                                                 showArtwork = showArtwork,
-                                                onClick = { viewModel.playJumpBackInSong(song) }
+                                                onClick = { viewModel.playJumpBackInSong(song) },
+                                                onPlayClick = { viewModel.playJumpBackInSong(song) }
                                             )
                                         }
                                     }
@@ -280,8 +305,8 @@ fun HomeTabScreen(
                             }
                         }
 
-                        // 5. Fresh Tracks / Recently Added Songs
-                        if (latestSongs.isNotEmpty()) {
+                        // 5. Track Showcase (Tabs: Fresh Tracks & Most Played)
+                        if (latestSongs.isNotEmpty() || mostPlayedSongs.isNotEmpty()) {
                             item {
                                 Column(
                                     modifier = Modifier
@@ -289,12 +314,36 @@ fun HomeTabScreen(
                                         .padding(horizontal = horizontalPadding)
                                 ) {
                                     VedTuneSectionHeader(
-                                        title = "Fresh Tracks",
-                                        count = totalSongs,
+                                        title = "Music Showcase",
+                                        count = if (selectedTrackTab == 0) totalSongs else mostPlayedSongs.size,
                                         actionText = "See All",
                                         onActionClick = { onNavigateToLibraryTab(0) }
                                     )
                                     Spacer(modifier = Modifier.height(MaterialTheme.spacing.s))
+
+                                    // Tab Pill Filter (Fresh Tracks vs Most Played)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.s),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        HomeTabFilterChip(
+                                            label = "Fresh Tracks",
+                                            icon = Icons.Default.MusicNote,
+                                            selected = selectedTrackTab == 0,
+                                            onClick = { selectedTrackTab = 0 }
+                                        )
+                                        HomeTabFilterChip(
+                                            label = "Most Played",
+                                            icon = Icons.Default.Star,
+                                            selected = selectedTrackTab == 1,
+                                            onClick = { selectedTrackTab = 1 }
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(MaterialTheme.spacing.m))
+
+                                    // Play All and Shuffle CTA Row
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.m),
@@ -303,39 +352,76 @@ fun HomeTabScreen(
                                         VedTunePrimaryButton(
                                             text = "Play All",
                                             icon = Icons.Default.PlayArrow,
-                                            onClick = { viewModel.playAll() },
+                                            onClick = { viewModel.playAllFromList(currentTrackList) },
                                             modifier = Modifier.weight(1f)
                                         )
                                         VedTuneSecondaryButton(
                                             text = "Shuffle",
                                             icon = Icons.Default.Shuffle,
-                                            onClick = { viewModel.shuffleAll() },
+                                            onClick = { viewModel.shuffleAllFromList(currentTrackList) },
                                             modifier = Modifier.weight(1f)
                                         )
                                     }
-                                }
-                            }
 
-                            items(
-                                items = latestSongsDisplay,
-                                key = { it.id }
-                            ) { song ->
-                                val isCurrentSong = song.id == currentSongId
-                                Box(modifier = Modifier.padding(horizontal = horizontalPadding)) {
-                                    VedTuneSongRow(
-                                        song = song,
-                                        isCurrentSong = isCurrentSong,
-                                        isPlaying = isPlaying && isCurrentSong,
-                                        showArtwork = showArtwork,
-                                        showDuration = true,
-                                        onClick = { viewModel.playSong(song) },
-                                        onOptionsClick = { selectedSongForOptions = song },
-                                        containerColor = if (isCurrentSong) {
-                                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
-                                        } else {
-                                            MaterialTheme.colorScheme.surfaceContainerLow
+                                    Spacer(modifier = Modifier.height(MaterialTheme.spacing.m))
+
+                                    // Grouped Card Container for Tracks
+                                    Surface(
+                                        shape = RoundedCornerShape(20.dp),
+                                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                        tonalElevation = 1.dp,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = MaterialTheme.spacing.xs)
+                                        ) {
+                                            currentTrackDisplay.forEachIndexed { index, song ->
+                                                val isCurrentSong = song.id == currentSongId
+                                                VedTuneSongRow(
+                                                    song = song,
+                                                    isCurrentSong = isCurrentSong,
+                                                    isPlaying = isPlaying && isCurrentSong,
+                                                    showArtwork = showArtwork,
+                                                    showDuration = true,
+                                                    onClick = { viewModel.playSongFromList(song, currentTrackList) },
+                                                    onOptionsClick = { selectedSongForOptions = song },
+                                                    containerColor = if (isCurrentSong) {
+                                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                                                    } else {
+                                                        Color.Transparent
+                                                    }
+                                                )
+                                                if (index < currentTrackDisplay.lastIndex) {
+                                                    HorizontalDivider(
+                                                        thickness = 0.5.dp,
+                                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.20f),
+                                                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m)
+                                                    )
+                                                }
+                                            }
+
+                                            // View all in library CTA button
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = MaterialTheme.spacing.xs),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                TextButton(
+                                                    onClick = { onNavigateToLibraryTab(0) }
+                                                ) {
+                                                    Text(
+                                                        text = "View all $totalSongs tracks in Library",
+                                                        style = MaterialTheme.typography.labelLarge,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            }
                                         }
-                                    )
+                                    }
                                 }
                             }
                         }
@@ -349,6 +435,10 @@ fun HomeTabScreen(
             SongOptionsBottomSheet(
                 song = song,
                 onDismiss = { selectedSongForOptions = null },
+                onToggleFavorite = {
+                    viewModel.toggleFavorite(song)
+                    selectedSongForOptions = null
+                },
                 onPlayNext = {
                     viewModel.playNext(song)
                     selectedSongForOptions = null
@@ -405,6 +495,9 @@ fun HomeTabScreen(
  */
 @Composable
 private fun HomeGreetingHeader(
+    totalSongs: Int,
+    totalAlbums: Int,
+    totalArtists: Int,
     onSearchClick: () -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -415,6 +508,14 @@ private fun HomeGreetingHeader(
             in 5..11 -> "Good Morning"
             in 12..16 -> "Good Afternoon"
             else -> "Good Evening"
+        }
+    }
+
+    val subtitle = remember(totalSongs, totalAlbums, totalArtists) {
+        if (totalSongs > 0) {
+            "$totalSongs songs • $totalAlbums albums • $totalArtists artists"
+        } else {
+            "What would you like to listen to?"
         }
     }
 
@@ -434,7 +535,7 @@ private fun HomeGreetingHeader(
             )
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.xxs))
             Text(
-                text = "What would you like to listen to?",
+                text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -453,7 +554,7 @@ private fun HomeGreetingHeader(
                 onClick = onSearchClick
             ) {
                 Box(
-                    modifier = Modifier.size(42.dp),
+                    modifier = Modifier.size(44.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -471,7 +572,7 @@ private fun HomeGreetingHeader(
                 onClick = onSettingsClick
             ) {
                 Box(
-                    modifier = Modifier.size(42.dp),
+                    modifier = Modifier.size(44.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -482,6 +583,59 @@ private fun HomeGreetingHeader(
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * Filter chip for switching track tabs (Fresh Tracks / Most Played).
+ */
+@Composable
+private fun HomeTabFilterChip(
+    label: String,
+    icon: ImageVector,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val containerColor = if (selected) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerLow
+    }
+    val contentColor = if (selected) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Surface(
+        onClick = onClick,
+        shape = VedTuneShapeTokens.Pill,
+        color = containerColor,
+        border = BorderStroke(
+            1.dp,
+            if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        ),
+        modifier = modifier.height(38.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m, vertical = MaterialTheme.spacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(16.dp)
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                color = contentColor
+            )
         }
     }
 }
@@ -513,7 +667,7 @@ private fun QuickAccessRow(
                 label = "Favorites",
                 count = if (favoriteCount > 0) favoriteCount else null,
                 icon = Icons.Default.Favorite,
-                iconColor = MaterialTheme.colorScheme.error,
+                iconColor = Color(0xFFE53935),
                 onClick = onFavoritesClick
             )
         }
@@ -570,11 +724,11 @@ private fun QuickAccessChip(
         shape = VedTuneShapeTokens.Pill,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         tonalElevation = 1.dp,
-        border = androidx.compose.foundation.BorderStroke(
+        border = BorderStroke(
             1.dp,
             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
         ),
-        modifier = modifier.height(40.dp)
+        modifier = modifier.height(42.dp)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m, vertical = MaterialTheme.spacing.xs),
@@ -602,7 +756,7 @@ private fun QuickAccessChip(
                         text = "$count",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
                     )
                 }
             }
@@ -620,23 +774,29 @@ private fun JumpBackInSongCard(
     isPlaying: Boolean,
     showArtwork: Boolean,
     onClick: () -> Unit,
+    onPlayClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    ElevatedCard(
+    Card(
         onClick = onClick,
-        shape = VedTuneShapeTokens.Large,
-        colors = CardDefaults.elevatedCardColors(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
             containerColor = if (isCurrentSong) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                MaterialTheme.colorScheme.surfaceContainerHigh
             } else {
                 MaterialTheme.colorScheme.surfaceContainerLow
             }
         ),
-        elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = if (isCurrentSong) 3.dp else 1.dp
+        border = if (isCurrentSong) {
+            BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+        } else {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+        },
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isCurrentSong) 2.dp else 1.dp
         ),
         modifier = modifier
-            .width(140.dp)
+            .width(154.dp)
             .wrapContentHeight()
     ) {
         Column(modifier = Modifier.padding(MaterialTheme.spacing.s)) {
@@ -644,7 +804,7 @@ private fun JumpBackInSongCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .clip(VedTuneShapeTokens.Small),
+                    .clip(RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 SongArtwork(
@@ -665,6 +825,26 @@ private fun JumpBackInSongCard(
                             modifier = Modifier.size(VedTuneIconSizes.Standard)
                         )
                     }
+                }
+
+                // Quick Play FAB button overlay in bottom right
+                FilledIconButton(
+                    onClick = onPlayClick,
+                    shape = CircleShape,
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(MaterialTheme.spacing.xs)
+                        .size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isCurrentSong && isPlaying) Icons.Default.MusicNote else Icons.Default.PlayArrow,
+                        contentDescription = "Play ${song.title}",
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.s))
@@ -701,14 +881,14 @@ private fun HomeAlbumBannerCard(
 ) {
     ElevatedCard(
         onClick = onClick,
-        shape = VedTuneShapeTokens.ExtraLarge,
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ),
         modifier = modifier
             .fillMaxWidth()
-            .height(230.dp)
+            .height(215.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             SongArtwork(
@@ -716,22 +896,40 @@ private fun HomeAlbumBannerCard(
                 modifier = Modifier.fillMaxSize(),
                 showArtwork = showArtwork
             )
-            // Gradient scrim for contrast
+            // Multi-stop gradient scrim for contrast
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
+                                Color.Black.copy(alpha = 0.25f),
                                 Color.Transparent,
-                                Color.Black.copy(alpha = 0.4f),
-                                Color.Black.copy(alpha = 0.85f)
-                            ),
-                            startY = 60f
+                                Color.Black.copy(alpha = 0.50f),
+                                Color.Black.copy(alpha = 0.88f)
+                            )
                         )
                     )
             )
-            // Details and Play CTA
+
+            // Top-left "ALBUM" pill tag
+            Surface(
+                shape = CircleShape,
+                color = Color.Black.copy(alpha = 0.55f),
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(MaterialTheme.spacing.m)
+            ) {
+                Text(
+                    text = "ALBUM",
+                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White.copy(alpha = 0.9f),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                )
+            }
+
+            // Bottom Details and Play CTA
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -753,7 +951,7 @@ private fun HomeAlbumBannerCard(
                     Text(
                         text = "${album.artist} • ${album.songCount} ${if (album.songCount == 1) "song" else "songs"}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.8f),
+                        color = Color.White.copy(alpha = 0.85f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -770,7 +968,7 @@ private fun HomeAlbumBannerCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Play Album",
+                        contentDescription = "Play Album ${album.title}",
                         modifier = Modifier.size(VedTuneIconSizes.Large)
                     )
                 }
@@ -787,6 +985,7 @@ private fun HomeAlbumBannerCard(
 private fun SongOptionsBottomSheet(
     song: Song,
     onDismiss: () -> Unit,
+    onToggleFavorite: () -> Unit,
     onPlayNext: () -> Unit,
     onShuffleThis: () -> Unit,
     onAddToPlaylist: () -> Unit,
@@ -810,6 +1009,19 @@ private fun SongOptionsBottomSheet(
                 title = song.title,
                 subtitle = "${song.artist} • ${song.album}",
                 onCloseClick = onDismiss
+            )
+
+            ListItem(
+                headlineContent = { Text(if (song.isFavorite) "Remove from Favorites" else "Add to Favorites") },
+                leadingContent = {
+                    Icon(
+                        imageVector = if (song.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = null,
+                        tint = if (song.isFavorite) Color(0xFFE53935) else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                modifier = Modifier.clickable(onClick = onToggleFavorite)
             )
 
             ListItem(

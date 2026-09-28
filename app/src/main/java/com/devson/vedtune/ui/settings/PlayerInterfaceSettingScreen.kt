@@ -181,6 +181,32 @@ fun PlayerInterfaceSettingScreen(
                             onCheckedChange = { viewModel.setShowMiniPlayerProgress(it) }
                         )
                     }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Mini Player Gestures",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Swipe left/right to skip songs, double tap to play/pause in mini player",
+                                style = VedTuneTextStyles.Metadata,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = isGestureMiniPlayerEnabled,
+                            onCheckedChange = { viewModel.setGestureMiniPlayerEnabled(it) }
+                        )
+                    }
                 }
             }
 

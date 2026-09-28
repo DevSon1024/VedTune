@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.SdCard
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -59,6 +60,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     onNavigateToAppearanceSettings: () -> Unit = {},
     onNavigateToPlaybackSettings: () -> Unit = {},
+    onNavigateToPlayerInterfaceSettings: () -> Unit = {},
     onNavigateToAudioSettings: () -> Unit = {},
     onNavigateToLibrarySettings: () -> Unit = {},
     onNavigateToNotificationSettings: () -> Unit = {},
@@ -132,6 +134,18 @@ fun SettingsScreen(
                         title = "Playback",
                         subtitle = "Queue, gapless playback, crossfade, and startup options",
                         onClick = onNavigateToPlaybackSettings
+                    )
+                }
+            }
+
+            // 3. Player Interface Section
+            item {
+                SettingsSectionContainer {
+                    SettingsNavigationTile(
+                        icon = Icons.Default.Tune,
+                        title = "Player Interface",
+                        subtitle = "Artwork display, mini player gestures, sleep timer & lyrics buttons",
+                        onClick = onNavigateToPlayerInterfaceSettings
                     )
                 }
             }
