@@ -21,7 +21,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -60,9 +60,9 @@ class MainActivity : ComponentActivity() {
         // The startup sync is now handled automatically by MainViewModel settings observer.
 
         setContent {
-            val themeMode by viewModel.themeMode.collectAsState()
-            val dynamicColorsEnabled by viewModel.dynamicColorsEnabled.collectAsState()
-            val isAmoledDark by viewModel.isAmoledDark.collectAsState()
+            val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+            val dynamicColorsEnabled by viewModel.dynamicColorsEnabled.collectAsStateWithLifecycle()
+            val isAmoledDark by viewModel.isAmoledDark.collectAsStateWithLifecycle()
 
             vedtuneTheme(
                 themeMode = themeMode,

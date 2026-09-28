@@ -54,6 +54,20 @@ object DatabaseModule {
             }
         }
 
+        val migration4to5 = object : androidx.room.migration.Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_songs_artist ON songs(artist)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_songs_album ON songs(album)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_songs_albumId ON songs(albumId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_songs_isFavorite ON songs(isFavorite)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_songs_title ON songs(title)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_songs_dateAdded ON songs(dateAdded)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_songs_playCount ON songs(playCount)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_queue_items_orderIndex ON queue_items(orderIndex)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_queue_items_songId ON queue_items(songId)")
+            }
+        }
+
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
@@ -69,7 +83,7 @@ object DatabaseModule {
                 db.execSQL("INSERT OR IGNORE INTO playlists (id, name, createdAt) VALUES (${Playlist.FAVORITES_PLAYLIST_ID}, '${Playlist.FAVORITES_PLAYLIST_NAME}', ${System.currentTimeMillis()})")
             }
         })
-        .addMigrations(migration3to4)
+        .addMigrations(migration3to4, migration4to5)
         .fallbackToDestructiveMigration()
         .build()
     }

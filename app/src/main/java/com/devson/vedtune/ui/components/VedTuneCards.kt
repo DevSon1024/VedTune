@@ -28,6 +28,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,10 +61,12 @@ fun VedTuneSongRow(
     onOptionsClick: (() -> Unit)? = null,
     containerColor: Color = MaterialTheme.colorScheme.surface
 ) {
-    val subtitle = if (song.album.isNotBlank() && song.album != "Unknown Album") {
-        "${song.artist} • ${song.album}"
-    } else {
-        song.artist
+    val subtitle = remember(song.artist, song.album) {
+        if (song.album.isNotBlank() && song.album != "Unknown Album") {
+            "${song.artist} • ${song.album}"
+        } else {
+            song.artist
+        }
     }
 
     VedTuneListItem(
@@ -145,14 +148,16 @@ fun VedTuneAlbumCard(
     showArtist: Boolean = true,
     gridCount: Int = 2
 ) {
-    val artistPart = if (showArtist) album.artist else ""
-    val songCountPart = "${album.songCount} ${if (album.songCount == 1) "song" else "songs"}"
-    val secondaryText = buildString {
-        if (artistPart.isNotEmpty()) {
-            append(artistPart)
-            append(" • ")
+    val secondaryText = remember(album.artist, album.songCount, showArtist) {
+        val artistPart = if (showArtist) album.artist else ""
+        val songCountPart = "${album.songCount} ${if (album.songCount == 1) "song" else "songs"}"
+        buildString {
+            if (artistPart.isNotEmpty()) {
+                append(artistPart)
+                append(" • ")
+            }
+            append(songCountPart)
         }
-        append(songCountPart)
     }
 
     VedTuneGridCard(

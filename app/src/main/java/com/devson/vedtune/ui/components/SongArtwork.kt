@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.size.Precision
 import coil.size.Size
 import coil.transform.Transformation
 import java.io.File
@@ -50,8 +51,9 @@ enum class ArtworkThumbnailSize(val px: Int) {
 
 object ArtworkCache {
     private val lock = Any()
+    @Volatile
     private var isInitialized = false
-    private val customAlbums = mutableSetOf<Long>()
+    private val customAlbums = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
     private var cachedSettingsRepo: com.devson.vedtune.domain.repository.SettingsRepository? = null
 
     fun getSettingsRepository(context: Context): com.devson.vedtune.domain.repository.SettingsRepository {
@@ -66,41 +68,39 @@ object ArtworkCache {
         }
     }
 
-    private fun initIfNeeded(context: Context) {
-        synchronized(lock) {
-            if (!isInitialized) {
-                val dir = File(context.filesDir, "custom_artwork")
-                if (dir.exists() && dir.isDirectory) {
-                    dir.listFiles()?.forEach { file ->
-                        if (file.isFile && file.name.endsWith(".jpg")) {
-                            file.name.removeSuffix(".jpg").toLongOrNull()?.let { albumId ->
-                                customAlbums.add(albumId)
+    fun init(context: Context) {
+        if (!isInitialized) {
+            synchronized(lock) {
+                if (!isInitialized) {
+                    val dir = File(context.filesDir, "custom_artwork")
+                    if (dir.exists() && dir.isDirectory) {
+                        dir.listFiles()?.forEach { file ->
+                            if (file.isFile && file.name.endsWith(".jpg")) {
+                                file.name.removeSuffix(".jpg").toLongOrNull()?.let { albumId ->
+                                    customAlbums.add(albumId)
+                                }
                             }
                         }
                     }
+                    isInitialized = true
                 }
-                isInitialized = true
             }
         }
     }
 
     fun hasCustomArtwork(context: Context, albumId: Long): Boolean {
-        initIfNeeded(context)
-        synchronized(lock) {
-            return customAlbums.contains(albumId)
+        if (!isInitialized) {
+            init(context)
         }
+        return customAlbums.contains(albumId)
     }
 
     fun addCustomArtwork(albumId: Long) {
-        synchronized(lock) {
-            customAlbums.add(albumId)
-        }
+        customAlbums.add(albumId)
     }
 
     fun removeCustomArtwork(albumId: Long) {
-        synchronized(lock) {
-            customAlbums.remove(albumId)
-        }
+        customAlbums.remove(albumId)
     }
 }
 
@@ -435,8 +435,13 @@ fun SongArtwork(
         val builder = ImageRequest.Builder(context)
             .data(artworkData)
             .memoryCacheKey("artwork_${albumId}_${lastModified}_blur_${blurRadius}_size_${thumbnailSize.name}")
-            .crossfade(true)
-        
+            .crossfade(thumbnailSize != ArtworkThumbnailSize.SMALL)
+            .allowHardware(blurRadius == 0)
+
+        if (thumbnailSize == ArtworkThumbnailSize.SMALL) {
+            builder.precision(Precision.INEXACT)
+        }
+
         if (thumbnailSize != ArtworkThumbnailSize.ORIGINAL) {
             builder.size(thumbnailSize.px, thumbnailSize.px)
         }

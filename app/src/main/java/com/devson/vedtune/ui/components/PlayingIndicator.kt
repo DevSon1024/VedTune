@@ -91,11 +91,13 @@ fun PlayingIndicator(
         val gap = 2.dp.toPx()
         val totalGapsWidth = gap * (barCount - 1)
         val barWidth = (width - totalGapsWidth) / barCount
-
-        val fractions = listOf(bar1Fraction, bar2Fraction, bar3Fraction, bar4Fraction)
-
         for (i in 0 until barCount) {
-            val fraction = fractions[i]
+            val fraction = when (i) {
+                0 -> bar1Fraction
+                1 -> bar2Fraction
+                2 -> bar3Fraction
+                else -> bar4Fraction
+            }
             val barHeight = height * fraction
             val left = i * (barWidth + gap)
             val top = height - barHeight

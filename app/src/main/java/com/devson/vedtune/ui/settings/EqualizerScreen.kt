@@ -46,7 +46,7 @@ import com.devson.vedtune.ui.theme.VedTuneIconSizes
 import com.devson.vedtune.ui.theme.VedTuneShapeTokens
 import com.devson.vedtune.ui.theme.spacing
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,7 +68,7 @@ fun EqualizerScreen(
     viewModel: SettingsViewModel,
     onBackClick: () -> Unit
 ) {
-    val audioSettings by viewModel.audioSettings.collectAsState()
+    val audioSettings by viewModel.audioSettings.collectAsStateWithLifecycle()
     var activeHelpDialog by remember { mutableStateOf<AudioFeatureHelp?>(null) }
 
     activeHelpDialog?.let { help ->

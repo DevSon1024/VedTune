@@ -34,7 +34,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,13 +60,13 @@ fun AppearanceSettingsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val themeMode by viewModel.themeMode.collectAsState()
-    val dynamicColorsEnabled by viewModel.dynamicColorsEnabled.collectAsState()
-    val showAlbumArt by viewModel.showAlbumArt.collectAsState()
-    val isAmoledDark by viewModel.isAmoledDark.collectAsState()
-    val albumArtQuality by viewModel.albumArtQuality.collectAsState()
-    val forceSquareArtwork by viewModel.forceSquareArtwork.collectAsState()
-    val defaultStartScreen by viewModel.defaultStartScreen.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val dynamicColorsEnabled by viewModel.dynamicColorsEnabled.collectAsStateWithLifecycle()
+    val showAlbumArt by viewModel.showAlbumArt.collectAsStateWithLifecycle()
+    val isAmoledDark by viewModel.isAmoledDark.collectAsStateWithLifecycle()
+    val albumArtQuality by viewModel.albumArtQuality.collectAsStateWithLifecycle()
+    val forceSquareArtwork by viewModel.forceSquareArtwork.collectAsStateWithLifecycle()
+    val defaultStartScreen by viewModel.defaultStartScreen.collectAsStateWithLifecycle()
 
     val systemInDark = isSystemInDarkTheme()
     val showAmoledToggle = themeMode == "DARK" || (themeMode == "SYSTEM" && systemInDark)

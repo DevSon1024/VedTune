@@ -1,9 +1,21 @@
 package com.devson.vedtune.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "songs")
+@Entity(
+    tableName = "songs",
+    indices = [
+        Index(value = ["artist"]),
+        Index(value = ["album"]),
+        Index(value = ["albumId"]),
+        Index(value = ["isFavorite"]),
+        Index(value = ["title"]),
+        Index(value = ["dateAdded"]),
+        Index(value = ["playCount"])
+    ]
+)
 data class SongEntity(
     @PrimaryKey val id: Long,
     val title: String,

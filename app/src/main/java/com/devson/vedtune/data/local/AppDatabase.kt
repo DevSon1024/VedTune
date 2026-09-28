@@ -17,7 +17,7 @@ import com.devson.vedtune.data.local.entity.PlaylistSongCrossRef
         PlaylistEntity::class,
         PlaylistSongCrossRef::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

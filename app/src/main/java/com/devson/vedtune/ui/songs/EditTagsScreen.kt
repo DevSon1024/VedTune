@@ -47,7 +47,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
@@ -93,9 +93,6 @@ fun EditTagsScreen(
     BackHandler(enabled = true) {
         handleBack()
     }
-    
-    val isPlaying by viewModel.isPlaying.collectAsState()
-    val playbackPosition by viewModel.playbackPosition.collectAsState()
 
     val intentSenderLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -287,7 +284,7 @@ fun EditTagsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    val artistSuggestions by viewModel.artistSuggestions.collectAsState()
+                    val artistSuggestions by viewModel.artistSuggestions.collectAsStateWithLifecycle()
                     AutoCompleteTextField(
                         value = viewModel.artist,
                         onValueChange = { viewModel.artist = it },
@@ -296,7 +293,7 @@ fun EditTagsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    val albumSuggestions by viewModel.albumSuggestions.collectAsState()
+                    val albumSuggestions by viewModel.albumSuggestions.collectAsStateWithLifecycle()
                     AutoCompleteTextField(
                         value = viewModel.album,
                         onValueChange = { viewModel.album = it },
@@ -312,7 +309,7 @@ fun EditTagsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    val composerSuggestions by viewModel.composerSuggestions.collectAsState()
+                    val composerSuggestions by viewModel.composerSuggestions.collectAsStateWithLifecycle()
                     AutoCompleteTextField(
                         value = viewModel.composer,
                         onValueChange = { viewModel.composer = it },
@@ -321,7 +318,7 @@ fun EditTagsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    val genreSuggestions by viewModel.genreSuggestions.collectAsState()
+                    val genreSuggestions by viewModel.genreSuggestions.collectAsStateWithLifecycle()
                     AutoCompleteTextField(
                         value = viewModel.genre,
                         onValueChange = { viewModel.genre = it },

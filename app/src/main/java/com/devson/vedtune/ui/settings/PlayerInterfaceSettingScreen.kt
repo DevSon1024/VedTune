@@ -26,7 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,14 +46,14 @@ fun PlayerInterfaceSettingScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val seekbarStyle by viewModel.seekbarStyle.collectAsState()
-    val showRemainingTime by viewModel.showRemainingTime.collectAsState()
-    val showMiniPlayerProgress by viewModel.showMiniPlayerProgress.collectAsState()
-    val isGestureMiniPlayerEnabled by viewModel.isGestureMiniPlayerEnabled.collectAsState()
-    val enableSwipeToSkip by viewModel.enableSwipeToSkip.collectAsState()
-    val showLyricsButton by viewModel.showLyricsButton.collectAsState()
-    val showSleepTimerButton by viewModel.showSleepTimerButton.collectAsState()
-    val showShuffleRepeatButtons by viewModel.showShuffleRepeatButtons.collectAsState()
+    val seekbarStyle by viewModel.seekbarStyle.collectAsStateWithLifecycle()
+    val showRemainingTime by viewModel.showRemainingTime.collectAsStateWithLifecycle()
+    val showMiniPlayerProgress by viewModel.showMiniPlayerProgress.collectAsStateWithLifecycle()
+    val isGestureMiniPlayerEnabled by viewModel.isGestureMiniPlayerEnabled.collectAsStateWithLifecycle()
+    val enableSwipeToSkip by viewModel.enableSwipeToSkip.collectAsStateWithLifecycle()
+    val showLyricsButton by viewModel.showLyricsButton.collectAsStateWithLifecycle()
+    val showSleepTimerButton by viewModel.showSleepTimerButton.collectAsStateWithLifecycle()
+    val showShuffleRepeatButtons by viewModel.showShuffleRepeatButtons.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier

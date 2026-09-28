@@ -1,5 +1,6 @@
 package com.devson.vedtune.ui.songs
 
+import androidx.compose.runtime.Immutable
 import com.devson.vedtune.core.UiEvent
 import com.devson.vedtune.core.UiState
 import com.devson.vedtune.domain.model.Song
@@ -14,6 +15,7 @@ enum class SortOrder {
     ASCENDING, DESCENDING
 }
 
+@Immutable
 data class SongsUiState(
     val songs: List<Song> = emptyList(),
     val searchQuery: String = "",

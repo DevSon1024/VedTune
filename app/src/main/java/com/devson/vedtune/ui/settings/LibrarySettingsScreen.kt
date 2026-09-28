@@ -31,7 +31,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,8 +57,8 @@ fun LibrarySettingsScreen(
     onNavigateToLyricsConverter: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val autoSyncOnStartup by viewModel.autoSyncOnStartup.collectAsState()
-    val folderFilterMode by viewModel.folderFilterMode.collectAsState()
+    val autoSyncOnStartup by viewModel.autoSyncOnStartup.collectAsStateWithLifecycle()
+    val folderFilterMode by viewModel.folderFilterMode.collectAsStateWithLifecycle()
 
     var showResetDialog by remember { mutableStateOf(false) }
 

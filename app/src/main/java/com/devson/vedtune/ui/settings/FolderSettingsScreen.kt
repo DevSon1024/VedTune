@@ -57,7 +57,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -83,10 +83,10 @@ fun FolderSettingsScreen(
     viewModel: SettingsViewModel,
     onNavigateBack: () -> Unit
 ) {
-    val filterMode by viewModel.folderFilterMode.collectAsState()
-    val blacklistedFolders by viewModel.blacklistedFolders.collectAsState()
-    val whitelistedFolders by viewModel.whitelistedFolders.collectAsState()
-    val includeSubfolders by viewModel.includeSubfolders.collectAsState()
+    val filterMode by viewModel.folderFilterMode.collectAsStateWithLifecycle()
+    val blacklistedFolders by viewModel.blacklistedFolders.collectAsStateWithLifecycle()
+    val whitelistedFolders by viewModel.whitelistedFolders.collectAsStateWithLifecycle()
+    val includeSubfolders by viewModel.includeSubfolders.collectAsStateWithLifecycle()
 
     // Tab: 0 = Whitelist, 1 = Blacklist
     var selectedTab by remember { mutableIntStateOf(if (filterMode == FolderFilterMode.WHITELIST) 0 else 1) }

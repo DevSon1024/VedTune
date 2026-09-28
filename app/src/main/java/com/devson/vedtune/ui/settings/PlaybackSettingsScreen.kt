@@ -38,7 +38,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,11 +65,11 @@ fun PlaybackSettingsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val audioSettings by viewModel.audioSettings.collectAsState()
-    val autoplayOnStartup by viewModel.autoplayOnStartup.collectAsState()
-    val audioFadeInEnabled by viewModel.audioFadeInEnabled.collectAsState()
-    val enableSwipeToSkip by viewModel.enableSwipeToSkip.collectAsState()
-    val seekbarStyle by viewModel.seekbarStyle.collectAsState()
+    val audioSettings by viewModel.audioSettings.collectAsStateWithLifecycle()
+    val autoplayOnStartup by viewModel.autoplayOnStartup.collectAsStateWithLifecycle()
+    val audioFadeInEnabled by viewModel.audioFadeInEnabled.collectAsStateWithLifecycle()
+    val enableSwipeToSkip by viewModel.enableSwipeToSkip.collectAsStateWithLifecycle()
+    val seekbarStyle by viewModel.seekbarStyle.collectAsStateWithLifecycle()
 
     var showResetDialog by remember { mutableStateOf(false) }
     var showClearQueueDialog by remember { mutableStateOf(false) }

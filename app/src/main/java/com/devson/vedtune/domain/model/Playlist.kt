@@ -1,5 +1,8 @@
 package com.devson.vedtune.domain.model
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class Playlist(
     val id: Long,
     val name: String,

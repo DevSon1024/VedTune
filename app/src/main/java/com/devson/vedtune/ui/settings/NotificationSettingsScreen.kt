@@ -27,7 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,7 +50,7 @@ fun NotificationSettingsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val showAlbumArt by viewModel.showAlbumArt.collectAsState()
+    val showAlbumArt by viewModel.showAlbumArt.collectAsStateWithLifecycle()
     var showLockscreenArtwork by remember { mutableStateOf(true) }
     var stopOnDismiss by remember { mutableStateOf(true) }
     var showResetDialog by remember { mutableStateOf(false) }

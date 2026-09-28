@@ -6,7 +6,11 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.devson.vedtune.data.sync.MediaStoreObserver
+import com.devson.vedtune.ui.components.ArtworkCache
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
 
@@ -19,6 +23,9 @@ class VedTuneApp : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         mediaStoreObserver.register()
+        CoroutineScope(Dispatchers.IO).launch {
+            ArtworkCache.init(applicationContext)
+        }
     }
 
     override fun newImageLoader(): ImageLoader {
@@ -34,7 +41,8 @@ class VedTuneApp : Application(), ImageLoaderFactory {
                     .maxSizeBytes(100L * 1024 * 1024)
                     .build()
             }
-            .crossfade(true)
+            .crossfade(false)
+            .allowHardware(true)
             .allowRgb565(true)
             .build()
     }

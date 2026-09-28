@@ -9,7 +9,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -176,7 +176,7 @@ fun NavGraph(
                 }
             }
         ) {
-            val defaultStartScreen by mainViewModel.defaultStartScreen.collectAsState()
+            val defaultStartScreen by mainViewModel.defaultStartScreen.collectAsStateWithLifecycle()
             HomeScreen(
                 navController = navController,
                 onNavigateToAlbum = { albumId ->

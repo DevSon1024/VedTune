@@ -51,7 +51,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -132,16 +131,16 @@ fun LibraryScreen(
     val foldersViewModel: FoldersViewModel = hiltViewModel()
     val playlistsViewModel: PlaylistsViewModel = hiltViewModel()
 
-    val uiState by songsViewModel.uiState.collectAsState()
-    val albumSortBy by albumsViewModel.sortBy.collectAsState()
-    val albumSortOrder by albumsViewModel.sortOrder.collectAsState()
-    val artistSortBy by artistsViewModel.sortBy.collectAsState()
-    val artistSortOrder by artistsViewModel.sortOrder.collectAsState()
-    val genreSortOrder by genresViewModel.sortOrder.collectAsState()
-    val folderSortBy by foldersViewModel.sortBy.collectAsState()
-    val folderSortOrder by foldersViewModel.sortOrder.collectAsState()
-    val playlistSortBy by playlistsViewModel.sortBy.collectAsState()
-    val playlistSortOrder by playlistsViewModel.sortOrder.collectAsState()
+    val uiState by songsViewModel.uiState.collectAsStateWithLifecycle()
+    val albumSortBy by albumsViewModel.sortBy.collectAsStateWithLifecycle()
+    val albumSortOrder by albumsViewModel.sortOrder.collectAsStateWithLifecycle()
+    val artistSortBy by artistsViewModel.sortBy.collectAsStateWithLifecycle()
+    val artistSortOrder by artistsViewModel.sortOrder.collectAsStateWithLifecycle()
+    val genreSortOrder by genresViewModel.sortOrder.collectAsStateWithLifecycle()
+    val folderSortBy by foldersViewModel.sortBy.collectAsStateWithLifecycle()
+    val folderSortOrder by foldersViewModel.sortOrder.collectAsStateWithLifecycle()
+    val playlistSortBy by playlistsViewModel.sortBy.collectAsStateWithLifecycle()
+    val playlistSortOrder by playlistsViewModel.sortOrder.collectAsStateWithLifecycle()
 
     var showSortMenu by remember { mutableStateOf(false) }
     var songForOptions by remember { mutableStateOf<Song?>(null) }
