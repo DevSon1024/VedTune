@@ -29,6 +29,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Check
@@ -49,6 +50,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -150,12 +152,12 @@ fun LibraryScreen(
     val context = LocalContext.current
 
     val tabs = listOf(
-        LibraryTabItem("Songs", Icons.AutoMirrored.Filled.List),
+        LibraryTabItem("Songs", Icons.AutoMirrored.Filled.QueueMusic),
         LibraryTabItem("Albums", Icons.Default.Album),
         LibraryTabItem("Artists", Icons.Default.Person),
         LibraryTabItem("Genres", Icons.Default.MusicNote),
         LibraryTabItem("Folders", Icons.Default.Folder),
-        LibraryTabItem("Playlists", Icons.AutoMirrored.Filled.QueueMusic)
+        LibraryTabItem("Playlists", Icons.AutoMirrored.Filled.PlaylistPlay)
     )
 
     val pagerState = rememberPagerState(
@@ -310,7 +312,7 @@ fun LibraryScreen(
                     )
                     LibraryQuickCard(
                         title = "Playlists",
-                        icon = Icons.AutoMirrored.Filled.QueueMusic,
+                        icon = Icons.AutoMirrored.Filled.PlaylistPlay,
                         containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
                         iconColor = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f),
@@ -328,14 +330,13 @@ fun LibraryScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column {
-                ScrollableTabRow(
+                TabRow(
                     selectedTabIndex = pagerState.currentPage,
-                    edgePadding = MaterialTheme.spacing.l,
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.primary,
                     divider = {},
                     indicator = { tabPositions ->
-                        if (tabPositions.isNotEmpty()) {
+                        if (tabPositions.isNotEmpty() && pagerState.currentPage in tabPositions.indices) {
                             val absolutePosition = pagerState.currentPage + pagerState.currentPageOffsetFraction
                             val floorPage = kotlin.math.floor(absolutePosition).toInt().coerceIn(0, tabPositions.lastIndex)
                             val ceilPage = kotlin.math.ceil(absolutePosition).toInt().coerceIn(0, tabPositions.lastIndex)
@@ -346,16 +347,17 @@ fun LibraryScreen(
 
                             val left = androidx.compose.ui.unit.lerp(floorPosition.left, ceilPosition.left, fraction)
                             val right = androidx.compose.ui.unit.lerp(floorPosition.right, ceilPosition.right, fraction)
-                            val currentTabWidth = right - left
+                            val tabCenter = (left + right) / 2
+                            val pillWidth = 46.dp
 
                             Box(
                                 modifier = Modifier
                                     .zIndex(1f)
                                     .fillMaxWidth()
                                     .wrapContentSize(Alignment.CenterStart)
-                                    .offset(x = left + 4.dp)
-                                    .width((currentTabWidth - 8.dp).coerceAtLeast(0.dp))
-                                    .height(38.dp)
+                                    .offset(x = tabCenter - (pillWidth / 2))
+                                    .width(pillWidth)
+                                    .height(36.dp)
                                     .clip(VedTuneShapeTokens.Pill)
                                     .background(MaterialTheme.colorScheme.primaryContainer)
                             )
@@ -363,7 +365,8 @@ fun LibraryScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
+                        .height(48.dp)
+                        .padding(horizontal = 8.dp)
                 ) {
                     tabs.forEachIndexed { index, tab ->
                         val isSelected = pagerState.currentPage == index
@@ -371,7 +374,7 @@ fun LibraryScreen(
                             targetValue = if (isSelected) {
                                 MaterialTheme.colorScheme.onPrimaryContainer
                             } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
                             },
                             animationSpec = tween(200),
                             label = "tabContentColor"
@@ -381,36 +384,25 @@ fun LibraryScreen(
                             selected = isSelected,
                             onClick = {
                                 scope.launch {
-                                    pagerState.scrollToPage(index)
+                                    pagerState.animateScrollToPage(index)
                                 }
                             },
                             modifier = Modifier
                                 .zIndex(2f)
                                 .clip(VedTuneShapeTokens.Pill)
-                                .height(40.dp)
-                                .padding(horizontal = 2.dp),
+                                .height(44.dp),
                             selectedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                             unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.fillMaxSize()
                             ) {
                                 Icon(
                                     imageVector = tab.icon,
                                     contentDescription = tab.label,
                                     tint = contentColor,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = tab.label,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = contentColor,
-                                    maxLines = 1,
-                                    softWrap = false
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                         }
@@ -424,7 +416,7 @@ fun LibraryScreen(
             }
         }
 
-        // Sticky Utility Row (Sort, Shuffle, Layout Toggle)
+        // Sticky Utility Row (Sort, Shuffle, Layout Toggle, and Centered Page Name)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -433,6 +425,7 @@ fun LibraryScreen(
             LibraryUtilityRow(
                 currentSortLabel = currentSortLabel,
                 sortOrderIcon = currentSortOrderIcon,
+                currentPageTitle = tabs.getOrNull(pagerState.currentPage)?.label ?: "",
                 onSortClick = {
                     if (pagerState.currentPage == 3) {
                         genresViewModel.toggleSortOrder()

@@ -1,5 +1,12 @@
 package com.devson.vedtune.ui.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -248,19 +255,18 @@ fun <T : Any> VedTuneLibraryView(
 fun LibraryUtilityRow(
     currentSortLabel: String,
     sortOrderIcon: String,
+    currentPageTitle: String = "",
     onSortClick: () -> Unit,
     isGridView: Boolean,
     onLayoutToggleClick: () -> Unit,
     onShuffleClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(40.dp)
-            .padding(horizontal = MaterialTheme.spacing.l),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .height(42.dp)
+            .padding(horizontal = MaterialTheme.spacing.l)
     ) {
         AssistChip(
             onClick = onSortClick,
@@ -283,10 +289,38 @@ fun LibraryUtilityRow(
             colors = AssistChipDefaults.assistChipColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
             ),
-            modifier = Modifier.height(30.dp)
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .height(30.dp)
         )
 
+        if (currentPageTitle.isNotEmpty()) {
+            AnimatedContent(
+                targetState = currentPageTitle,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(220, delayMillis = 40)) +
+                        scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 40)))
+                        .togetherWith(fadeOut(animationSpec = tween(140)) + scaleOut(targetScale = 0.92f, animationSpec = tween(140)))
+                },
+                label = "libraryPageTitle",
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 92.dp),
+                contentAlignment = Alignment.Center
+            ) { title ->
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+        }
+
         Row(
+            modifier = Modifier.align(Alignment.CenterEnd),
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
             verticalAlignment = Alignment.CenterVertically
         ) {
