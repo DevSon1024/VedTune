@@ -2,20 +2,10 @@ package com.devson.vedtune.player
 
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.ContentUris
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.os.Process
-import android.provider.MediaStore
 import androidx.annotation.OptIn
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -35,7 +25,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -50,9 +39,6 @@ class PlaybackService : MediaSessionService() {
     lateinit var repository: MediaRepository
 
     @Inject
-    lateinit var dataStore: DataStore<Preferences>
-
-    @Inject
     lateinit var audioEngine: AudioEngine
 
     private var mediaSession: MediaSession? = null
@@ -65,11 +51,6 @@ class PlaybackService : MediaSessionService() {
     companion object {
         const val CUSTOM_COMMAND_CLOSE_PLAYER = "com.devson.vedtune.CLOSE_PLAYER"
         const val CUSTOM_COMMAND_LIKE = "com.devson.vedtune.LIKE"
-
-        private val KEY_CURRENT_SONG_ID = longPreferencesKey("current_song_id")
-        private val KEY_PLAYBACK_POSITION = longPreferencesKey("playback_position")
-        private val KEY_REPEAT_MODE = intPreferencesKey("repeat_mode")
-        private val KEY_SHUFFLE_MODE = booleanPreferencesKey("shuffle_mode")
     }
 
     private val playerListener = object : Player.Listener {
@@ -126,13 +107,6 @@ class PlaybackService : MediaSessionService() {
             setSmallIcon(com.devson.vedtune.R.drawable.ic_notification)
         }
         setMediaNotificationProvider(notificationProvider)
-
-        // Restore playback state if needed
-        serviceScope.launch {
-            restorePlaybackState()
-            mediaSession?.let { refreshMediaSessionUi(it, force = true) }
-        }
-
         // Observe favorite changes to dynamically update notification heart button in real-time
         serviceScope.launch {
             repository.getFavoriteSongIdsFlow().collect { ids ->
@@ -205,7 +179,7 @@ class PlaybackService : MediaSessionService() {
                     return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                 }
                 CUSTOM_COMMAND_CLOSE_PLAYER, "ACTION_CLOSE" -> {
-                    stopPlaybackAndUnload(killProcess = true)
+                    stopPlaybackAndUnload()
                     return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                 }
             }
@@ -258,75 +232,19 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
-    private fun stopPlaybackAndUnload(killProcess: Boolean = false) {
+    private fun stopPlaybackAndUnload() {
         mediaSessionButtonRefreshJob?.cancel()
-        serviceScope.cancel()
         runCatching {
             exoPlayer.pause()
             exoPlayer.stop()
             exoPlayer.clearMediaItems()
         }
-        mediaSession?.run {
-            player.release()
-            release()
-        }
-        mediaSession = null
         stopForeground(STOP_FOREGROUND_REMOVE)
         val notificationManager = getSystemService(NotificationManager::class.java)
         notificationManager?.cancelAll()
+        mediaSession?.release()
+        mediaSession = null
         stopSelf()
-        if (killProcess) {
-            Process.killProcess(Process.myPid())
-        }
-    }
-
-    private suspend fun restorePlaybackState() {
-        if (exoPlayer.mediaItemCount == 0) {
-            val savedQueue = repository.getQueue()
-            if (savedQueue.isNotEmpty()) {
-                val preferences = dataStore.data.first()
-                val savedSongId = preferences[KEY_CURRENT_SONG_ID]
-                val savedPosition = preferences[KEY_PLAYBACK_POSITION] ?: 0L
-                val savedRepeatMode = preferences[KEY_REPEAT_MODE] ?: Player.REPEAT_MODE_OFF
-
-                val mediaItems = savedQueue.map { s ->
-                    MediaItem.Builder()
-                        .setMediaId(s.id.toString())
-                        .setUri(
-                            ContentUris.withAppendedId(
-                                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                                s.id
-                            )
-                        )
-                        .setMediaMetadata(
-                            MediaMetadata.Builder()
-                                .setTitle(s.title)
-                                .setArtist(s.artist)
-                                .setAlbumTitle(s.album)
-                                .setArtworkUri(
-                                    ContentUris.withAppendedId(
-                                        Uri.parse("content://media/external/audio/albumart"),
-                                        s.albumId
-                                    )
-                                )
-                                .build()
-                        )
-                        .build()
-                }
-                exoPlayer.setMediaItems(mediaItems)
-
-                val index = savedQueue.indexOfFirst { it.id == savedSongId }
-                if (index != -1) {
-                    exoPlayer.seekTo(index, savedPosition)
-                } else {
-                    exoPlayer.seekTo(0, savedPosition)
-                }
-
-                exoPlayer.repeatMode = savedRepeatMode
-                exoPlayer.shuffleModeEnabled = false
-                exoPlayer.prepare()
-            }
-        }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
@@ -334,26 +252,27 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        super.onTaskRemoved(rootIntent)
         val isActivelyPlaying = exoPlayer.playWhenReady &&
             exoPlayer.playbackState != Player.STATE_IDLE &&
             exoPlayer.playbackState != Player.STATE_ENDED
 
-        // If not actively playing when removed from Recents, dismiss notification, clean up, and kill process
+        // If not actively playing when removed from Recents, dismiss notification and stop service
         if (!isActivelyPlaying) {
-            stopPlaybackAndUnload(killProcess = true)
+            stopPlaybackAndUnload()
         }
         // If actively playing, playback continues smoothly in background
+        super.onTaskRemoved(rootIntent)
     }
 
     override fun onDestroy() {
         serviceScope.cancel()
         exoPlayer.removeListener(playerListener)
         audioEngine.release()
-        mediaSession?.run {
-            player.release()
-            release()
+        runCatching {
+            exoPlayer.stop()
+            exoPlayer.clearMediaItems()
         }
+        mediaSession?.release()
         mediaSession = null
         super.onDestroy()
     }

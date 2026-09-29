@@ -192,6 +192,27 @@ class PlaybackConnection @Inject constructor(
         scope.launch(Dispatchers.IO) {
             try {
                 originalQueue = repository.getQueue()
+                val preferences = dataStore.data.first()
+                val savedSongId = preferences[KEY_CURRENT_SON_ID]
+                val savedPosition = preferences[KEY_PLAYBACK_POSITION] ?: 0L
+                val savedRepeatMode = preferences[KEY_REPEAT_MODE] ?: Player.REPEAT_MODE_OFF
+                val savedShuffleMode = preferences[KEY_SHUFFLE_MODE] ?: false
+
+                if (originalQueue.isNotEmpty()) {
+                    val songsMap = HashMap<Long, Song>(originalQueue.size).apply {
+                        originalQueue.forEach { put(it.id, it) }
+                    }
+                    _playlistQueue.value = originalQueue
+                    _queueSongMap.value = songsMap
+                    val song = if (savedSongId != null) originalQueue.firstOrNull { it.id == savedSongId } else originalQueue.firstOrNull()
+                    if (song != null) {
+                        _currentSong.value = song
+                        _currentSongId.value = song.id
+                    }
+                    _playbackPosition.value = savedPosition
+                    _repeatMode.value = savedRepeatMode
+                    _shuffleModeEnabled.value = savedShuffleMode
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -248,10 +269,12 @@ class PlaybackConnection @Inject constructor(
         val controller = mediaController ?: return
         if (!controller.isConnected) return
         _isPlaying.value = controller.isPlaying
-        _currentSongId.value = controller.currentMediaItem?.mediaId?.toLongOrNull()
-        _playbackPosition.value = controller.currentPosition
-        _playbackDuration.value = controller.duration.coerceAtLeast(0L)
-        _repeatMode.value = controller.repeatMode
+        if (controller.mediaItemCount > 0) {
+            _currentSongId.value = controller.currentMediaItem?.mediaId?.toLongOrNull()
+            _playbackPosition.value = controller.currentPosition
+            _playbackDuration.value = controller.duration.coerceAtLeast(0L)
+            _repeatMode.value = controller.repeatMode
+        }
         scope.launch {
             val preferences = dataStore.data.first()
             val savedShuffleMode = preferences[KEY_SHUFFLE_MODE] ?: false
@@ -517,6 +540,41 @@ class PlaybackConnection @Inject constructor(
         scope.launch {
             try {
                 val controller = getController()
+                if (controller.mediaItemCount == 0 && _playlistQueue.value.isNotEmpty()) {
+                    val queue = _playlistQueue.value
+                    val currentSong = _currentSong.value ?: queue.firstOrNull()
+                    val index = if (currentSong != null) queue.indexOfFirst { it.id == currentSong.id }.coerceAtLeast(0) else 0
+                    val mediaItems = queue.map { s ->
+                        MediaItem.Builder()
+                            .setMediaId(s.id.toString())
+                            .setUri(
+                                ContentUris.withAppendedId(
+                                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                                    s.id
+                                )
+                            )
+                            .setMediaMetadata(
+                                MediaMetadata.Builder()
+                                    .setTitle(s.title)
+                                    .setArtist(s.artist)
+                                    .setAlbumTitle(s.album)
+                                    .setArtworkUri(
+                                        ContentUris.withAppendedId(
+                                            Uri.parse("content://media/external/audio/albumart"),
+                                            s.albumId
+                                        )
+                                    )
+                                    .build()
+                            )
+                            .build()
+                    }
+                    val preferences = dataStore.data.first()
+                    val savedPosition = preferences[KEY_PLAYBACK_POSITION] ?: 0L
+                    val savedRepeatMode = preferences[KEY_REPEAT_MODE] ?: Player.REPEAT_MODE_OFF
+                    controller.setMediaItems(mediaItems, index, savedPosition)
+                    controller.repeatMode = savedRepeatMode
+                    controller.prepare()
+                }
                 controller.volume = 1f
                 controller.play()
             } catch (e: Exception) {
@@ -707,8 +765,10 @@ class PlaybackConnection @Inject constructor(
         if (!controller.isConnected) return
         val timeline = controller.currentTimeline
         if (timeline.isEmpty) {
-            _playlistQueue.value = emptyList()
-            _queueSongMap.value = emptyMap()
+            if (originalQueue.isEmpty()) {
+                _playlistQueue.value = emptyList()
+                _queueSongMap.value = emptyMap()
+            }
             return
         }
         val window = androidx.media3.common.Timeline.Window()

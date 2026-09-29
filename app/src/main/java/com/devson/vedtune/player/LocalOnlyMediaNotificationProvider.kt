@@ -1,6 +1,5 @@
 package com.devson.vedtune.player
 
-import android.app.Notification
 import android.content.Context
 import android.os.Bundle
 import androidx.media3.common.util.UnstableApi
@@ -31,20 +30,12 @@ class LocalOnlyMediaNotificationProvider(
         actionFactory: MediaNotification.ActionFactory,
         callback: MediaNotification.Provider.Callback
     ): MediaNotification {
-        val notification = delegate.createNotification(
+        return delegate.createNotification(
             mediaSession,
             customLayout,
             actionFactory,
             callback
         )
-        val localOnlyNotification = runCatching {
-            Notification.Builder.recoverBuilder(context, notification.notification)
-                .setLocalOnly(true)
-                .build()
-        }.getOrElse {
-            notification.notification
-        }
-        return MediaNotification(notification.notificationId, localOnlyNotification)
     }
 
     override fun handleCustomCommand(
