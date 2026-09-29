@@ -202,7 +202,10 @@ fun PlaylistDetailsScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Button(
-                                    onClick = { viewModel.playPlaylist() },
+                                    onClick = {
+                                        viewModel.playPlaylist()
+                                        onNavigateToPlayer()
+                                    },
                                     shape = VedTuneShapeTokens.Pill,
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = MaterialTheme.colorScheme.primary,
@@ -225,7 +228,10 @@ fun PlaylistDetailsScreen(
                                 }
 
                                 FilledTonalButton(
-                                    onClick = { viewModel.shufflePlaylist() },
+                                    onClick = {
+                                        viewModel.shufflePlaylist()
+                                        onNavigateToPlayer()
+                                    },
                                     shape = VedTuneShapeTokens.Pill,
                                     modifier = Modifier
                                         .weight(1f)
@@ -260,7 +266,10 @@ fun PlaylistDetailsScreen(
                             showArtwork = showArtwork,
                             isCurrentSong = isCurrentSong,
                             isPlaying = isPlaying,
-                            onClick = { viewModel.playSong(song) },
+                            onClick = {
+                                viewModel.playSong(song)
+                                onNavigateToPlayer()
+                            },
                             onPlayNext = { viewModel.playNext(song) },
                             onRemoveClick = { viewModel.removeSongFromPlaylist(song.id) }
                         )

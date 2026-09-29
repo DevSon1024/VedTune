@@ -59,6 +59,7 @@ import com.devson.vedtune.ui.theme.spacing
 fun FoldersScreen(
     viewModel: FoldersViewModel,
     onSongOptionsClick: (Song) -> Unit,
+    onNavigateToPlayer: () -> Unit = {},
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
@@ -176,13 +177,19 @@ fun FoldersScreen(
                                     VedTunePrimaryButton(
                                         text = "Play All (${selectedFolder.songCount})",
                                         icon = Icons.Rounded.PlayArrow,
-                                        onClick = { viewModel.playAllInFolder(selectedFolder) },
+                                        onClick = {
+                                            viewModel.playAllInFolder(selectedFolder)
+                                            onNavigateToPlayer()
+                                        },
                                         modifier = Modifier.weight(1f)
                                     )
                                     VedTuneSecondaryButton(
                                         text = "Shuffle",
                                         icon = Icons.Rounded.Shuffle,
-                                        onClick = { viewModel.shuffleAllInFolder(selectedFolder) },
+                                        onClick = {
+                                            viewModel.shuffleAllInFolder(selectedFolder)
+                                            onNavigateToPlayer()
+                                        },
                                         modifier = Modifier.weight(1f)
                                     )
                                 }
@@ -210,7 +217,10 @@ fun FoldersScreen(
                                     song = song,
                                     isCurrentSong = song.id == currentSongId,
                                     isPlaying = isPlaying,
-                                    onClick = { viewModel.playSongInFolder(song, selectedFolder) },
+                                    onClick = {
+                                        viewModel.playSongInFolder(song, selectedFolder)
+                                        onNavigateToPlayer()
+                                    },
                                     onOptionsClick = { onSongOptionsClick(song) }
                                 )
                             }

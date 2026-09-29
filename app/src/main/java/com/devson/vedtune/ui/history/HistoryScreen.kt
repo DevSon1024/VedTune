@@ -65,9 +65,9 @@ import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.ui.MainViewModel
 import com.devson.vedtune.ui.components.AddToPlaylistDialog
 import com.devson.vedtune.ui.components.MiniPlayer
-import com.devson.vedtune.ui.components.VedTuneBottomSheetHeader
 import com.devson.vedtune.ui.components.VedTuneConfirmDialog
 import com.devson.vedtune.ui.components.VedTuneEmptyState
+import com.devson.vedtune.ui.components.VedTuneSongOptionsBottomSheet
 import com.devson.vedtune.ui.components.VedTuneSongRow
 import com.devson.vedtune.ui.theme.VedTuneIconSizes
 import com.devson.vedtune.ui.theme.VedTuneShapeTokens
@@ -202,7 +202,10 @@ fun HistoryScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Button(
-                                onClick = { viewModel.playAll() },
+                                onClick = {
+                                    viewModel.playAll()
+                                    onNavigateToPlayer()
+                                },
                                 shape = VedTuneShapeTokens.Pill,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary,
@@ -225,7 +228,10 @@ fun HistoryScreen(
                             }
 
                             FilledTonalButton(
-                                onClick = { viewModel.shuffleAll() },
+                                onClick = {
+                                    viewModel.shuffleAll()
+                                    onNavigateToPlayer()
+                                },
                                 shape = VedTuneShapeTokens.Pill,
                                 modifier = Modifier
                                     .weight(1f)
@@ -265,7 +271,10 @@ fun HistoryScreen(
                         isPlaying = isPlaying && isCurrent,
                         showArtwork = showArtwork,
                         showDuration = true,
-                        onClick = { viewModel.playSong(song) },
+                        onClick = {
+                            viewModel.playSong(song)
+                            onNavigateToPlayer()
+                        },
                         onOptionsClick = { selectedSongForOptions = song },
                         containerColor = if (isCurrent) {
                             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
@@ -304,7 +313,7 @@ fun HistoryScreen(
 
     // Song Options Bottom Sheet
     selectedSongForOptions?.let { song ->
-        HistorySongOptionsBottomSheet(
+        VedTuneSongOptionsBottomSheet(
             song = song,
             onDismiss = { selectedSongForOptions = null },
             onToggleFavorite = {
@@ -358,121 +367,5 @@ fun HistoryScreen(
                 songForPlaylistAdd = null
             }
         )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun HistorySongOptionsBottomSheet(
-    song: Song,
-    onDismiss: () -> Unit,
-    onToggleFavorite: () -> Unit,
-    onPlayNext: () -> Unit,
-    onAddToPlaylist: () -> Unit,
-    onRemoveFromHistory: () -> Unit,
-    onGoToAlbum: () -> Unit,
-    onGoToArtist: () -> Unit
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = VedTuneShapeTokens.BottomSheet,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = MaterialTheme.spacing.xxl)
-        ) {
-            VedTuneBottomSheetHeader(
-                title = song.title,
-                subtitle = "${song.artist} • ${song.album}",
-                onCloseClick = onDismiss
-            )
-
-            ListItem(
-                headlineContent = { Text(if (song.isFavorite) "Remove from Favorites" else "Add to Favorites") },
-                leadingContent = {
-                    Icon(
-                        imageVector = if (song.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = null,
-                        tint = if (song.isFavorite) Color(0xFFE53935) else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                modifier = Modifier.clickable(onClick = onToggleFavorite)
-            )
-
-            ListItem(
-                headlineContent = { Text("Play Next") },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.QueueMusic,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                modifier = Modifier.clickable(onClick = onPlayNext)
-            )
-
-            ListItem(
-                headlineContent = { Text("Add to Playlist") },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.PlaylistAddCheck,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                modifier = Modifier.clickable(onClick = onAddToPlaylist)
-            )
-
-            ListItem(
-                headlineContent = { Text("Remove from History") },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Default.RemoveCircleOutline,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                modifier = Modifier.clickable(onClick = onRemoveFromHistory)
-            )
-
-            if (song.albumId > 0) {
-                ListItem(
-                    headlineContent = { Text("Go to Album") },
-                    leadingContent = {
-                        Icon(
-                            imageVector = Icons.Default.Album,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    modifier = Modifier.clickable(onClick = onGoToAlbum)
-                )
-            }
-
-            if (song.artist.isNotBlank() && song.artist != "<unknown>") {
-                ListItem(
-                    headlineContent = { Text("Go to Artist") },
-                    leadingContent = {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    modifier = Modifier.clickable(onClick = onGoToArtist)
-                )
-            }
-        }
     }
 }

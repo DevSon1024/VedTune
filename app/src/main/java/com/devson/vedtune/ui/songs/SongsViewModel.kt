@@ -190,6 +190,140 @@ class SongsViewModel @Inject constructor(
 
     private var pendingTagUpdate: PendingTagUpdate? = null
     private var pendingDeleteSongId: Long? = null
+    private val pendingDeleteSongIds = mutableSetOf<Long>()
+
+    fun enterSelectionMode(initialSongId: Long) {
+        updateState {
+            it.copy(
+                isSelectionMode = true,
+                selectedSongIds = setOf(initialSongId)
+            )
+        }
+    }
+
+    fun toggleSongSelection(songId: Long) {
+        updateState { state ->
+            val updated = state.selectedSongIds.toMutableSet()
+            if (updated.contains(songId)) {
+                updated.remove(songId)
+            } else {
+                updated.add(songId)
+            }
+            state.copy(
+                isSelectionMode = updated.isNotEmpty(),
+                selectedSongIds = updated
+            )
+        }
+    }
+
+    fun selectAll() {
+        updateState { state ->
+            state.copy(
+                isSelectionMode = true,
+                selectedSongIds = state.songs.map { it.id }.toSet()
+            )
+        }
+    }
+
+    fun clearSelection() {
+        updateState {
+            it.copy(
+                selectedSongIds = emptySet()
+            )
+        }
+    }
+
+    fun exitSelectionMode() {
+        updateState {
+            it.copy(
+                isSelectionMode = false,
+                selectedSongIds = emptySet()
+            )
+        }
+    }
+
+    fun playSelectedSongs() {
+        val selectedSongs = currentState.songs.filter { it.id in currentState.selectedSongIds }
+        if (selectedSongs.isNotEmpty()) {
+            playbackConnection.playSong(selectedSongs.first(), selectedSongs)
+            exitSelectionMode()
+        }
+    }
+
+    fun playNextSelectedSongs() {
+        val selectedSongs = currentState.songs.filter { it.id in currentState.selectedSongIds }
+        selectedSongs.reversed().forEach { song ->
+            playbackConnection.playNext(song)
+        }
+        exitSelectionMode()
+    }
+
+    fun addSelectedToPlaylist(playlistId: Long) {
+        val selectedIds = currentState.selectedSongIds.toList()
+        viewModelScope.launch {
+            selectedIds.forEach { songId ->
+                repository.addSongToPlaylist(playlistId, songId)
+            }
+            exitSelectionMode()
+        }
+    }
+
+    fun createPlaylistAndAddSelected(playlistName: String) {
+        val selectedIds = currentState.selectedSongIds.toList()
+        viewModelScope.launch {
+            val playlistId = repository.createPlaylist(playlistName)
+            selectedIds.forEach { songId ->
+                repository.addSongToPlaylist(playlistId, songId)
+            }
+            exitSelectionMode()
+        }
+    }
+
+    fun deleteSelectedPermanently(context: Context) {
+        val selectedIds = currentState.selectedSongIds.toList()
+        if (selectedIds.isEmpty()) return
+
+        val uris = selectedIds.map { songId ->
+            ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, songId)
+        }
+
+        viewModelScope.launch {
+            pendingDeleteSongIds.clear()
+            pendingDeleteSongIds.addAll(selectedIds)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val pi = MediaStore.createDeleteRequest(context.contentResolver, uris)
+                    sendEvent(SongsUiEvent.LaunchIntentSender(pi.intentSender))
+                } else {
+                    val deletedAny = withContext(Dispatchers.IO) {
+                        var success = false
+                        for (uri in uris) {
+                            try {
+                                if (context.contentResolver.delete(uri, null, null) > 0) {
+                                    success = true
+                                }
+                            } catch (e: RecoverableSecurityException) {
+                                sendEvent(SongsUiEvent.LaunchIntentSender(e.userAction.actionIntent.intentSender))
+                            }
+                        }
+                        success
+                    }
+                    if (deletedAny) {
+                        selectedIds.forEach { repository.deleteSong(it) }
+                        exitSelectionMode()
+                    }
+                }
+            } catch (e: Exception) {
+                sendEvent(SongsUiEvent.ShowError(e.message ?: "Failed to delete selected songs"))
+            }
+        }
+    }
+
+    fun toggleFavorite(song: Song) {
+        viewModelScope.launch {
+            repository.toggleFavorite(song.id)
+        }
+    }
 
     fun playNext(song: Song) {
         playbackConnection.playNext(song)
@@ -239,6 +373,14 @@ class SongsViewModel @Inject constructor(
             viewModelScope.launch {
                 repository.deleteSong(songId)
                 pendingDeleteSongId = null
+            }
+        }
+        if (pendingDeleteSongIds.isNotEmpty()) {
+            val idsToDelete = pendingDeleteSongIds.toList()
+            viewModelScope.launch {
+                idsToDelete.forEach { repository.deleteSong(it) }
+                pendingDeleteSongIds.clear()
+                exitSelectionMode()
             }
         }
     }

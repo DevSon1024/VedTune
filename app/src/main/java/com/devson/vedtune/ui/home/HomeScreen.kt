@@ -172,6 +172,7 @@ fun HomeScreen(
                             }
                         },
                         onNavigateToFolderSettings = onNavigateToFolderSettings,
+                        onNavigateToPlayer = { navController.navigateSafe(Screen.Player.route) },
                         contentPadding = innerPadding,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -183,6 +184,7 @@ fun HomeScreen(
                         onNavigateToAlbum = onNavigateToAlbum,
                         onNavigateToArtist = onNavigateToArtist,
                         onNavigateToGenre = onNavigateToGenre,
+                        onNavigateToPlayer = { navController.navigateSafe(Screen.Player.route) },
                         contentPadding = innerPadding,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -195,6 +197,7 @@ fun HomeScreen(
                         onNavigateToGenre = onNavigateToGenre,
                         onNavigateToEditTags = onNavigateToEditTags,
                         onNavigateToHistory = onNavigateToHistory,
+                        onNavigateToPlayer = { navController.navigateSafe(Screen.Player.route) },
                         navigateToLocationEvent = mainViewModel.navigateToLocationEvent,
                         targetLibraryTabEvent = mainViewModel.targetLibraryTabEvent,
                         contentPadding = innerPadding,

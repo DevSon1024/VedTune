@@ -1,7 +1,6 @@
 package com.devson.vedtune.ui.player.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,8 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.Icon
@@ -23,7 +22,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,39 +38,25 @@ fun PlayerHeader(
     onOptionsClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+    // Header Action Bar with perfectly centered NOW PLAYING title
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(56.dp)
     ) {
-        // Visual affordance: Bottom-sheet style drag handle pill
-        Box(
-            modifier = Modifier
-                .padding(top = 4.dp, bottom = 2.dp)
-                .width(36.dp)
-                .height(4.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
-                    shape = VedTuneShapeTokens.Pill
-                )
-        )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Minimize / Back button
+            // Left: Back button
             VedTuneIconButton(
-                icon = Icons.Default.KeyboardArrowDown,
-                contentDescription = "Minimize Player",
+                icon = Icons.AutoMirrored.Rounded.ArrowBack,
+                contentDescription = "Back",
                 onClick = onBackClick,
-                iconSize = VedTuneIconSizes.Large,
-                tint = MaterialTheme.colorScheme.onSurface
+                iconSize = VedTuneIconSizes.Medium,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.align(Alignment.CenterStart)
             )
 
-            // Center Header
+            // Center: Header title mathematically centered
             Column(
+                modifier = Modifier.align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -111,8 +95,11 @@ fun PlayerHeader(
                 }
             }
 
-            // Right action buttons
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Right action buttons: Queue and Options
+            Row(
+                modifier = Modifier.align(Alignment.CenterEnd),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 VedTuneIconButton(
                     icon = Icons.AutoMirrored.Rounded.QueueMusic,
                     contentDescription = "Playback Queue",
@@ -131,5 +118,4 @@ fun PlayerHeader(
                 }
             }
         }
-    }
 }

@@ -253,14 +253,20 @@ fun ArtistDetailsScreen(
                                 VedTunePrimaryButton(
                                     text = "Play",
                                     icon = Icons.Default.PlayArrow,
-                                    onClick = { viewModel.playArtist() },
+                                    onClick = {
+                                        viewModel.playArtist()
+                                        onNavigateToPlayer()
+                                    },
                                     modifier = Modifier.weight(1f)
                                 )
 
                                 VedTuneSecondaryButton(
                                     text = "Shuffle",
                                     icon = Icons.Default.Shuffle,
-                                    onClick = { viewModel.shuffleArtist() },
+                                    onClick = {
+                                        viewModel.shuffleArtist()
+                                        onNavigateToPlayer()
+                                    },
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -277,7 +283,10 @@ fun ArtistDetailsScreen(
                             song = song,
                             isCurrentSong = isCurrentSong,
                             isPlaying = isPlaying,
-                            onClick = { viewModel.playSong(song) },
+                            onClick = {
+                                viewModel.playSong(song)
+                                onNavigateToPlayer()
+                            },
                             modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m, vertical = 2.dp)
                         )
                     }

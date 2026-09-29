@@ -64,12 +64,21 @@ import com.devson.vedtune.ui.theme.spacing
  * Standard Material 3 List Item for VedTune library views.
  * Supports leading artwork/icon, title, subtitle, and trailing options/actions.
  */
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+
+/**
+ * Standard Material 3 List Item for VedTune library views.
+ * Supports leading artwork/icon, title, subtitle, and trailing options/actions.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun VedTuneListItem(
     primaryText: String,
     secondaryText: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
     leadingContent: @Composable (() -> Unit)? = null,
     trailingContent: @Composable (() -> Unit)? = null,
     containerColor: Color = MaterialTheme.colorScheme.surface,
@@ -106,7 +115,10 @@ fun VedTuneListItem(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
     )
 }
 
@@ -114,12 +126,14 @@ fun VedTuneListItem(
  * Standard Material 3 Grid Card for VedTune library views.
  * Built with ElevatedCard, 1:1 aspect ratio artwork, tonal elevation, and clamped typography.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun VedTuneGridCard(
     primaryText: String,
     secondaryText: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
     tonalElevation: Dp = 1.dp,
     gridCount: Int = 2,
@@ -149,7 +163,10 @@ fun VedTuneGridCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
     ) {
         Column(
             modifier = Modifier.padding(padding)

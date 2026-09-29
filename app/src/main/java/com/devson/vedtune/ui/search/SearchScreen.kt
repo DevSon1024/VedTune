@@ -65,6 +65,7 @@ fun SearchScreen(
     onNavigateToAlbum: (Long) -> Unit,
     onNavigateToArtist: (String) -> Unit,
     onNavigateToGenre: (String) -> Unit,
+    onNavigateToPlayer: () -> Unit = {},
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
@@ -238,7 +239,10 @@ fun SearchScreen(
                             isCurrentSong = song.id == currentSongId,
                             isPlaying = isPlaying,
                             showArtwork = showArtwork,
-                            onClick = { viewModel.playSong(song) },
+                            onClick = {
+                                viewModel.playSong(song)
+                                onNavigateToPlayer()
+                            },
                             onOptionsClick = null
                         )
                     }

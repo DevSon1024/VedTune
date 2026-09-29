@@ -7,14 +7,20 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.repeatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,7 +42,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Deselect
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
@@ -46,6 +56,8 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.QueuePlayNext
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
@@ -57,8 +69,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -94,6 +106,7 @@ import com.devson.vedtune.ui.components.VedTuneConfirmDialog
 import com.devson.vedtune.ui.components.VedTuneEmptyState
 import com.devson.vedtune.ui.components.VedTuneGridCard
 import com.devson.vedtune.ui.components.VedTuneLibraryView
+import com.devson.vedtune.ui.components.VedTuneSongOptionsBottomSheet
 import com.devson.vedtune.ui.components.VedTuneSongRow
 import com.devson.vedtune.ui.theme.VedTuneIconSizes
 import com.devson.vedtune.ui.theme.VedTuneMotion
@@ -111,6 +124,7 @@ fun SongsScreen(
     onNavigateToAlbum: (Long) -> Unit,
     onNavigateToArtist: (String) -> Unit,
     onNavigateToEditTags: (Long) -> Unit,
+    onNavigateToPlayer: () -> Unit = {},
     onLayoutToggleClick: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
@@ -135,6 +149,12 @@ fun SongsScreen(
     var showInfoDialogSong by remember { mutableStateOf<Song?>(null) }
     var showPreviewDialogSong by remember { mutableStateOf<Song?>(null) }
     var showDeleteConfirmDialogSong by remember { mutableStateOf<Song?>(null) }
+    var showBatchDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showBatchAddToPlaylistDialog by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = uiState.isSelectionMode) {
+        viewModel.exitSelectionMode()
+    }
 
     val context = LocalContext.current
 
@@ -210,6 +230,109 @@ fun SongsScreen(
     Column(
         modifier = modifier.fillMaxSize()
     ) {
+        // Selection Action Bar
+        AnimatedVisibility(
+            visible = uiState.isSelectionMode,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = VedTuneShapeTokens.Medium,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { viewModel.exitSelectionMode() }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Exit Selection"
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${uiState.selectedSongIds.size} selected",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val allSelected = uiState.selectedSongIds.size == uiState.songs.size && uiState.songs.isNotEmpty()
+                        IconButton(onClick = {
+                            if (allSelected) viewModel.clearSelection() else viewModel.selectAll()
+                        }) {
+                            Icon(
+                                imageVector = if (allSelected) Icons.Default.Deselect else Icons.Default.SelectAll,
+                                contentDescription = if (allSelected) "Deselect All" else "Select All"
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                viewModel.playSelectedSongs()
+                                onNavigateToPlayer()
+                            },
+                            enabled = uiState.selectedSongIds.isNotEmpty()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = "Play Selected"
+                            )
+                        }
+                        IconButton(
+                            onClick = { showBatchAddToPlaylistDialog = true },
+                            enabled = uiState.selectedSongIds.isNotEmpty()
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
+                                contentDescription = "Add to Playlist"
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                val selectedSongs = uiState.songs.filter { it.id in uiState.selectedSongIds }
+                                if (selectedSongs.isNotEmpty()) {
+                                    val uris = ArrayList<Uri>()
+                                    selectedSongs.forEach {
+                                        uris.add(ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, it.id))
+                                    }
+                                    val shareIntent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                                        type = "audio/*"
+                                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(Intent.createChooser(shareIntent, "Share Songs"))
+                                }
+                            },
+                            enabled = uiState.selectedSongIds.isNotEmpty()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Share Selected"
+                            )
+                        }
+                        IconButton(
+                            onClick = { showBatchDeleteConfirmDialog = true },
+                            enabled = uiState.selectedSongIds.isNotEmpty()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteForever,
+                                contentDescription = "Delete Selected",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         PullToRefreshBox(
             isRefreshing = uiState.isRefreshing,
             onRefresh = { viewModel.refresh() },
@@ -291,12 +414,29 @@ fun SongsScreen(
                             ),
                             listItemContent = { song ->
                                 val isCurrent = song.id == currentSongId
+                                val isSelected = uiState.selectedSongIds.contains(song.id)
                                 VedTuneSongRow(
                                     song = song,
                                     isCurrentSong = isCurrent,
                                     isPlaying = isPlaying && isCurrent,
                                     showArtwork = uiState.viewPreferences.showAlbumArt,
-                                    onClick = { viewModel.playSong(song) },
+                                    isSelected = isSelected,
+                                    isSelectionMode = uiState.isSelectionMode,
+                                    onClick = {
+                                        if (uiState.isSelectionMode) {
+                                            viewModel.toggleSongSelection(song.id)
+                                        } else {
+                                            viewModel.playSong(song)
+                                            onNavigateToPlayer()
+                                        }
+                                    },
+                                    onLongClick = {
+                                        if (!uiState.isSelectionMode) {
+                                            viewModel.enterSelectionMode(song.id)
+                                        } else {
+                                            viewModel.toggleSongSelection(song.id)
+                                        }
+                                    },
                                     onOptionsClick = { selectedSongForOptions = song },
                                     modifier = Modifier.drawBehind {
                                         if (highlightedSongId == song.id) {
@@ -310,6 +450,7 @@ fun SongsScreen(
                             },
                             gridItemContent = { song ->
                                 val isCurrentSong = song.id == currentSongId
+                                val isSelected = uiState.selectedSongIds.contains(song.id)
                                 val subtitle = if (song.album.isNotBlank() && song.album != "Unknown Album") {
                                     "${song.artist} • ${song.album}"
                                 } else {
@@ -318,16 +459,43 @@ fun SongsScreen(
                                 VedTuneGridCard(
                                     primaryText = song.title,
                                     secondaryText = subtitle,
-                                    onClick = { viewModel.playSong(song) },
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                    onClick = {
+                                        if (uiState.isSelectionMode) {
+                                            viewModel.toggleSongSelection(song.id)
+                                        } else {
+                                            viewModel.playSong(song)
+                                            onNavigateToPlayer()
+                                        }
+                                    },
+                                    onLongClick = {
+                                        if (!uiState.isSelectionMode) {
+                                            viewModel.enterSelectionMode(song.id)
+                                        } else {
+                                            viewModel.toggleSongSelection(song.id)
+                                        }
+                                    },
+                                    containerColor = if (isSelected) {
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceContainerLow
+                                    },
                                     gridCount = uiState.viewPreferences.gridSpanCount,
                                     showArtwork = uiState.viewPreferences.showAlbumArt,
                                     trailingContent = {
-                                        IconButton(onClick = { selectedSongForOptions = song }) {
+                                        if (uiState.isSelectionMode) {
                                             Icon(
-                                                imageVector = Icons.Default.MoreVert,
-                                                contentDescription = "Options"
+                                                imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                                contentDescription = if (isSelected) "Selected" else "Not selected",
+                                                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                                modifier = Modifier.size(24.dp)
                                             )
+                                        } else {
+                                            IconButton(onClick = { selectedSongForOptions = song }) {
+                                                Icon(
+                                                    imageVector = Icons.Default.MoreVert,
+                                                    contentDescription = "Options"
+                                                )
+                                            }
                                         }
                                     },
                                     modifier = Modifier.drawBehind {
@@ -353,7 +521,7 @@ fun SongsScreen(
                                                     .background(MaterialTheme.colorScheme.surfaceVariant),
                                                 showArtwork = uiState.viewPreferences.showAlbumArt
                                             )
-                                            if (isCurrentSong) {
+                                            if (isCurrentSong && !uiState.isSelectionMode) {
                                                 Box(
                                                     modifier = Modifier
                                                         .fillMaxSize()
@@ -364,6 +532,22 @@ fun SongsScreen(
                                                     PlayingIndicator(
                                                         isPlaying = isPlaying,
                                                         modifier = Modifier.size(VedTuneIconSizes.ExtraLarge)
+                                                    )
+                                                }
+                                            }
+                                            if (uiState.isSelectionMode && isSelected) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .clip(VedTuneShapeTokens.Medium)
+                                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Check,
+                                                        contentDescription = "Selected",
+                                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                                        modifier = Modifier.size(36.dp)
                                                     )
                                                 }
                                             }
@@ -394,194 +578,90 @@ fun SongsScreen(
     }
 
     selectedSongForOptions?.let { song ->
-        ModalBottomSheet(
-            onDismissRequest = { selectedSongForOptions = null }
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 32.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SongArtwork(
-                        albumId = song.albumId,
-                        lastModified = song.dateModified,
-                        fallbackIcon = Icons.Default.MusicNote,
-                        showFallbackAnimation = false,
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clip(MaterialTheme.shapes.medium)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = song.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "Artist",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = song.artist,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Album,
-                                contentDescription = "Album",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = song.album,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
+        VedTuneSongOptionsBottomSheet(
+            song = song,
+            onDismiss = { selectedSongForOptions = null },
+            onSongInfo = {
+                selectedSongForOptions = null
+                showInfoDialogSong = song
+            },
+            onAddToPlaylist = {
+                selectedSongForOptions = null
+                songForPlaylist = song
+            },
+            onPreviewSong = {
+                selectedSongForOptions = null
+                showPreviewDialogSong = song
+            },
+            onShare = {
+                selectedSongForOptions = null
+                val songUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, song.id)
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "audio/*"
+                    putExtra(Intent.EXTRA_STREAM, songUri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
-                
-                HorizontalDivider()
-                
-                LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                    item {
-                        BottomSheetOption(
-                            icon = Icons.Default.Info,
-                            title = "Song Info",
-                            onClick = {
-                                selectedSongForOptions = null
-                                showInfoDialogSong = song
-                            }
-                        )
-                    }
-                    item {
-                        BottomSheetOption(
-                            icon = Icons.AutoMirrored.Filled.PlaylistAdd,
-                            title = "Add to Playlist",
-                            onClick = {
-                                selectedSongForOptions = null
-                                songForPlaylist = song
-                            }
-                        )
-                    }
-                    item {
-                        BottomSheetOption(
-                            icon = Icons.Default.PlayCircle,
-                            title = "Preview Song",
-                            onClick = {
-                                selectedSongForOptions = null
-                                showPreviewDialogSong = song
-                            }
-                        )
-                    }
-                    item {
-                        BottomSheetOption(
-                            icon = Icons.Default.Share,
-                            title = "Share",
-                            onClick = {
-                                selectedSongForOptions = null
-                                val songUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, song.id)
-                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "audio/*"
-                                    putExtra(Intent.EXTRA_STREAM, songUri)
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
-                                context.startActivity(Intent.createChooser(shareIntent, "Share Song"))
-                            }
-                        )
-                    }
-                    item {
-                        BottomSheetOption(
-                            icon = Icons.Default.Edit,
-                            title = "Edit Tags",
-                            onClick = {
-                                selectedSongForOptions = null
-                                onNavigateToEditTags(song.id)
-                            }
-                        )
-                    }
-                    item {
-                        BottomSheetOption(
-                            icon = Icons.Default.DeleteForever,
-                            title = "Delete Permanently",
-                            tint = MaterialTheme.colorScheme.error,
-                            onClick = {
-                                selectedSongForOptions = null
-                                showDeleteConfirmDialogSong = song
-                            }
-                        )
-                    }
-                    item {
-                        BottomSheetOption(
-                            icon = Icons.Default.Album,
-                            title = "Go to Album",
-                            onClick = {
-                                selectedSongForOptions = null
-                                onNavigateToAlbum(song.albumId)
-                            }
-                        )
-                    }
-                    item {
-                        BottomSheetOption(
-                            icon = Icons.Default.Person,
-                            title = "Go to Artist",
-                            onClick = {
-                                selectedSongForOptions = null
-                                onNavigateToArtist(song.artist)
-                            }
-                        )
-                    }
-                    item {
-                        BottomSheetOption(
-                            icon = Icons.Default.Shuffle,
-                            title = "Shuffle",
-                            onClick = {
-                                selectedSongForOptions = null
-                                viewModel.playShuffle(song)
-                            }
-                        )
-                    }
-                    item {
-                        BottomSheetOption(
-                            icon = Icons.Default.QueuePlayNext,
-                            title = "Play Next",
-                            onClick = {
-                                selectedSongForOptions = null
-                                viewModel.playNext(song)
-                            }
-                        )
-                    }
+                context.startActivity(Intent.createChooser(shareIntent, "Share Song"))
+            },
+            onEditTags = {
+                selectedSongForOptions = null
+                onNavigateToEditTags(song.id)
+            },
+            onDeletePermanently = {
+                selectedSongForOptions = null
+                showDeleteConfirmDialogSong = song
+            },
+            onGoToAlbum = if (song.albumId > 0) {
+                {
+                    selectedSongForOptions = null
+                    onNavigateToAlbum(song.albumId)
                 }
+            } else null,
+            onGoToArtist = if (song.artist.isNotBlank() && song.artist != "<unknown>") {
+                {
+                    selectedSongForOptions = null
+                    onNavigateToArtist(song.artist)
+                }
+            } else null,
+            onPlayShuffle = {
+                selectedSongForOptions = null
+                viewModel.playShuffle(song)
+            },
+            onPlayNext = {
+                selectedSongForOptions = null
+                viewModel.playNext(song)
             }
-        }
+        )
+    }
+
+    if (showBatchDeleteConfirmDialog) {
+        VedTuneConfirmDialog(
+            title = "Delete Selected Songs",
+            message = "Are you sure you want to permanently delete ${uiState.selectedSongIds.size} selected songs from your device? This action cannot be undone.",
+            confirmText = "Delete",
+            dismissText = "Cancel",
+            isDestructive = true,
+            onConfirm = {
+                viewModel.deleteSelectedPermanently(context)
+                showBatchDeleteConfirmDialog = false
+            },
+            onDismiss = { showBatchDeleteConfirmDialog = false }
+        )
+    }
+
+    if (showBatchAddToPlaylistDialog) {
+        AddToPlaylistDialog(
+            playlists = playlists,
+            onDismiss = { showBatchAddToPlaylistDialog = false },
+            onPlaylistSelected = { playlistId ->
+                viewModel.addSelectedToPlaylist(playlistId)
+                showBatchAddToPlaylistDialog = false
+            },
+            onCreateNewPlaylist = { playlistName ->
+                viewModel.createPlaylistAndAddSelected(playlistName)
+                showBatchAddToPlaylistDialog = false
+            }
+        )
     }
 
     showInfoDialogSong?.let { song ->
@@ -641,43 +721,6 @@ fun SongsScreen(
                 showDeleteConfirmDialogSong = null
             },
             onDismiss = { showDeleteConfirmDialogSong = null }
-        )
-    }
-}
-
-@Composable
-fun BottomSheetOption(
-    icon: ImageVector,
-    title: String,
-    tint: Color = MaterialTheme.colorScheme.onSurface,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                tint = tint,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            color = tint
         )
     }
 }

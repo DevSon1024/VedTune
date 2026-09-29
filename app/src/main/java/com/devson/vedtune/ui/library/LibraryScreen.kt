@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Folder
@@ -91,13 +93,13 @@ import com.devson.vedtune.ui.components.AddToPlaylistDialog
 import com.devson.vedtune.ui.components.LibraryUtilityRow
 import com.devson.vedtune.ui.components.VedTuneConfirmDialog
 import com.devson.vedtune.ui.components.VedTuneIconButton
+import com.devson.vedtune.ui.components.VedTuneSongOptionsBottomSheet
 import com.devson.vedtune.ui.folders.FolderSortBy
 import com.devson.vedtune.ui.folders.FolderSortOrder
 import com.devson.vedtune.ui.folders.FoldersScreen
 import com.devson.vedtune.ui.folders.FoldersViewModel
 import com.devson.vedtune.ui.genres.GenresScreen
 import com.devson.vedtune.ui.genres.GenresViewModel
-import com.devson.vedtune.ui.player.components.OptionsSheetContent
 import com.devson.vedtune.ui.playlists.PlaylistSortBy
 import com.devson.vedtune.ui.playlists.PlaylistsScreen
 import com.devson.vedtune.ui.playlists.PlaylistsViewModel
@@ -124,6 +126,7 @@ fun LibraryScreen(
     onNavigateToGenre: (String) -> Unit,
     onNavigateToEditTags: (Long) -> Unit,
     onNavigateToHistory: () -> Unit = {},
+    onNavigateToPlayer: () -> Unit = {},
     navigateToLocationEvent: kotlinx.coroutines.flow.SharedFlow<Long>?,
     targetLibraryTabEvent: kotlinx.coroutines.flow.SharedFlow<Int>? = null,
     contentPadding: PaddingValues,
@@ -295,7 +298,7 @@ fun LibraryScreen(
                     )
                 }
 
-                // Quick Shortcut Cards Row (Favorites, Recent, Folders, Playlists)
+                // Quick Shortcut Cards Row (Favorites, Recent, Super Queue)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -321,23 +324,14 @@ fun LibraryScreen(
                         onClick = onNavigateToHistory
                     )
                     LibraryQuickCard(
-                        title = "Folders",
-                        icon = Icons.Default.Folder,
+                        title = "Super Queue",
+                        subtitle = "Coming Soon",
+                        icon = Icons.Default.Bolt,
                         containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                         iconColor = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f),
                         onClick = {
-                            scope.launch { pagerState.scrollToPage(4) }
-                        }
-                    )
-                    LibraryQuickCard(
-                        title = "Playlists",
-                        icon = Icons.AutoMirrored.Filled.PlaylistPlay,
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                        iconColor = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            scope.launch { pagerState.scrollToPage(5) }
+                            Toast.makeText(context, "Super Queue is coming soon!", Toast.LENGTH_SHORT).show()
                         }
                     )
                 }
@@ -758,6 +752,7 @@ fun LibraryScreen(
                         onNavigateToAlbum = onNavigateToAlbum,
                         onNavigateToArtist = onNavigateToArtist,
                         onNavigateToEditTags = onNavigateToEditTags,
+                        onNavigateToPlayer = onNavigateToPlayer,
                         navigateToLocationEvent = navigateToLocationEvent,
                         onLayoutToggleClick = { songsViewModel.toggleLayoutView() },
                         contentPadding = contentPadding,
@@ -798,6 +793,7 @@ fun LibraryScreen(
                     FoldersScreen(
                         viewModel = foldersViewModel,
                         onSongOptionsClick = { song -> songForOptions = song },
+                        onNavigateToPlayer = onNavigateToPlayer,
                         contentPadding = contentPadding,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -818,44 +814,44 @@ fun LibraryScreen(
 
     // Song Options Bottom Sheet for Library
     songForOptions?.let { activeSong ->
-        ModalBottomSheet(
-            onDismissRequest = { songForOptions = null },
-            shape = VedTuneShapeTokens.BottomSheet,
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        ) {
-            OptionsSheetContent(
-                song = activeSong,
-                showArtwork = uiState.showArtwork,
-                onEditTags = {
-                    songForOptions = null
-                    onNavigateToEditTags(activeSong.id)
-                },
-                onEditLyrics = {
-                    songForOptions = null
-                },
-                onShare = {
-                    songForOptions = null
-                    val songUri = ContentUris.withAppendedId(
-                        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                        activeSong.id
-                    )
-                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                        type = "audio/*"
-                        putExtra(Intent.EXTRA_STREAM, songUri)
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    }
-                    context.startActivity(Intent.createChooser(shareIntent, "Share Song"))
-                },
-                onDeletePermanently = {
-                    songForOptions = null
-                    songToDeletePermanently = activeSong
-                },
-                onPlayerSettings = {
-                    songForOptions = null
-                },
-                onCloseClick = { songForOptions = null }
-            )
-        }
+        VedTuneSongOptionsBottomSheet(
+            song = activeSong,
+            onDismiss = { songForOptions = null },
+            onToggleFavorite = {
+                songsViewModel.toggleFavorite(activeSong)
+                songForOptions = null
+            },
+            onPlayNext = {
+                songsViewModel.playNext(activeSong)
+                songForOptions = null
+            },
+            onAddToPlaylist = {
+                val song = activeSong
+                songForOptions = null
+                songForPlaylist = song
+            },
+            onShare = {
+                songForOptions = null
+                val songUri = ContentUris.withAppendedId(
+                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                    activeSong.id
+                )
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "audio/*"
+                    putExtra(Intent.EXTRA_STREAM, songUri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(Intent.createChooser(shareIntent, "Share Song"))
+            },
+            onEditTags = {
+                songForOptions = null
+                onNavigateToEditTags(activeSong.id)
+            },
+            onDeletePermanently = {
+                songForOptions = null
+                songToDeletePermanently = activeSong
+            }
+        )
     }
 
     // Add to Playlist Dialog
@@ -898,6 +894,7 @@ private fun LibraryQuickCard(
     containerColor: Color,
     iconColor: Color,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     onClick: () -> Unit
 ) {
     Surface(
@@ -909,7 +906,7 @@ private fun LibraryQuickCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 6.dp, vertical = 6.dp),
+                .padding(horizontal = 6.dp, vertical = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -928,6 +925,16 @@ private fun LibraryQuickCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }

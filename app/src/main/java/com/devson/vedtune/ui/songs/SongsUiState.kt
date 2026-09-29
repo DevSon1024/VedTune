@@ -28,7 +28,9 @@ data class SongsUiState(
     val showArtwork: Boolean = true,
     val totalItemCount: Int = 0,
     val totalDurationMs: Long = 0L,
-    val viewPreferences: ViewPreferences = ViewPreferences()
+    val viewPreferences: ViewPreferences = ViewPreferences(),
+    val isSelectionMode: Boolean = false,
+    val selectedSongIds: Set<Long> = emptySet()
 ) : UiState
 
 sealed interface SongsUiEvent : UiEvent {

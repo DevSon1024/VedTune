@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,6 +46,10 @@ import com.devson.vedtune.ui.theme.VedTuneIconSizes
 import com.devson.vedtune.ui.theme.VedTuneShapeTokens
 import com.devson.vedtune.ui.theme.spacing
 
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+
 /**
  * Standard Song list row for VedTune with high performance and accessibility.
  * Powered by VedTuneListItem.
@@ -54,10 +59,13 @@ fun VedTuneSongRow(
     song: Song,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
     isCurrentSong: Boolean = false,
     isPlaying: Boolean = false,
     showArtwork: Boolean = true,
     showDuration: Boolean = true,
+    isSelected: Boolean = false,
+    isSelectionMode: Boolean = false,
     onOptionsClick: (() -> Unit)? = null,
     containerColor: Color = MaterialTheme.colorScheme.surface
 ) {
@@ -69,13 +77,19 @@ fun VedTuneSongRow(
         }
     }
 
+    val effectiveContainerColor = when {
+        isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+        else -> containerColor
+    }
+
     VedTuneListItem(
         primaryText = song.title,
         secondaryText = subtitle,
         onClick = onClick,
+        onLongClick = onLongClick,
         modifier = modifier,
-        containerColor = containerColor,
-        isHighlighted = isCurrentSong,
+        containerColor = effectiveContainerColor,
+        isHighlighted = isCurrentSong && !isSelectionMode,
         leadingContent = if (showArtwork) {
             {
                 Box(
@@ -93,7 +107,7 @@ fun VedTuneSongRow(
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         showArtwork = showArtwork
                     )
-                    if (isCurrentSong) {
+                    if (isCurrentSong && !isSelectionMode) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -107,6 +121,22 @@ fun VedTuneSongRow(
                             )
                         }
                     }
+                    if (isSelectionMode && isSelected) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(VedTuneShapeTokens.Small)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
                 }
             }
         } else null,
@@ -115,21 +145,30 @@ fun VedTuneSongRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs)
             ) {
-                if (showDuration && song.duration > 0) {
-                    Text(
-                        text = song.duration.toFormattedSongDuration(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                if (isSelectionMode) {
+                    Icon(
+                        imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                        contentDescription = if (isSelected) "Selected" else "Not selected",
+                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.size(24.dp)
                     )
-                }
-                if (onOptionsClick != null) {
-                    VedTuneIconButton(
-                        icon = Icons.Default.MoreVert,
-                        contentDescription = "Song options for ${song.title}",
-                        onClick = onOptionsClick,
-                        iconSize = VedTuneIconSizes.Medium,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                } else {
+                    if (showDuration && song.duration > 0) {
+                        Text(
+                            text = song.duration.toFormattedSongDuration(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                        )
+                    }
+                    if (onOptionsClick != null) {
+                        VedTuneIconButton(
+                            icon = Icons.Default.MoreVert,
+                            contentDescription = "Song options for ${song.title}",
+                            onClick = onOptionsClick,
+                            iconSize = VedTuneIconSizes.Medium,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
