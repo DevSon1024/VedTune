@@ -14,6 +14,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,29 +52,41 @@ fun PlayerArtworkPager(
     onPlayPause: () -> Unit,
     onViewAlbumArt: () -> Unit,
     modifier: Modifier = Modifier,
+    enableSwipeToSkip: Boolean = true,
     contentPadding: PaddingValues = PaddingValues(horizontal = 48.dp),
     overlapOffset: Dp = 16.dp
 ) {
     if (queue.isEmpty()) return
 
-    val initialIndex = currentQueueIndex.coerceIn(0, queue.size - 1)
+    val currentQueueIndexState by rememberUpdatedState(currentQueueIndex)
+    val queueState by rememberUpdatedState(queue)
+    val onSkipToQueueItemState by rememberUpdatedState(onSkipToQueueItem)
+
+    val initialIndex = currentQueueIndex.coerceIn(0, (queue.size - 1).coerceAtLeast(0))
     val pagerState = rememberPagerState(
         initialPage = initialIndex,
-        pageCount = { queue.size }
+        pageCount = { queueState.size }
     )
 
     // Sync with external / automated track changes (e.g. song finishes, next/prev button)
     LaunchedEffect(currentQueueIndex) {
-        if (currentQueueIndex in 0 until pagerState.pageCount && pagerState.currentPage != currentQueueIndex) {
-            pagerState.animateScrollToPage(currentQueueIndex)
+        if (!pagerState.isScrollInProgress &&
+            currentQueueIndex in 0 until pagerState.pageCount &&
+            pagerState.currentPage != currentQueueIndex
+        ) {
+            if ((pagerState.currentPage - currentQueueIndex).absoluteValue > 1) {
+                pagerState.scrollToPage(currentQueueIndex)
+            } else {
+                pagerState.animateScrollToPage(currentQueueIndex)
+            }
         }
     }
 
     // Sync with user physical swipes: when the user settles on a new page, skip to that queue item
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.settledPage }.collect { settledPage ->
-            if (settledPage != currentQueueIndex && settledPage in queue.indices) {
-                onSkipToQueueItem(settledPage)
+            if (settledPage != currentQueueIndexState && settledPage in 0 until queueState.size) {
+                onSkipToQueueItemState(settledPage)
             }
         }
     }
@@ -85,11 +99,12 @@ fun PlayerArtworkPager(
         modifier = modifier
             .fillMaxWidth()
             .graphicsLayer { clip = false },
+        userScrollEnabled = enableSwipeToSkip,
         contentPadding = contentPadding,
         pageSize = PageSize.Fill,
         beyondViewportPageCount = 2,
         flingBehavior = PagerDefaults.flingBehavior(state = pagerState),
-        key = { index -> queue.getOrNull(index)?.id ?: index }
+        key = { index -> queue.getOrNull(index)?.let { "${it.id}_$index" } ?: index }
     ) { page ->
         val song = queue.getOrNull(page) ?: return@HorizontalPager
         val rawOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
@@ -136,7 +151,7 @@ fun PlayerArtworkPager(
                     this.shape = cardShape
                     this.clip = true
                 }
-                .background(Color(0xFF1E293B), cardShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant, cardShape)
                 .then(gestureModifier),
             contentAlignment = Alignment.Center
         ) {

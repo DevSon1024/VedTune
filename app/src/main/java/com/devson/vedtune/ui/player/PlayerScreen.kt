@@ -41,7 +41,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -61,7 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
-import com.devson.vedtune.ui.theme.DarkColorScheme
+import com.devson.vedtune.ui.theme.ArtworkColorExtractor
 import com.devson.vedtune.ui.components.AddToPlaylistDialog
 import com.devson.vedtune.ui.components.ArtworkThumbnailSize
 import com.devson.vedtune.ui.components.AudioDiagnosticsDialog
@@ -197,9 +196,11 @@ fun PlayerScreen(
         }
     }
 
-    // Ensure light/white status bar and navigation bar icons on PlayerScreen against dark scrims
+    val isDark = ArtworkColorExtractor.calculateLuminance(MaterialTheme.colorScheme.surface) < 0.5f
+
+    // Dynamically adjust status bar and navigation bar icons based on dark/light theme
     val view = LocalView.current
-    DisposableEffect(view) {
+    DisposableEffect(view, isDark) {
         var ctx = view.context
         while (ctx is ContextWrapper) {
             if (ctx is Activity) break
@@ -210,20 +211,12 @@ fun PlayerScreen(
         val prevLightStatusBars = controller?.isAppearanceLightStatusBars ?: false
         val prevLightNavBars = controller?.isAppearanceLightNavigationBars ?: false
 
-        controller?.isAppearanceLightStatusBars = false
-        controller?.isAppearanceLightNavigationBars = false
+        controller?.isAppearanceLightStatusBars = !isDark
+        controller?.isAppearanceLightNavigationBars = !isDark
 
         onDispose {
             controller?.isAppearanceLightStatusBars = prevLightStatusBars
             controller?.isAppearanceLightNavigationBars = prevLightNavBars
-        }
-    }
-
-    val playerColorScheme = remember(context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            dynamicDarkColorScheme(context)
-        } else {
-            DarkColorScheme
         }
     }
 
@@ -248,108 +241,138 @@ fun PlayerScreen(
         }
     }
 
-    MaterialTheme(
-        colorScheme = playerColorScheme
+    val playerBackgroundColor = if (isDark) Color.Black else MaterialTheme.colorScheme.background
+    val artworkOverlayColor = if (isDark) Color.Black.copy(alpha = 0.20f) else Color.White.copy(alpha = 0.20f)
+    val fallbackBackgroundBrush = if (isDark) {
+        Brush.verticalGradient(
+            colors = listOf(
+                Color(0xFF0F172A),
+                Color(0xFF020617)
+            )
+        )
+    } else {
+        Brush.verticalGradient(
+            colors = listOf(
+                MaterialTheme.colorScheme.surfaceVariant,
+                MaterialTheme.colorScheme.background
+            )
+        )
+    }
+
+    val topScrimBrush = if (isDark) {
+        Brush.verticalGradient(
+            colors = listOf(
+                Color.Black.copy(alpha = 0.65f),
+                Color.Black.copy(alpha = 0.38f),
+                Color.Black.copy(alpha = 0.12f),
+                Color.Transparent
+            )
+        )
+    } else {
+        Brush.verticalGradient(
+            colors = listOf(
+                Color.White.copy(alpha = 0.85f),
+                Color.White.copy(alpha = 0.60f),
+                Color.White.copy(alpha = 0.25f),
+                Color.Transparent
+            )
+        )
+    }
+
+    val bottomScrimBrush = if (isDark) {
+        Brush.verticalGradient(
+            colors = listOf(
+                Color.Transparent,
+                Color.Black.copy(alpha = 0.20f),
+                Color.Black.copy(alpha = 0.50f),
+                Color.Black.copy(alpha = 0.80f)
+            )
+        )
+    } else {
+        Brush.verticalGradient(
+            colors = listOf(
+                Color.Transparent,
+                Color.White.copy(alpha = 0.30f),
+                Color.White.copy(alpha = 0.70f),
+                Color.White.copy(alpha = 0.92f)
+            )
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(playerBackgroundColor)
     ) {
-        Box(
-            modifier = modifier
+        // 1. Dynamic Contrast-Safe Blurred Artwork Background
+        Crossfade(
+            targetState = song?.albumId,
+            animationSpec = tween(400, easing = FastOutSlowInEasing),
+            label = "BackgroundTransition",
+            modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
-        ) {
-            // 1. Dynamic Contrast-Safe Blurred Artwork Background
-            Crossfade(
-                targetState = song?.albumId,
-                animationSpec = tween(400, easing = FastOutSlowInEasing),
-                label = "BackgroundTransition",
+                .background(playerBackgroundColor)
+        ) { albumId ->
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black)
-            ) { albumId ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black)
-                ) {
-                    if (albumId != null) {
-                        SongArtwork(
-                            albumId = albumId,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer {
-                                    scaleX = 1.15f
-                                    scaleY = 1.15f
+                    .background(playerBackgroundColor)
+            ) {
+                if (albumId != null) {
+                    SongArtwork(
+                        albumId = albumId,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                scaleX = 1.15f
+                                scaleY = 1.15f
+                            }
+                            .then(
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && playerBackgroundBlurRadius > 0f) {
+                                    Modifier.blur(playerBackgroundBlurRadius.dp)
+                                } else {
+                                    Modifier
                                 }
-                                .then(
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && playerBackgroundBlurRadius > 0f) {
-                                        Modifier.blur(playerBackgroundBlurRadius.dp)
-                                    } else {
-                                        Modifier
-                                    }
-                                ),
-                            showArtwork = showArtworkState,
-                            blurRadius = playerBackgroundBlurRadius.toInt(),
-                            thumbnailSize = ArtworkThumbnailSize.SMALL,
-                            isPlaying = isPlaying,
-                            showFallbackAnimation = false
-                        )
-                        // Ambient base darkening: keeps artwork colors vibrant while avoiding harsh glare
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.20f))
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(
-                                            Color(0xFF0F172A),
-                                            Color(0xFF020617)
-                                        )
-                                    )
-                                )
-                        )
-                    }
+                            ),
+                        showArtwork = showArtworkState,
+                        blurRadius = playerBackgroundBlurRadius.toInt(),
+                        thumbnailSize = ArtworkThumbnailSize.SMALL,
+                        isPlaying = isPlaying,
+                        showFallbackAnimation = false
+                    )
+                    // Ambient base darkening or lightening: keeps artwork colors vibrant while avoiding harsh glare
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(artworkOverlayColor)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(fallbackBackgroundBrush)
+                    )
                 }
             }
+        }
 
-            // Top Black Blur / Scrim Gradient: ensures device status bar and top header are clearly legible
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(130.dp)
-                    .align(Alignment.TopCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Black.copy(alpha = 0.65f),
-                                Color.Black.copy(alpha = 0.38f),
-                                Color.Black.copy(alpha = 0.12f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
+        // Top Blur / Scrim Gradient: ensures device status bar and top header are clearly legible
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(130.dp)
+                .align(Alignment.TopCenter)
+                .background(topScrimBrush)
+        )
 
-            // Bottom Black Blur / Scrim Gradient: ensures seekbar, timestamps, action bar, and playback controls are clearly legible
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.44f)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.20f),
-                                Color.Black.copy(alpha = 0.50f),
-                                Color.Black.copy(alpha = 0.80f)
-                            )
-                        )
-                    )
-            )
+        // Bottom Blur / Scrim Gradient: ensures seekbar, timestamps, action bar, and playback controls are clearly legible
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.44f)
+                .align(Alignment.BottomCenter)
+                .background(bottomScrimBrush)
+        )
 
         // 2. Main Content (Adaptive Portrait vs Landscape Layout)
         val currentActiveSong = song
@@ -413,6 +436,7 @@ fun PlayerScreen(
                                         isPlaying = isPlaying,
                                         artworkScale = artworkScale,
                                         showArtwork = showArtworkState,
+                                        enableSwipeToSkip = enableSwipeToSkip,
                                         albumArtClickAction = albumArtClickAction,
                                         playbackProgress = progressProvider,
                                         onSkipToQueueItem = { newIndex -> viewModel.skipToQueueItem(newIndex) },
@@ -453,8 +477,7 @@ fun PlayerScreen(
                         PlayerHeader(
                             sleepTimerRemaining = sleepTimerRemaining,
                             onBackClick = dismissPlayer,
-                            onQueueClick = { showQueueSheet = true },
-                            onOptionsClick = { sheetState = PlayerSheetState.Options }
+                            onQueueClick = { showQueueSheet = true }
                         )
 
                         Crossfade(
@@ -531,7 +554,6 @@ fun PlayerScreen(
                         sleepTimerRemaining = sleepTimerRemaining,
                         onBackClick = dismissPlayer,
                         onQueueClick = { showQueueSheet = true },
-                        onOptionsClick = { sheetState = PlayerSheetState.Options },
                         modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m)
                     )
 
@@ -569,6 +591,7 @@ fun PlayerScreen(
                                         isPlaying = isPlaying,
                                         artworkScale = artworkScale,
                                         showArtwork = showArtworkState,
+                                        enableSwipeToSkip = enableSwipeToSkip,
                                         albumArtClickAction = albumArtClickAction,
                                         playbackProgress = progressProvider,
                                         onSkipToQueueItem = { newIndex -> viewModel.skipToQueueItem(newIndex) },
@@ -840,6 +863,5 @@ fun PlayerScreen(
             viewModel = viewModel,
             onDismiss = { showQueueSheet = false }
         )
-    }
     }
 }

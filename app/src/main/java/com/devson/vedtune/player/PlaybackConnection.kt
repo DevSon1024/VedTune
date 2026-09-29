@@ -830,6 +830,11 @@ class PlaybackConnection @Inject constructor(
                 if (index in 0 until controller.mediaItemCount) {
                     controller.seekTo(index, 0L)
                     controller.play()
+                } else {
+                    val queue = _playlistQueue.value
+                    if (index in queue.indices) {
+                        playQueueItemById(queue[index].id)
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
