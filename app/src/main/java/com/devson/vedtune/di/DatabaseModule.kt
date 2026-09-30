@@ -68,6 +68,47 @@ object DatabaseModule {
             }
         }
 
+        val migration5to6 = object : androidx.room.migration.Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS queues (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        name TEXT NOT NULL,
+                        orderIndex INTEGER NOT NULL DEFAULT 0,
+                        createdAt INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+
+                db.execSQL("INSERT OR IGNORE INTO queues (id, name, orderIndex, createdAt) VALUES (1, 'Default Queue', 0, ${System.currentTimeMillis()})")
+
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS queue_items_new (
+                        queueItemId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        queueId INTEGER NOT NULL,
+                        songId INTEGER NOT NULL,
+                        orderIndex INTEGER NOT NULL,
+                        FOREIGN KEY (queueId) REFERENCES queues(id) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+
+                try {
+                    db.execSQL("""
+                        INSERT INTO queue_items_new (queueItemId, queueId, songId, orderIndex)
+                        SELECT queueItemId, 1, songId, orderIndex FROM queue_items
+                    """.trimIndent())
+                    db.execSQL("DROP TABLE queue_items")
+                } catch (e: Exception) {
+                    // In case queue_items table didn't exist or had schema mismatch
+                }
+
+                db.execSQL("ALTER TABLE queue_items_new RENAME TO queue_items")
+
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_queue_items_queueId_orderIndex ON queue_items(queueId, orderIndex)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_queue_items_queueId ON queue_items(queueId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_queue_items_songId ON queue_items(songId)")
+            }
+        }
+
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
@@ -77,13 +118,16 @@ object DatabaseModule {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
                 db.execSQL("INSERT OR IGNORE INTO playlists (id, name, createdAt) VALUES (${Playlist.FAVORITES_PLAYLIST_ID}, '${Playlist.FAVORITES_PLAYLIST_NAME}', ${System.currentTimeMillis()})")
+                db.execSQL("INSERT OR IGNORE INTO queues (id, name, orderIndex, createdAt) VALUES (1, 'All Songs', 0, ${System.currentTimeMillis()})")
             }
             override fun onOpen(db: SupportSQLiteDatabase) {
                 super.onOpen(db)
                 db.execSQL("INSERT OR IGNORE INTO playlists (id, name, createdAt) VALUES (${Playlist.FAVORITES_PLAYLIST_ID}, '${Playlist.FAVORITES_PLAYLIST_NAME}', ${System.currentTimeMillis()})")
+                db.execSQL("INSERT OR IGNORE INTO queues (id, name, orderIndex, createdAt) VALUES (1, 'All Songs', 0, ${System.currentTimeMillis()})")
+                db.execSQL("UPDATE queues SET name = 'All Songs' WHERE id = 1 AND name = 'Default Queue'")
             }
         })
-        .addMigrations(migration3to4, migration4to5)
+        .addMigrations(migration3to4, migration4to5, migration5to6)
         .fallbackToDestructiveMigration()
         .build()
     }

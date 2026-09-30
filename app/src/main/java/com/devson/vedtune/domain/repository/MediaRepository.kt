@@ -4,6 +4,7 @@ import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.domain.model.Album
 import com.devson.vedtune.domain.model.Artist
 import com.devson.vedtune.domain.model.Playlist
+import com.devson.vedtune.domain.model.QueueInfo
 import kotlinx.coroutines.flow.Flow
 
 interface MediaRepository {
@@ -16,8 +17,25 @@ interface MediaRepository {
     suspend fun clearAllPlaybackHistory()
     fun getRecentlyPlayedSongs(): Flow<List<Song>>
     suspend fun synchronizeLibrary()
+
+    // Multi-Queue operations
+    fun getAllQueues(): Flow<List<QueueInfo>>
+    fun getQueueSongs(queueId: Long): Flow<List<Song>>
+    suspend fun getQueueSongsSync(queueId: Long): List<Song>
+    suspend fun createQueue(name: String): Long
+    suspend fun renameQueue(queueId: Long, newName: String)
+    suspend fun deleteQueue(queueId: Long)
+    suspend fun removeAllOtherQueues(keepQueueId: Long)
+    suspend fun reorderQueues(orderedQueueIds: List<Long>)
+    suspend fun saveQueueSongs(queueId: Long, songs: List<Song>)
+    suspend fun addSongsToQueue(queueId: Long, songIds: List<Long>, atBeginning: Boolean = false)
+    suspend fun removeSongFromQueue(queueId: Long, songId: Long)
+    suspend fun clearQueueById(queueId: Long)
+
+    // Legacy Queue operations (defaults to active/default queue)
     suspend fun getQueue(): List<Song>
     suspend fun saveQueue(songs: List<Song>)
+
     fun getAllAlbums(): Flow<List<Album>>
     fun getSongsByAlbumId(albumId: Long): Flow<List<Song>>
     fun getAllArtists(): Flow<List<Artist>>

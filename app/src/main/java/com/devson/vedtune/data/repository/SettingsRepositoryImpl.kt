@@ -54,6 +54,7 @@ class SettingsRepositoryImpl @Inject constructor(
         private val KEY_SHOW_LYRICS_BUTTON = booleanPreferencesKey("show_lyrics_button")
         private val KEY_SHOW_SLEEP_TIMER_BUTTON = booleanPreferencesKey("show_sleep_timer_button")
         private val KEY_SHOW_SHUFFLE_REPEAT_BUTTONS = booleanPreferencesKey("show_shuffle_repeat_buttons")
+        private val KEY_ACTIVE_QUEUE_ID = androidx.datastore.preferences.core.longPreferencesKey("active_queue_id")
         private val KEY_LRC_SEARCH_FIELD = stringPreferencesKey("lrc_search_field")
 
 
@@ -205,6 +206,16 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override val showShuffleRepeatButtons: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[KEY_SHOW_SHUFFLE_REPEAT_BUTTONS] ?: true
+    }
+
+    override val activeQueueId: Flow<Long> = dataStore.data.map { preferences ->
+        preferences[KEY_ACTIVE_QUEUE_ID] ?: 1L
+    }
+
+    override suspend fun setActiveQueueId(queueId: Long) {
+        dataStore.edit { preferences ->
+            preferences[KEY_ACTIVE_QUEUE_ID] = queueId
+        }
     }
 
     //  Folder filtering flows 

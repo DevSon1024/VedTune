@@ -41,6 +41,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
@@ -99,6 +100,7 @@ import androidx.core.content.ContextCompat
 import com.devson.vedtune.core.formatDuration
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.ui.components.AddToPlaylistDialog
+import com.devson.vedtune.ui.components.AddToQueueModal
 import com.devson.vedtune.ui.components.ArtworkThumbnailSize
 import com.devson.vedtune.ui.components.PlayingIndicator
 import com.devson.vedtune.ui.components.SongArtwork
@@ -134,6 +136,7 @@ fun SongsScreen(
     val currentSongId by viewModel.currentSongId.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+    val queues by viewModel.queues.collectAsStateWithLifecycle()
 
     val lazyListState = rememberLazyListState()
     val lazyGridState = rememberLazyGridState()
@@ -145,12 +148,14 @@ fun SongsScreen(
 
     // Dialog and bottom sheet states
     var songForPlaylist by remember { mutableStateOf<Song?>(null) }
+    var songForQueueModal by remember { mutableStateOf<Song?>(null) }
     var selectedSongForOptions by remember { mutableStateOf<Song?>(null) }
     var showInfoDialogSong by remember { mutableStateOf<Song?>(null) }
     var showPreviewDialogSong by remember { mutableStateOf<Song?>(null) }
     var showDeleteConfirmDialogSong by remember { mutableStateOf<Song?>(null) }
     var showBatchDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showBatchAddToPlaylistDialog by remember { mutableStateOf(false) }
+    var showBatchAddToQueueModal by remember { mutableStateOf(false) }
 
     BackHandler(enabled = uiState.isSelectionMode) {
         viewModel.exitSelectionMode()
@@ -293,6 +298,15 @@ fun SongsScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
                                 contentDescription = "Add to Playlist"
+                            )
+                        }
+                        IconButton(
+                            onClick = { showBatchAddToQueueModal = true },
+                            enabled = uiState.selectedSongIds.isNotEmpty()
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                                contentDescription = "Add to Queue"
                             )
                         }
                         IconButton(
@@ -577,6 +591,23 @@ fun SongsScreen(
         )
     }
 
+    songForQueueModal?.let { targetSong ->
+        AddToQueueModal(
+            songs = listOf(targetSong),
+            prefilledQueueName = targetSong.title,
+            queues = queues,
+            onDismiss = { songForQueueModal = null },
+            onAddToQueue = { queueId, songs, playNext ->
+                viewModel.addSongsToQueue(queueId, songs.map { it.id }, playNext)
+                songForQueueModal = null
+            },
+            onCreateQueueAndAdd = { queueName, songs, playNext ->
+                viewModel.createQueueAndAddSongs(queueName, songs.map { it.id }, playNext)
+                songForQueueModal = null
+            }
+        )
+    }
+
     selectedSongForOptions?.let { song ->
         VedTuneSongOptionsBottomSheet(
             song = song,
@@ -588,6 +619,11 @@ fun SongsScreen(
             onAddToPlaylist = {
                 selectedSongForOptions = null
                 songForPlaylist = song
+            },
+            onAddToQueue = {
+                val s = song
+                selectedSongForOptions = null
+                songForQueueModal = s
             },
             onPreviewSong = {
                 selectedSongForOptions = null
@@ -660,6 +696,26 @@ fun SongsScreen(
             onCreateNewPlaylist = { playlistName ->
                 viewModel.createPlaylistAndAddSelected(playlistName)
                 showBatchAddToPlaylistDialog = false
+            }
+        )
+    }
+
+    if (showBatchAddToQueueModal) {
+        val selectedSongs = uiState.songs.filter { it.id in uiState.selectedSongIds }
+        AddToQueueModal(
+            songs = selectedSongs,
+            prefilledQueueName = if (selectedSongs.isNotEmpty()) "${selectedSongs.size} Songs" else "Queue",
+            queues = queues,
+            onDismiss = { showBatchAddToQueueModal = false },
+            onAddToQueue = { queueId, songs, playNext ->
+                viewModel.addSongsToQueue(queueId, songs.map { it.id }, playNext)
+                viewModel.exitSelectionMode()
+                showBatchAddToQueueModal = false
+            },
+            onCreateQueueAndAdd = { queueName, songs, playNext ->
+                viewModel.createQueueAndAddSongs(queueName, songs.map { it.id }, playNext)
+                viewModel.exitSelectionMode()
+                showBatchAddToQueueModal = false
             }
         )
     }

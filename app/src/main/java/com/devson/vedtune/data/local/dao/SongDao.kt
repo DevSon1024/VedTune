@@ -16,6 +16,9 @@ interface SongDao {
     @Query("SELECT * FROM songs ORDER BY title ASC")
     fun getAllSongs(): Flow<List<SongEntity>>
 
+    @Query("SELECT * FROM songs ORDER BY title ASC")
+    suspend fun getAllSongsList(): List<SongEntity>
+
     @Query("SELECT * FROM songs WHERE id = :id")
     suspend fun getSongById(id: Long): SongEntity?
 

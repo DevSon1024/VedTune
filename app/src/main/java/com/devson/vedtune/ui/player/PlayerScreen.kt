@@ -102,6 +102,7 @@ fun PlayerScreen(
     onNavigateToEditTags: (Long) -> Unit,
     onNavigateToLyricsEditor: (Long) -> Unit,
     onNavigateToLocation: (Long) -> Unit,
+    onNavigateToSuperQueue: () -> Unit = {},
     modifier: Modifier = Modifier,
     showArtwork: Boolean = true,
     showRemainingTime: Boolean = false
@@ -861,7 +862,11 @@ fun PlayerScreen(
     if (showQueueSheet) {
         QueueBottomSheet(
             viewModel = viewModel,
-            onDismiss = { showQueueSheet = false }
+            onDismiss = { showQueueSheet = false },
+            onOpenSuperQueue = {
+                showQueueSheet = false
+                onNavigateToSuperQueue()
+            }
         )
     }
 }

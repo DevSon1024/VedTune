@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 import com.devson.vedtune.domain.model.Playlist
+import com.devson.vedtune.domain.model.QueueInfo
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -61,6 +62,26 @@ class SongsViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    val queues: StateFlow<List<QueueInfo>> = repository.getAllQueues()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun addSongsToQueue(queueId: Long, songIds: List<Long>, playNext: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.addSongsToQueue(queueId, songIds, atBeginning = playNext)
+        }
+    }
+
+    fun createQueueAndAddSongs(name: String, songIds: List<Long>, playNext: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val qId = repository.createQueue(name)
+            repository.addSongsToQueue(qId, songIds, atBeginning = playNext)
+        }
+    }
 
     fun addSongToPlaylist(playlistId: Long, songId: Long) {
         viewModelScope.launch {
@@ -162,7 +183,7 @@ class SongsViewModel @Inject constructor(
     }
 
     fun playSong(song: Song) {
-        playbackConnection.playSong(song, currentState.songs)
+        playbackConnection.playSong(song, currentState.songs, targetQueueId = QueueInfo.DEFAULT_QUEUE_ID)
     }
 
     fun refresh() {
@@ -245,7 +266,7 @@ class SongsViewModel @Inject constructor(
     fun playSelectedSongs() {
         val selectedSongs = currentState.songs.filter { it.id in currentState.selectedSongIds }
         if (selectedSongs.isNotEmpty()) {
-            playbackConnection.playSong(selectedSongs.first(), selectedSongs)
+            playbackConnection.playSong(selectedSongs.first(), selectedSongs, targetQueueId = QueueInfo.DEFAULT_QUEUE_ID)
             exitSelectionMode()
         }
     }

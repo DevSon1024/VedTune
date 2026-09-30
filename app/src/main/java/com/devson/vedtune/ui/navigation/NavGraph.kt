@@ -52,6 +52,7 @@ import com.devson.vedtune.ui.genres.GenreDetailsScreen
 import com.devson.vedtune.ui.genres.GenreDetailsViewModel
 import com.devson.vedtune.ui.history.HistoryScreen
 import com.devson.vedtune.ui.history.HistoryViewModel
+import com.devson.vedtune.ui.queue.SuperQueueRoute
 
 sealed class Screen(val route: String) {
     data object Home : Screen("home")
@@ -97,6 +98,7 @@ sealed class Screen(val route: String) {
         fun createRoute(genreName: String) = "genre_details/${android.net.Uri.encode(genreName)}"
     }
     data object History : Screen("history")
+    data object SuperQueue : Screen("super_queue")
 }
 
 private val horizontalEnterTransition: AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.() -> androidx.compose.animation.EnterTransition = {
@@ -441,6 +443,9 @@ fun NavGraph(
                 onNavigateToLocation = { songId ->
                     navController.popBackStackSafe()
                     mainViewModel.navigateToLocation(songId)
+                },
+                onNavigateToSuperQueue = {
+                    navController.navigateSafe(Screen.SuperQueue.route)
                 }
             )
         }
@@ -580,6 +585,28 @@ fun NavGraph(
                 mainViewModel = mainViewModel,
                 onBackClick = { navController.popBackStackSafe() },
                 onNavigateToPlayer = { navController.navigateSafe(Screen.Player.route) },
+                onNavigateToAlbum = { albumId ->
+                    navController.navigateSafe(Screen.AlbumDetails.createRoute(albumId))
+                },
+                onNavigateToArtist = { artistName ->
+                    navController.navigateSafe(Screen.ArtistDetails.createRoute(artistName))
+                }
+            )
+        }
+        composable(
+            route = Screen.SuperQueue.route,
+            enterTransition = horizontalEnterTransition,
+            exitTransition = exitTowardsPlayerTransition,
+            popEnterTransition = popEnterFromPlayerTransition,
+            popExitTransition = horizontalPopExitTransition
+        ) {
+            SuperQueueRoute(
+                mainViewModel = mainViewModel,
+                onBackClick = { navController.popBackStackSafe() },
+                onNavigateToPlayer = { navController.navigateSafe(Screen.Player.route) },
+                onNavigateToEditTags = { songId ->
+                    navController.navigateSafe(Screen.EditTags.createRoute(songId))
+                },
                 onNavigateToAlbum = { albumId ->
                     navController.navigateSafe(Screen.AlbumDetails.createRoute(albumId))
                 },

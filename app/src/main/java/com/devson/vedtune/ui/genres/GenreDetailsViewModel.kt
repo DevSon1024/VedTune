@@ -7,6 +7,9 @@ import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.domain.repository.MediaRepository
 import com.devson.vedtune.player.PlaybackConnection
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.devson.vedtune.domain.model.Playlist
+import com.devson.vedtune.domain.model.QueueInfo
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.net.URLDecoder
@@ -18,6 +21,46 @@ class GenreDetailsViewModel @Inject constructor(
     private val repository: MediaRepository,
     private val playbackConnection: PlaybackConnection
 ) : ViewModel() {
+
+    val queues: StateFlow<List<QueueInfo>> = repository.getAllQueues()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val playlists: StateFlow<List<Playlist>> = repository.getAllPlaylists()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun addSongsToQueue(queueId: Long, songIds: List<Long>, playNext: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.addSongsToQueue(queueId, songIds, atBeginning = playNext)
+        }
+    }
+
+    fun createQueueAndAddSongs(name: String, songIds: List<Long>, playNext: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val qId = repository.createQueue(name)
+            repository.addSongsToQueue(qId, songIds, atBeginning = playNext)
+        }
+    }
+
+    fun addSongsToPlaylist(playlistId: Long, songIds: List<Long>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            songIds.forEach { songId ->
+                repository.addSongToPlaylist(playlistId, songId)
+            }
+        }
+    }
+
+    fun createPlaylistAndAddSongs(name: String, songIds: List<Long>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val playlistId = repository.createPlaylist(name)
+            songIds.forEach { songId ->
+                repository.addSongToPlaylist(playlistId, songId)
+            }
+        }
+    }
+
+    fun playNext(song: Song) {
+        playbackConnection.playNext(song)
+    }
 
     val genreName: String = URLDecoder.decode(
         savedStateHandle.get<String>("genreName") ?: "",

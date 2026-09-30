@@ -6,6 +6,7 @@ import com.devson.vedtune.data.local.dao.SongDao
 import com.devson.vedtune.data.local.dao.QueueDao
 import com.devson.vedtune.data.local.dao.PlaylistDao
 import com.devson.vedtune.data.local.entity.SongEntity
+import com.devson.vedtune.data.local.entity.QueueEntity
 import com.devson.vedtune.data.local.entity.QueueItemEntity
 import com.devson.vedtune.data.local.entity.PlaylistEntity
 import com.devson.vedtune.data.local.entity.PlaylistSongCrossRef
@@ -13,11 +14,12 @@ import com.devson.vedtune.data.local.entity.PlaylistSongCrossRef
 @Database(
     entities = [
         SongEntity::class,
+        QueueEntity::class,
         QueueItemEntity::class,
         PlaylistEntity::class,
         PlaylistSongCrossRef::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

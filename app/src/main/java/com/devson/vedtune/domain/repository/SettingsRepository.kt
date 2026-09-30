@@ -31,6 +31,8 @@ interface SettingsRepository {
     val showLyricsButton: Flow<Boolean>
     val showSleepTimerButton: Flow<Boolean>
     val showShuffleRepeatButtons: Flow<Boolean>
+    val activeQueueId: Flow<Long>
+    suspend fun setActiveQueueId(queueId: Long)
 
     // Folder filtering
     val folderFilterMode: Flow<FolderFilterMode>

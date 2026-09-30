@@ -197,6 +197,7 @@ fun HomeScreen(
                         onNavigateToGenre = onNavigateToGenre,
                         onNavigateToEditTags = onNavigateToEditTags,
                         onNavigateToHistory = onNavigateToHistory,
+                        onNavigateToSuperQueue = { navController.navigateSafe(Screen.SuperQueue.route) },
                         onNavigateToPlayer = { navController.navigateSafe(Screen.Player.route) },
                         navigateToLocationEvent = mainViewModel.navigateToLocationEvent,
                         targetLibraryTabEvent = mainViewModel.targetLibraryTabEvent,

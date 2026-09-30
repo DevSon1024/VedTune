@@ -2,7 +2,10 @@ package com.devson.vedtune.data.repository
 
 import com.devson.vedtune.data.local.dao.SongDao
 import com.devson.vedtune.data.local.dao.QueueDao
+import com.devson.vedtune.data.local.dao.QueueWithCount
+import com.devson.vedtune.data.local.entity.QueueEntity
 import com.devson.vedtune.data.local.entity.QueueItemEntity
+import com.devson.vedtune.domain.model.QueueInfo
 import com.devson.vedtune.data.mapper.toSong
 import com.devson.vedtune.data.mapper.toEntity
 import com.devson.vedtune.data.sync.MediaSyncEngine
@@ -15,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
 import com.devson.vedtune.data.local.dao.PlaylistDao
 import com.devson.vedtune.data.local.entity.PlaylistEntity
 import com.devson.vedtune.data.local.entity.PlaylistSongCrossRef
@@ -74,25 +78,148 @@ class MediaRepositoryImpl @Inject constructor(
         syncEngine.performSync()
     }
 
-    override suspend fun getQueue(): List<Song> {
-        val queueItems = queueDao.getQueueItems()
-        if (queueItems.isEmpty()) return emptyList()
-        val songIds = queueItems.map { it.songId }
-        val songEntities = songDao.getSongsByIds(songIds)
-        val songsMap = songEntities.associateBy { it.id }
-        return queueItems.mapNotNull { item ->
-            songsMap[item.songId]?.toSong()
+    override fun getAllQueues(): Flow<List<QueueInfo>> {
+        return kotlinx.coroutines.flow.combine(
+            queueDao.getAllQueuesWithCountFlow(),
+            songDao.getAllSongs()
+        ) { list, allSongs ->
+            list.map { entity ->
+                val count = if (entity.id == QueueInfo.DEFAULT_QUEUE_ID && entity.songCount == 0) {
+                    allSongs.size
+                } else {
+                    entity.songCount
+                }
+                val displayName = if (entity.id == QueueInfo.DEFAULT_QUEUE_ID && (entity.name == "Default Queue" || entity.name.isBlank())) {
+                    QueueInfo.DEFAULT_QUEUE_NAME
+                } else {
+                    entity.name
+                }
+                QueueInfo(
+                    id = entity.id,
+                    name = displayName,
+                    orderIndex = entity.orderIndex,
+                    songCount = count,
+                    createdAt = entity.createdAt
+                )
+            }
         }
     }
 
-    override suspend fun saveQueue(songs: List<Song>) {
+    override fun getQueueSongs(queueId: Long): Flow<List<Song>> {
+        return combine(
+            queueDao.getQueueItemsFlow(queueId),
+            songDao.getAllSongs()
+        ) { items, allSongs ->
+            if (items.isEmpty()) {
+                if (queueId == QueueInfo.DEFAULT_QUEUE_ID) {
+                    allSongs.map { it.toSong() }
+                } else {
+                    emptyList()
+                }
+            } else {
+                val songsMap = allSongs.associateBy { it.id }
+                items.mapNotNull { item -> songsMap[item.songId]?.toSong() }
+            }
+        }
+    }
+
+    override suspend fun getQueueSongsSync(queueId: Long): List<Song> {
+        val items = queueDao.getQueueItems(queueId)
+        if (items.isEmpty()) {
+            if (queueId == QueueInfo.DEFAULT_QUEUE_ID) {
+                return songDao.getAllSongsList().map { it.toSong() }
+            }
+            return emptyList()
+        }
+        val songIds = items.map { it.songId }
+        val songEntities = songDao.getSongsByIds(songIds)
+        val songsMap = songEntities.associateBy { it.id }
+        return items.mapNotNull { item -> songsMap[item.songId]?.toSong() }
+    }
+
+    override suspend fun createQueue(name: String): Long {
+        val maxOrder = queueDao.getMaxQueueOrderIndex()
+        val entity = QueueEntity(
+            name = name.ifBlank { "New Queue" },
+            orderIndex = maxOrder + 1,
+            createdAt = System.currentTimeMillis()
+        )
+        return queueDao.insertQueue(entity)
+    }
+
+    override suspend fun renameQueue(queueId: Long, newName: String) {
+        queueDao.renameQueue(queueId, newName.trim().ifBlank { "Queue $queueId" })
+    }
+
+    override suspend fun deleteQueue(queueId: Long) {
+        queueDao.deleteQueue(queueId)
+    }
+
+    override suspend fun removeAllOtherQueues(keepQueueId: Long) {
+        queueDao.deleteAllQueuesExcept(keepQueueId)
+    }
+
+    override suspend fun reorderQueues(orderedQueueIds: List<Long>) {
+        queueDao.reorderQueues(orderedQueueIds)
+    }
+
+    override suspend fun saveQueueSongs(queueId: Long, songs: List<Song>) {
         val entities = songs.mapIndexed { index, song ->
             QueueItemEntity(
+                queueId = queueId,
                 songId = song.id,
                 orderIndex = index
             )
         }
-        queueDao.updateQueue(entities)
+        queueDao.updateQueueItemsForQueue(queueId, entities)
+    }
+
+    override suspend fun addSongsToQueue(queueId: Long, songIds: List<Long>, atBeginning: Boolean) {
+        if (songIds.isEmpty()) return
+        val currentItems = queueDao.getQueueItems(queueId)
+        val currentSongIds = currentItems.map { it.songId }.toMutableList()
+        if (atBeginning) {
+            currentSongIds.addAll(0, songIds)
+        } else {
+            currentSongIds.addAll(songIds)
+        }
+        val newEntities = currentSongIds.mapIndexed { index, id ->
+            QueueItemEntity(
+                queueId = queueId,
+                songId = id,
+                orderIndex = index
+            )
+        }
+        queueDao.updateQueueItemsForQueue(queueId, newEntities)
+    }
+
+    override suspend fun removeSongFromQueue(queueId: Long, songId: Long) {
+        val currentItems = queueDao.getQueueItems(queueId)
+        val updatedSongIds = currentItems.map { it.songId }.toMutableList()
+        val removeIndex = updatedSongIds.indexOfFirst { it == songId }
+        if (removeIndex != -1) {
+            updatedSongIds.removeAt(removeIndex)
+            val newEntities = updatedSongIds.mapIndexed { index, id ->
+                QueueItemEntity(
+                    queueId = queueId,
+                    songId = id,
+                    orderIndex = index
+                )
+            }
+            queueDao.updateQueueItemsForQueue(queueId, newEntities)
+        }
+    }
+
+    override suspend fun clearQueueById(queueId: Long) {
+        queueDao.clearQueue(queueId)
+    }
+
+    override suspend fun getQueue(): List<Song> {
+        return getQueueSongsSync(1L)
+    }
+
+    override suspend fun saveQueue(songs: List<Song>) {
+        saveQueueSongs(1L, songs)
     }
 
     override fun getAllAlbums(): Flow<List<Album>> {

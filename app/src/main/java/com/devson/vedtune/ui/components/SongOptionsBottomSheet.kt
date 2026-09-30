@@ -54,6 +54,7 @@ fun VedTuneSongOptionsBottomSheet(
     onPlayNext: (() -> Unit)? = null,
     onPlayShuffle: (() -> Unit)? = null,
     onAddToPlaylist: (() -> Unit)? = null,
+    onAddToQueue: (() -> Unit)? = null,
     onSongInfo: (() -> Unit)? = null,
     onPreviewSong: (() -> Unit)? = null,
     onShare: (() -> Unit)? = null,
@@ -121,6 +122,14 @@ fun VedTuneSongOptionsBottomSheet(
                     title = "Add to Playlist",
                     icon = Icons.AutoMirrored.Filled.PlaylistAdd,
                     onClick = onAddToPlaylist
+                )
+            }
+
+            if (onAddToQueue != null) {
+                SheetOptionItem(
+                    title = "Add to Queue",
+                    icon = Icons.AutoMirrored.Filled.QueueMusic,
+                    onClick = onAddToQueue
                 )
             }
 
@@ -194,7 +203,7 @@ fun VedTuneSongOptionsBottomSheet(
 }
 
 @Composable
-private fun SheetOptionItem(
+fun SheetOptionItem(
     title: String,
     icon: ImageVector,
     modifier: Modifier = Modifier,

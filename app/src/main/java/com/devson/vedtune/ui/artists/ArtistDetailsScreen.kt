@@ -1,5 +1,9 @@
 package com.devson.vedtune.ui.artists
 
+import android.content.ContentUris
+import android.content.Intent
+import android.net.Uri
+import android.provider.MediaStore
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
@@ -35,10 +40,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,12 +54,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.devson.vedtune.core.formatDuration
 import com.devson.vedtune.domain.model.Song
 import com.devson.vedtune.ui.MainViewModel
+import com.devson.vedtune.ui.components.AddToPlaylistDialog
+import com.devson.vedtune.ui.components.AddToQueueModal
 import com.devson.vedtune.ui.components.MiniPlayer
 import com.devson.vedtune.ui.components.PlayingIndicator
 import com.devson.vedtune.ui.components.SongArtwork
+import com.devson.vedtune.ui.components.VedTuneCollectionOptionsBottomSheet
 import com.devson.vedtune.ui.components.VedTuneEmptyState
 import com.devson.vedtune.ui.components.VedTunePrimaryButton
 import com.devson.vedtune.ui.components.VedTuneSecondaryButton
+import com.devson.vedtune.ui.components.VedTuneSongOptionsBottomSheet
 import com.devson.vedtune.ui.theme.spacing
 import java.util.Locale
 
@@ -66,6 +78,8 @@ fun ArtistDetailsScreen(
     val songs by viewModel.songs.collectAsStateWithLifecycle()
     val artistDetails by viewModel.artistDetails.collectAsStateWithLifecycle()
     val showArtwork by viewModel.showAlbumArt.collectAsStateWithLifecycle()
+    val queues by viewModel.queues.collectAsStateWithLifecycle()
+    val playlists by viewModel.playlists.collectAsStateWithLifecycle()
 
     val currentSongId by viewModel.currentSongId.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
@@ -75,6 +89,15 @@ fun ArtistDetailsScreen(
     val showArtworkFlow by mainViewModel.showAlbumArt.collectAsStateWithLifecycle()
     val showMiniPlayerProgress by mainViewModel.showMiniPlayerProgress.collectAsStateWithLifecycle()
     val isGestureMiniPlayerEnabled by mainViewModel.isGestureMiniPlayerEnabled.collectAsStateWithLifecycle()
+
+    val context = LocalContext.current
+
+    var showCollectionOptions by remember { mutableStateOf(false) }
+    var showAddToQueueForCollection by remember { mutableStateOf(false) }
+    var showAddToPlaylistForCollection by remember { mutableStateOf(false) }
+    var selectedSongForOptions by remember { mutableStateOf<Song?>(null) }
+    var songForQueueModal by remember { mutableStateOf<Song?>(null) }
+    var songForPlaylist by remember { mutableStateOf<Song?>(null) }
 
     val progressProvider = remember(mainViewModel) {
         {
@@ -109,8 +132,15 @@ fun ArtistDetailsScreen(
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
+                IconButton(onClick = { showCollectionOptions = true }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Artist Options"
+                    )
+                }
             }
 
             if (songs.isEmpty()) {
@@ -287,6 +317,9 @@ fun ArtistDetailsScreen(
                                 viewModel.playSong(song)
                                 onNavigateToPlayer()
                             },
+                            onOptionsClick = {
+                                selectedSongForOptions = song
+                            },
                             modifier = Modifier.padding(horizontal = MaterialTheme.spacing.m, vertical = 2.dp)
                         )
                     }
@@ -317,6 +350,141 @@ fun ArtistDetailsScreen(
                 )
             }
         }
+
+        if (showCollectionOptions) {
+            VedTuneCollectionOptionsBottomSheet(
+                title = artistDetails?.name ?: "Artist",
+                subtitle = "${songs.size} tracks",
+                onDismiss = { showCollectionOptions = false },
+                onPlay = {
+                    showCollectionOptions = false
+                    viewModel.playArtist()
+                    onNavigateToPlayer()
+                },
+                onPlayShuffle = {
+                    showCollectionOptions = false
+                    viewModel.shuffleArtist()
+                    onNavigateToPlayer()
+                },
+                onAddToQueue = {
+                    showCollectionOptions = false
+                    showAddToQueueForCollection = true
+                },
+                onAddToPlaylist = {
+                    showCollectionOptions = false
+                    showAddToPlaylistForCollection = true
+                },
+                onShare = {
+                    showCollectionOptions = false
+                    if (songs.isNotEmpty()) {
+                        val uris = ArrayList<Uri>()
+                        songs.forEach {
+                            uris.add(ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, it.id))
+                        }
+                        val shareIntent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                            type = "audio/*"
+                            putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, "Share Artist Songs"))
+                    }
+                }
+            )
+        }
+
+        if (showAddToQueueForCollection) {
+            AddToQueueModal(
+                songs = songs,
+                prefilledQueueName = artistDetails?.name ?: "Artist",
+                queues = queues,
+                onDismiss = { showAddToQueueForCollection = false },
+                onAddToQueue = { queueId, songList, playNext ->
+                    viewModel.addSongsToQueue(queueId, songList.map { it.id }, playNext)
+                    showAddToQueueForCollection = false
+                },
+                onCreateQueueAndAdd = { queueName, songList, playNext ->
+                    viewModel.createQueueAndAddSongs(queueName, songList.map { it.id }, playNext)
+                    showAddToQueueForCollection = false
+                }
+            )
+        }
+
+        if (showAddToPlaylistForCollection) {
+            AddToPlaylistDialog(
+                playlists = playlists,
+                onDismiss = { showAddToPlaylistForCollection = false },
+                onPlaylistSelected = { playlistId ->
+                    viewModel.addSongsToPlaylist(playlistId, songs.map { it.id })
+                    showAddToPlaylistForCollection = false
+                },
+                onCreateNewPlaylist = { playlistName ->
+                    viewModel.createPlaylistAndAddSongs(playlistName, songs.map { it.id })
+                    showAddToPlaylistForCollection = false
+                }
+            )
+        }
+
+        selectedSongForOptions?.let { song ->
+            VedTuneSongOptionsBottomSheet(
+                song = song,
+                onDismiss = { selectedSongForOptions = null },
+                onPlayNext = {
+                    selectedSongForOptions = null
+                    viewModel.playNext(song)
+                },
+                onAddToQueue = {
+                    val s = song
+                    selectedSongForOptions = null
+                    songForQueueModal = s
+                },
+                onAddToPlaylist = {
+                    selectedSongForOptions = null
+                    songForPlaylist = song
+                },
+                onShare = {
+                    selectedSongForOptions = null
+                    val songUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, song.id)
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "audio/*"
+                        putExtra(Intent.EXTRA_STREAM, songUri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "Share Song"))
+                }
+            )
+        }
+
+        songForQueueModal?.let { song ->
+            AddToQueueModal(
+                songs = listOf(song),
+                prefilledQueueName = song.title,
+                queues = queues,
+                onDismiss = { songForQueueModal = null },
+                onAddToQueue = { queueId, songList, playNext ->
+                    viewModel.addSongsToQueue(queueId, songList.map { it.id }, playNext)
+                    songForQueueModal = null
+                },
+                onCreateQueueAndAdd = { queueName, songList, playNext ->
+                    viewModel.createQueueAndAddSongs(queueName, songList.map { it.id }, playNext)
+                    songForQueueModal = null
+                }
+            )
+        }
+
+        songForPlaylist?.let { song ->
+            AddToPlaylistDialog(
+                playlists = playlists,
+                onDismiss = { songForPlaylist = null },
+                onPlaylistSelected = { playlistId ->
+                    viewModel.addSongsToPlaylist(playlistId, listOf(song.id))
+                    songForPlaylist = null
+                },
+                onCreateNewPlaylist = { playlistName ->
+                    viewModel.createPlaylistAndAddSongs(playlistName, listOf(song.id))
+                    songForPlaylist = null
+                }
+            )
+        }
     }
 }
 
@@ -327,7 +495,8 @@ fun ArtistTrackItem(
     isCurrentSong: Boolean,
     isPlaying: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOptionsClick: (() -> Unit)? = null
 ) {
     val rowShape = RoundedCornerShape(12.dp)
     val backgroundColor = if (isCurrentSong) {
@@ -390,5 +559,15 @@ fun ArtistTrackItem(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+        if (onOptionsClick != null) {
+            IconButton(onClick = onOptionsClick) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "Song Options",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }

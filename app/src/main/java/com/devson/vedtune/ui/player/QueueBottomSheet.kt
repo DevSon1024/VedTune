@@ -88,7 +88,8 @@ private data class QueueItemEntry(
 fun QueueBottomSheet(
     viewModel: PlayerViewModel,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenSuperQueue: (() -> Unit)? = null
 ) {
     val playlistQueue by viewModel.playlistQueue.collectAsStateWithLifecycle()
     val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
@@ -196,6 +197,14 @@ fun QueueBottomSheet(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs)
                 ) {
+                    if (onOpenSuperQueue != null) {
+                        VedTuneIconButton(
+                            icon = Icons.AutoMirrored.Filled.QueueMusic,
+                            contentDescription = "Open Super Queue",
+                            onClick = onOpenSuperQueue,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                     if (localQueue.isNotEmpty()) {
                         VedTuneIconButton(
                             icon = Icons.Default.BookmarkAdd,

@@ -126,6 +126,7 @@ fun LibraryScreen(
     onNavigateToGenre: (String) -> Unit,
     onNavigateToEditTags: (Long) -> Unit,
     onNavigateToHistory: () -> Unit = {},
+    onNavigateToSuperQueue: () -> Unit = {},
     onNavigateToPlayer: () -> Unit = {},
     navigateToLocationEvent: kotlinx.coroutines.flow.SharedFlow<Long>?,
     targetLibraryTabEvent: kotlinx.coroutines.flow.SharedFlow<Int>? = null,
@@ -325,14 +326,11 @@ fun LibraryScreen(
                     )
                     LibraryQuickCard(
                         title = "Super Queue",
-                        subtitle = "Coming Soon",
-                        icon = Icons.Default.Bolt,
+                        icon = Icons.AutoMirrored.Filled.QueueMusic,
                         containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                         iconColor = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f),
-                        onClick = {
-                            Toast.makeText(context, "Super Queue is coming soon!", Toast.LENGTH_SHORT).show()
-                        }
+                        onClick = onNavigateToSuperQueue
                     )
                 }
             }

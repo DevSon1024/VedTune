@@ -19,6 +19,7 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.devson.vedtune.domain.model.Song
+import com.devson.vedtune.domain.model.QueueInfo
 import com.devson.vedtune.domain.repository.MediaRepository
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -81,12 +82,16 @@ class PlaybackConnection @Inject constructor(
     private val _currentSong = MutableStateFlow<Song?>(null)
     val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
 
+    private val _activeQueueId = MutableStateFlow(1L)
+    val activeQueueId: StateFlow<Long> = _activeQueueId.asStateFlow()
+
     companion object {
         private val KEY_CURRENT_SON_ID = longPreferencesKey("current_song_id")
         private val KEY_PLAYBACK_POSITION = longPreferencesKey("playback_position")
         private val KEY_REPEAT_MODE = intPreferencesKey("repeat_mode")
         private val KEY_SHUFFLE_MODE = booleanPreferencesKey("shuffle_mode")
         private val KEY_AUDIO_FADE_IN_ENABLED = booleanPreferencesKey("audio_fade_in_enabled")
+        private val KEY_ACTIVE_QUEUE_ID = longPreferencesKey("active_queue_id")
     }
 
     private val playerListener = object : Player.Listener {
@@ -191,8 +196,14 @@ class PlaybackConnection @Inject constructor(
         initializeController()
         scope.launch(Dispatchers.IO) {
             try {
-                originalQueue = repository.getQueue()
                 val preferences = dataStore.data.first()
+                val savedQueueId = preferences[KEY_ACTIVE_QUEUE_ID]?.takeIf { it != QueueInfo.LOCAL_QUEUE_ID } ?: QueueInfo.DEFAULT_QUEUE_ID
+                _activeQueueId.value = savedQueueId
+                originalQueue = repository.getQueueSongsSync(savedQueueId)
+                if (originalQueue.isEmpty() && savedQueueId != QueueInfo.DEFAULT_QUEUE_ID) {
+                    originalQueue = repository.getQueueSongsSync(QueueInfo.DEFAULT_QUEUE_ID)
+                    _activeQueueId.value = QueueInfo.DEFAULT_QUEUE_ID
+                }
                 val savedSongId = preferences[KEY_CURRENT_SON_ID]
                 val savedPosition = preferences[KEY_PLAYBACK_POSITION] ?: 0L
                 val savedRepeatMode = preferences[KEY_REPEAT_MODE] ?: Player.REPEAT_MODE_OFF
@@ -312,12 +323,18 @@ class PlaybackConnection @Inject constructor(
         }
     }
 
-    fun playSong(song: Song, playlist: List<Song>) {
+    fun playSong(song: Song, playlist: List<Song>, targetQueueId: Long? = null) {
         scope.launch {
             try {
                 val controller = getController()
                 originalQueue = playlist
                 
+                if (targetQueueId != null) {
+                    setActiveQueueId(targetQueueId)
+                } else {
+                    _activeQueueId.value = QueueInfo.LOCAL_QUEUE_ID
+                }
+
                 val finalPlaylist = if (_shuffleModeEnabled.value) {
                     val clicked = song
                     val remaining = playlist.filter { it.id != song.id }.shuffled()
@@ -360,7 +377,9 @@ class PlaybackConnection @Inject constructor(
                 
                 scope.launch(Dispatchers.IO) {
                     try {
-                        repository.saveQueue(finalPlaylist)
+                        if (targetQueueId != null) {
+                            repository.saveQueueSongs(targetQueueId, finalPlaylist)
+                        }
                         dataStore.edit { preferences ->
                             preferences[KEY_CURRENT_SON_ID] = song.id
                             preferences[KEY_PLAYBACK_POSITION] = 0L
@@ -443,8 +462,10 @@ class PlaybackConnection @Inject constructor(
                 updatedOriginal.add(insertIdxInOrig.coerceIn(0, updatedOriginal.size), song)
                 originalQueue = updatedOriginal
 
-                scope.launch(Dispatchers.IO) {
-                    repository.saveQueue(currentQueue)
+                if (_activeQueueId.value != QueueInfo.LOCAL_QUEUE_ID) {
+                    scope.launch(Dispatchers.IO) {
+                        repository.saveQueueSongs(_activeQueueId.value, currentQueue)
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -452,7 +473,7 @@ class PlaybackConnection @Inject constructor(
         }
     }
 
-    fun playShuffle(song: Song, playlist: List<Song>) {
+    fun playShuffle(song: Song, playlist: List<Song>, targetQueueId: Long? = null) {
         scope.launch {
             try {
                 val controller = getController()
@@ -462,6 +483,12 @@ class PlaybackConnection @Inject constructor(
                     dataStore.edit { preferences ->
                         preferences[KEY_SHUFFLE_MODE] = true
                     }
+                }
+
+                if (targetQueueId != null) {
+                    setActiveQueueId(targetQueueId)
+                } else {
+                    _activeQueueId.value = QueueInfo.LOCAL_QUEUE_ID
                 }
                 
                 val remaining = playlist.filter { it.id != song.id }.shuffled()
@@ -496,7 +523,9 @@ class PlaybackConnection @Inject constructor(
 
                 scope.launch(Dispatchers.IO) {
                     try {
-                        repository.saveQueue(fullList)
+                        if (targetQueueId != null) {
+                            repository.saveQueueSongs(targetQueueId, fullList)
+                        }
                         dataStore.edit { preferences ->
                             preferences[KEY_CURRENT_SON_ID] = song.id
                             preferences[KEY_PLAYBACK_POSITION] = 0L
@@ -524,7 +553,9 @@ class PlaybackConnection @Inject constructor(
                 _queueSongMap.value = emptyMap()
                 originalQueue = emptyList()
                 scope.launch(Dispatchers.IO) {
-                    repository.saveQueue(emptyList())
+                    if (_activeQueueId.value != QueueInfo.LOCAL_QUEUE_ID) {
+                        repository.saveQueueSongs(_activeQueueId.value, emptyList())
+                    }
                     dataStore.edit { preferences ->
                         preferences.remove(KEY_CURRENT_SON_ID)
                         preferences[KEY_PLAYBACK_POSITION] = 0L
@@ -668,7 +699,7 @@ class PlaybackConnection @Inject constructor(
                     if (originalQueue.isEmpty()) {
                         originalQueue = _playlistQueue.value
                     }
-                    val currentSong = originalQueue.firstOrNull { it.id == currentSongIdVal }
+                    val currentSong = originalQueue.firstOrNull { it.id == currentSongIdVal } ?: originalQueue.firstOrNull()
                     
                     if (currentSong != null) {
                         val remaining = originalQueue.filter { it.id != currentSong.id }
@@ -695,12 +726,18 @@ class PlaybackConnection @Inject constructor(
                         controller.setMediaItems(mediaItems, 0, currentPosition)
                         
                         _playlistQueue.value = finalPlaylist
-                        repository.saveQueue(finalPlaylist)
+                        if (_activeQueueId.value != QueueInfo.LOCAL_QUEUE_ID) {
+                            scope.launch(Dispatchers.IO) {
+                                repository.saveQueueSongs(_activeQueueId.value, finalPlaylist)
+                            }
+                        }
                     }
                 } else {
                     _shuffleModeEnabled.value = false
-                    dataStore.edit { preferences ->
-                        preferences[KEY_SHUFFLE_MODE] = false
+                    scope.launch(Dispatchers.IO) {
+                        dataStore.edit { preferences ->
+                            preferences[KEY_SHUFFLE_MODE] = false
+                        }
                     }
                     
                     if (originalQueue.isNotEmpty()) {
@@ -725,7 +762,11 @@ class PlaybackConnection @Inject constructor(
                         controller.setMediaItems(mediaItems, if (originalIndex != -1) originalIndex else 0, currentPosition)
                         
                         _playlistQueue.value = originalQueue
-                        repository.saveQueue(originalQueue)
+                        if (_activeQueueId.value != QueueInfo.LOCAL_QUEUE_ID) {
+                            scope.launch(Dispatchers.IO) {
+                                repository.saveQueueSongs(_activeQueueId.value, originalQueue)
+                            }
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -837,7 +878,11 @@ class PlaybackConnection @Inject constructor(
                     val item = updatedQueue.removeAt(fromIndex)
                     updatedQueue.add(toIndex, item)
                     _playlistQueue.value = updatedQueue
-                    repository.saveQueue(updatedQueue)
+                    if (_activeQueueId.value != QueueInfo.LOCAL_QUEUE_ID) {
+                        scope.launch(Dispatchers.IO) {
+                            repository.saveQueueSongs(_activeQueueId.value, updatedQueue)
+                        }
+                    }
                     
                     val updatedOriginal = originalQueue.toMutableList()
                     val fromOriginalIndex = updatedOriginal.indexOfFirst { it.id == fromSong.id }
@@ -873,7 +918,11 @@ class PlaybackConnection @Inject constructor(
                     val updatedQueue = currentQueue.toMutableList()
                     updatedQueue.removeAt(index)
                     _playlistQueue.value = updatedQueue
-                    repository.saveQueue(updatedQueue)
+                    if (_activeQueueId.value != QueueInfo.LOCAL_QUEUE_ID) {
+                        scope.launch(Dispatchers.IO) {
+                            repository.saveQueueSongs(_activeQueueId.value, updatedQueue)
+                        }
+                    }
                     
                     originalQueue = originalQueue.filterIndexed { idx, s -> !(idx == index && s.id == targetSong.id) }
                 }
@@ -916,6 +965,81 @@ class PlaybackConnection @Inject constructor(
                 if (targetIndex != -1) {
                     controller.seekTo(targetIndex, 0L)
                     controller.play()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun setActiveQueueId(queueId: Long) {
+        _activeQueueId.value = queueId
+        scope.launch(Dispatchers.IO) {
+            dataStore.edit { preferences ->
+                preferences[KEY_ACTIVE_QUEUE_ID] = queueId
+            }
+        }
+    }
+
+    fun playQueue(queueId: Long, startIndex: Int = 0) {
+        scope.launch {
+            try {
+                setActiveQueueId(queueId)
+                val songs = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    repository.getQueueSongsSync(queueId)
+                }
+                if (songs.isNotEmpty()) {
+                    val targetSong = songs.getOrElse(startIndex) { songs.first() }
+                    playSong(targetSong, songs, targetQueueId = queueId)
+                } else {
+                    clearQueue()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun switchActiveQueue(queueId: Long, autoPlay: Boolean = false) {
+        scope.launch {
+            try {
+                setActiveQueueId(queueId)
+                val songs = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    repository.getQueueSongsSync(queueId)
+                }
+                if (songs.isNotEmpty()) {
+                    if (autoPlay) {
+                        playSong(songs.first(), songs)
+                    } else {
+                        val controller = getController()
+                        originalQueue = songs
+                        val songsMap = HashMap<Long, Song>(songs.size).apply {
+                            songs.forEach { put(it.id, it) }
+                        }
+                        _playlistQueue.value = songs
+                        _queueSongMap.value = songsMap
+                        _currentSongId.value = songs.first().id
+                        _currentSong.value = songs.first()
+
+                        val mediaItems = songs.map { s ->
+                            MediaItem.Builder()
+                                .setMediaId(s.id.toString())
+                                .setUri(ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, s.id))
+                                .setMediaMetadata(
+                                    MediaMetadata.Builder()
+                                        .setTitle(s.title)
+                                        .setArtist(s.artist)
+                                        .setAlbumTitle(s.album)
+                                        .setArtworkUri(Uri.parse("content://media/external/audio/albumart/${s.albumId}"))
+                                        .build()
+                                )
+                                .build()
+                        }
+                        controller.setMediaItems(mediaItems, 0, 0L)
+                        controller.prepare()
+                    }
+                } else {
+                    clearQueue()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
