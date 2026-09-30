@@ -41,6 +41,10 @@ class GenreDetailsViewModel @Inject constructor(
         }
     }
 
+    suspend fun getQueueSongIds(queueId: Long): List<Long> {
+        return repository.getQueueSongIds(queueId)
+    }
+
     fun addSongsToPlaylist(playlistId: Long, songIds: List<Long>) {
         viewModelScope.launch(Dispatchers.IO) {
             songIds.forEach { songId ->

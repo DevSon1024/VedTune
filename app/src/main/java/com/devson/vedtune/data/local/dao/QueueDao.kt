@@ -65,6 +65,9 @@ interface QueueDao {
     @Query("SELECT * FROM queue_items WHERE queueId = :queueId ORDER BY orderIndex ASC")
     suspend fun getQueueItems(queueId: Long = 1L): List<QueueItemEntity>
 
+    @Query("SELECT songId FROM queue_items WHERE queueId = :queueId ORDER BY orderIndex ASC")
+    suspend fun getQueueSongIds(queueId: Long): List<Long>
+
     @Query("SELECT * FROM queue_items WHERE queueId = :queueId ORDER BY orderIndex ASC")
     fun getQueueItemsFlow(queueId: Long = 1L): Flow<List<QueueItemEntity>>
 

@@ -405,7 +405,8 @@ fun ArtistDetailsScreen(
                 onCreateQueueAndAdd = { queueName, songList, playNext ->
                     viewModel.createQueueAndAddSongs(queueName, songList.map { it.id }, playNext)
                     showAddToQueueForCollection = false
-                }
+                },
+                onCheckExistingSongIds = viewModel::getQueueSongIds
             )
         }
 
@@ -467,7 +468,8 @@ fun ArtistDetailsScreen(
                 onCreateQueueAndAdd = { queueName, songList, playNext ->
                     viewModel.createQueueAndAddSongs(queueName, songList.map { it.id }, playNext)
                     songForQueueModal = null
-                }
+                },
+                onCheckExistingSongIds = viewModel::getQueueSongIds
             )
         }
 

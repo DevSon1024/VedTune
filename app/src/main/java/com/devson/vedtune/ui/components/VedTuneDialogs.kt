@@ -144,21 +144,24 @@ fun VedTuneBottomSheetHeader(
     title: String,
     modifier: Modifier = Modifier,
     onCloseClick: () -> Unit = {},
-    subtitle: String? = null
+    subtitle: String? = null,
+    showDragHandle: Boolean = false
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Drag handle
-        Box(
-            modifier = Modifier
-                .padding(top = MaterialTheme.spacing.s, bottom = MaterialTheme.spacing.m)
-                .width(36.dp)
-                .height(4.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
-        )
+        if (showDragHandle) {
+            // Drag handle
+            Box(
+                modifier = Modifier
+                    .padding(top = MaterialTheme.spacing.s, bottom = MaterialTheme.spacing.m)
+                    .width(36.dp)
+                    .height(4.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+            )
+        }
 
         Row(
             modifier = Modifier

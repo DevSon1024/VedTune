@@ -28,6 +28,7 @@ interface MediaRepository {
     suspend fun removeAllOtherQueues(keepQueueId: Long)
     suspend fun reorderQueues(orderedQueueIds: List<Long>)
     suspend fun saveQueueSongs(queueId: Long, songs: List<Song>)
+    suspend fun getQueueSongIds(queueId: Long): List<Long>
     suspend fun addSongsToQueue(queueId: Long, songIds: List<Long>, atBeginning: Boolean = false)
     suspend fun removeSongFromQueue(queueId: Long, songId: Long)
     suspend fun clearQueueById(queueId: Long)

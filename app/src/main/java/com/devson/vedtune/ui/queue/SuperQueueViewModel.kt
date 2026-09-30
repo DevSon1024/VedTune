@@ -376,6 +376,10 @@ class SuperQueueViewModel @Inject constructor(
         }
     }
 
+    suspend fun getQueueSongIds(queueId: Long): List<Long> {
+        return repository.getQueueSongIds(queueId)
+    }
+
     fun saveQueueAsPlaylist(playlistName: String) {
         viewModelScope.launch {
             val currentSongs = uiState.value.songs

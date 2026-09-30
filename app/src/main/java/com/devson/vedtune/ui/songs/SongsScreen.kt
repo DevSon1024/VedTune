@@ -604,7 +604,8 @@ fun SongsScreen(
             onCreateQueueAndAdd = { queueName, songs, playNext ->
                 viewModel.createQueueAndAddSongs(queueName, songs.map { it.id }, playNext)
                 songForQueueModal = null
-            }
+            },
+            onCheckExistingSongIds = viewModel::getQueueSongIds
         )
     }
 
@@ -716,7 +717,8 @@ fun SongsScreen(
                 viewModel.createQueueAndAddSongs(queueName, songs.map { it.id }, playNext)
                 viewModel.exitSelectionMode()
                 showBatchAddToQueueModal = false
-            }
+            },
+            onCheckExistingSongIds = viewModel::getQueueSongIds
         )
     }
 

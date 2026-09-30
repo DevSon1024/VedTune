@@ -164,7 +164,8 @@ class MediaRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveQueueSongs(queueId: Long, songs: List<Song>) {
-        val entities = songs.mapIndexed { index, song ->
+        val uniqueSongs = songs.distinctBy { it.id }
+        val entities = uniqueSongs.mapIndexed { index, song ->
             QueueItemEntity(
                 queueId = queueId,
                 songId = song.id,
@@ -174,14 +175,24 @@ class MediaRepositoryImpl @Inject constructor(
         queueDao.updateQueueItemsForQueue(queueId, entities)
     }
 
+    override suspend fun getQueueSongIds(queueId: Long): List<Long> {
+        val songIds = queueDao.getQueueSongIds(queueId)
+        if (songIds.isEmpty() && queueId == QueueInfo.DEFAULT_QUEUE_ID) {
+            return songDao.getAllSongsList().map { it.id }
+        }
+        return songIds
+    }
+
     override suspend fun addSongsToQueue(queueId: Long, songIds: List<Long>, atBeginning: Boolean) {
         if (songIds.isEmpty()) return
         val currentItems = queueDao.getQueueItems(queueId)
         val currentSongIds = currentItems.map { it.songId }.toMutableList()
+        val uniqueNewSongIds = songIds.distinct().filter { !currentSongIds.contains(it) }
+        if (uniqueNewSongIds.isEmpty()) return
         if (atBeginning) {
-            currentSongIds.addAll(0, songIds)
+            currentSongIds.addAll(0, uniqueNewSongIds)
         } else {
-            currentSongIds.addAll(songIds)
+            currentSongIds.addAll(uniqueNewSongIds)
         }
         val newEntities = currentSongIds.mapIndexed { index, id ->
             QueueItemEntity(

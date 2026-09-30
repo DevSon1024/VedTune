@@ -20,6 +20,8 @@ import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,12 +33,15 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -48,6 +53,14 @@ import com.devson.vedtune.ui.theme.VedTuneIconSizes
 import com.devson.vedtune.ui.theme.VedTuneShapeTokens
 import com.devson.vedtune.ui.theme.VedTuneTextStyles
 import com.devson.vedtune.ui.theme.spacing
+
+data class DuplicateQueueSongDialogState(
+    val queueId: Long,
+    val queueName: String,
+    val duplicateSongs: List<Song>,
+    val newSongs: List<Song>,
+    val playNext: Boolean
+)
 
 /**
  * Bottom sheet modal allowing users to add songs to an existing queue or create a new queue.
@@ -62,10 +75,14 @@ fun AddToQueueModal(
     onDismiss: () -> Unit,
     onAddToQueue: (queueId: Long, songs: List<Song>, playNext: Boolean) -> Unit,
     onCreateQueueAndAdd: (queueName: String, songs: List<Song>, playNext: Boolean) -> Unit,
+    onCheckExistingSongIds: suspend (queueId: Long) -> List<Long>,
     modifier: Modifier = Modifier
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
     var playNext by remember { mutableStateOf(false) }
+    var duplicateDialogState by remember { mutableStateOf<DuplicateQueueSongDialogState?>(null) }
+    var isCheckingDuplicates by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -189,9 +206,30 @@ fun AddToQueueModal(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                onAddToQueue(queue.id, songs, playNext)
-                                onDismiss()
+                            .clickable(enabled = !isCheckingDuplicates) {
+                                scope.launch {
+                                    isCheckingDuplicates = true
+                                    try {
+                                        val existingIds = onCheckExistingSongIds(queue.id).toSet()
+                                        val duplicates = songs.filter { existingIds.contains(it.id) }
+                                        val newSongs = songs.filter { !existingIds.contains(it.id) }
+
+                                        if (duplicates.isNotEmpty()) {
+                                            duplicateDialogState = DuplicateQueueSongDialogState(
+                                                queueId = queue.id,
+                                                queueName = queue.name,
+                                                duplicateSongs = duplicates,
+                                                newSongs = newSongs,
+                                                playNext = playNext
+                                            )
+                                        } else {
+                                            onAddToQueue(queue.id, songs, playNext)
+                                            onDismiss()
+                                        }
+                                    } finally {
+                                        isCheckingDuplicates = false
+                                    }
+                                }
                             },
                         shape = VedTuneShapeTokens.Medium,
                         colors = CardDefaults.cardColors(
@@ -249,8 +287,77 @@ fun AddToQueueModal(
             onDismiss = { showCreateDialog = false },
             onCreate = { queueName ->
                 showCreateDialog = false
-                onCreateQueueAndAdd(queueName, songs, playNext)
+                onCreateQueueAndAdd(queueName, songs.distinctBy { it.id }, playNext)
                 onDismiss()
+            }
+        )
+    }
+
+    duplicateDialogState?.let { state ->
+        AlertDialog(
+            onDismissRequest = { duplicateDialogState = null },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = if (state.newSongs.isEmpty()) {
+                        if (state.duplicateSongs.size == 1) "Song Already in Queue" else "Songs Already in Queue"
+                    } else {
+                        "Duplicate Songs Found"
+                    },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = if (state.newSongs.isEmpty()) {
+                        if (state.duplicateSongs.size == 1) {
+                            "\"${state.duplicateSongs.first().title}\" is already available in \"${state.queueName}\"."
+                        } else {
+                            "All selected ${state.duplicateSongs.size} songs are already available in \"${state.queueName}\"."
+                        }
+                    } else {
+                        "${state.duplicateSongs.size} of ${state.duplicateSongs.size + state.newSongs.size} songs are already in \"${state.queueName}\". Would you like to add only the remaining ${state.newSongs.size} new songs?"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                if (state.newSongs.isNotEmpty()) {
+                    TextButton(
+                        onClick = {
+                            val toAdd = state.newSongs
+                            val targetQId = state.queueId
+                            val pNext = state.playNext
+                            duplicateDialogState = null
+                            onAddToQueue(targetQId, toAdd, pNext)
+                            onDismiss()
+                        }
+                    ) {
+                        Text("Add New Only", fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    TextButton(
+                        onClick = { duplicateDialogState = null }
+                    ) {
+                        Text("OK", fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                if (state.newSongs.isNotEmpty()) {
+                    TextButton(onClick = { duplicateDialogState = null }) {
+                        Text("Cancel")
+                    }
+                }
             }
         )
     }

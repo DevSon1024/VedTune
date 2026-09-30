@@ -219,12 +219,6 @@ fun QueueBottomSheet(
                             tint = MaterialTheme.colorScheme.error
                         )
                     }
-                    VedTuneIconButton(
-                        icon = Icons.Default.Close,
-                        contentDescription = "Close Queue",
-                        onClick = onDismiss,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
 

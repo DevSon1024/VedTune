@@ -783,7 +783,7 @@ fun LyricsEditDialog(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Custom Button Row matching the screenshot layout
+                // Custom Button Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,

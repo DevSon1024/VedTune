@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
@@ -166,6 +168,7 @@ fun SuperQueueRoute(
         onNavigateToEditTags = onNavigateToEditTags,
         onNavigateToAlbum = onNavigateToAlbum,
         onNavigateToArtist = onNavigateToArtist,
+        onCheckExistingSongIds = viewModel::getQueueSongIds,
         modifier = modifier
     )
 }
@@ -201,6 +204,7 @@ fun SuperQueueScreen(
     onRemoveSelectedSongs: () -> Unit,
     onExportM3u: () -> Unit,
     onShareSongs: (List<Song>) -> Unit,
+    onCheckExistingSongIds: suspend (Long) -> List<Long>,
     onNavigateToPlayer: () -> Unit,
     onNavigateToEditTags: (Long) -> Unit,
     onNavigateToAlbum: (Long) -> Unit,
@@ -284,32 +288,15 @@ fun SuperQueueScreen(
         }
     }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = {
-            MiniPlayer(
-                song = currentSong,
-                isPlaying = mainIsPlaying,
-                progress = progressProvider,
-                onPlayPauseClick = {
-                    if (mainIsPlaying) mainViewModel.pause() else mainViewModel.play()
-                },
-                onSkipNextClick = { mainViewModel.skipToNext() },
-                onSkipPreviousClick = { mainViewModel.skipToPrevious() },
-                onClick = onNavigateToPlayer,
-                showArtwork = showArtwork,
-                showProgress = showMiniPlayerProgress,
-                isGestureEnabled = isGestureMiniPlayerEnabled
-            )
-        }
-    ) { innerPadding ->
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = innerPadding.calculateBottomPadding())
                 .statusBarsPadding()
-                .background(MaterialTheme.colorScheme.background)
         ) {
         // TOP NAVIGATION & DROPDOWN BAR
         Row(
@@ -433,7 +420,7 @@ fun SuperQueueScreen(
             )
         }
 
-        // QUEUE CONTROL STRIP (Screenshot 1 & 2)
+        // QUEUE CONTROL STRIP
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -562,9 +549,9 @@ fun SuperQueueScreen(
                 modifier = Modifier.size(38.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Save,
+                    imageVector = Icons.Default.BookmarkAdd,
                     contentDescription = "Save queue as playlist",
-                    tint = MaterialTheme.colorScheme.onSurface,
+                    tint = if (uiState.songs.isNotEmpty()) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -718,7 +705,7 @@ fun SuperQueueScreen(
                     .weight(1f),
                 contentPadding = PaddingValues(
                     top = MaterialTheme.spacing.xs,
-                    bottom = MaterialTheme.spacing.m
+                    bottom = if (currentSong != null) 92.dp else MaterialTheme.spacing.m
                 ),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
@@ -804,7 +791,41 @@ fun SuperQueueScreen(
         }
     }
 
-    // QUEUES MANAGEMENT MODAL (Screenshot 4)
+    // Floating MiniPlayer overlay (transparent background, content visible underneath)
+    if (currentSong != null) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(bottom = 8.dp)
+        ) {
+            MiniPlayer(
+                song = currentSong,
+                isPlaying = mainIsPlaying,
+                progress = progressProvider,
+                onPlayPauseClick = {
+                    if (mainIsPlaying) mainViewModel.pause() else mainViewModel.play()
+                },
+                onSkipNextClick = { mainViewModel.skipToNext() },
+                onSkipPreviousClick = { mainViewModel.skipToPrevious() },
+                onClick = onNavigateToPlayer,
+                showArtwork = showArtwork,
+                showProgress = showMiniPlayerProgress,
+                isGestureEnabled = isGestureMiniPlayerEnabled
+            )
+        }
+    }
+
+    SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .navigationBarsPadding()
+            .padding(bottom = if (currentSong != null) 84.dp else 16.dp)
+    )
+
+    // QUEUES MANAGEMENT MODAL
     if (showQueuesModal) {
         QueuesManagementModal(
             queues = uiState.queues,
@@ -889,7 +910,8 @@ fun SuperQueueScreen(
             onCreateQueueAndAdd = { name, songs, playNext ->
                 onCreateQueue(name)
                 songForAnotherQueue = null
-            }
+            },
+            onCheckExistingSongIds = onCheckExistingSongIds
         )
     }
 
